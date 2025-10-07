@@ -29,13 +29,19 @@ const CompanyProfile: React.FC = () => {
     
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev],
-          [child]: value,
-        },
-      }));
+      setFormData(prev => {
+        // Type-safe way to handle nested objects
+        if (parent === 'address') {
+          return {
+            ...prev,
+            address: {
+              ...prev.address,
+              [child]: value,
+            },
+          };
+        }
+        return { ...prev, [name]: value };
+      });
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }

@@ -28,7 +28,7 @@ const Subscription: React.FC = () => {
     status: 'active',
     nextBillingDate: '2023-11-15',
     users: 8,
-    maxUsers: 10,
+    maxUsers: 10 as number | 'unlimited', // Type annotation to match Plan interface
     projects: 12,
     storage: {
       used: 2.4, // in GB
