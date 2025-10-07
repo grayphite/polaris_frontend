@@ -1,5 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 
 import Button from '../../components/ui/Button';
@@ -16,14 +15,14 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Mock conversation data
   const conversation = {
     id: chatId,
-    title: 'Social Media Strategy',
+    title: chatId && chatId.startsWith('1') ? 'Social Media Strategy' : '',
     createdAt: '2023-10-01T12:00:00Z',
   };
   
@@ -54,7 +53,13 @@ const ChatInterface: React.FC = () => {
   // Load initial messages
   useEffect(() => {
     // In a real app, you would fetch messages from an API
-    const initialMessages: Message[] = [
+    // For brand new conversations, start blank
+    if (chatId && /^\d{13,}$/.test(chatId)) {
+      setMessages([]);
+      return;
+    }
+    // Otherwise load mock history
+    setMessages([
       {
         id: '1',
         content: "Hi there! I'm your AI assistant. How can I help you with your social media strategy today?",
@@ -69,13 +74,11 @@ const ChatInterface: React.FC = () => {
       },
       {
         id: '3',
-        content: "Great! For Instagram content targeting millennials and Gen Z for a product launch, I'd recommend the following approach:\n\n1. **Content Mix**: Create a balanced mix of educational content about your product features, lifestyle imagery showing the product in use, user-generated content, and behind-the-scenes looks at the launch preparations.\n\n2. **Format Variety**: Utilize all Instagram formats - feed posts, Stories, Reels, and IGTV for longer content. Reels are particularly effective for reaching younger audiences right now.\n\n3. **Pre-launch Teaser Campaign**: Start building excitement 2-3 weeks before launch with teaser content that creates intrigue without revealing everything.\n\n4. **Influencer Collaborations**: Partner with micro-influencers who align with your brand values and have high engagement with your target demographic.\n\n5. **Interactive Elements**: Incorporate polls, questions, and countdown stickers in Stories to boost engagement and create anticipation.\n\nWould you like me to elaborate on any of these points or suggest specific content ideas for each phase of your launch?",
+        content: "Great! For Instagram content targeting millennials and Gen Z for a product launch...",
         role: 'assistant',
         timestamp: '2023-10-01T12:03:45Z',
       },
-    ];
-    
-    setMessages(initialMessages);
+    ]);
   }, [chatId]);
   
   // Scroll to bottom when messages change
@@ -148,95 +151,11 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex overflow-hidden">
-      {/* Sidebar with conversations */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white border-r border-gray-200 flex flex-col w-80 flex-shrink-0"
-          >
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Conversations</h2>
-                <Link to={`/projects/${projectId}/chat/new`}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                    }
-                  >
-                    New
-                  </Button>
-                </Link>
-              </div>
-              <div className="mt-2 relative">
-                <input
-                  type="text"
-                  placeholder="Search conversations..."
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-                <svg
-                  className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-2">
-              {conversations.map((conv) => (
-                <Link
-                  key={conv.id}
-                  to={`/projects/${projectId}/chat/${conv.id}`}
-                  className={`block p-3 mb-1 rounded-md transition-colors ${
-                    conv.id === chatId
-                      ? 'bg-primary-50 border-l-4 border-primary-500'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-gray-900 line-clamp-1">{conv.title}</h3>
-                    <span className="text-xs text-gray-500">
-                      {new Date(conv.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            
-            <div className="p-4 border-t border-gray-200">
-              <Link to={`/projects/${projectId}`}>
-                <Button variant="outline" fullWidth>
-                  Back to Project
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
       {/* Chat interface */}
       <div className="flex-1 flex flex-col bg-light-200">
         {/* Chat header */}
         <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="mr-4 text-gray-500 hover:text-gray-700"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
             <h1 className="text-xl font-semibold text-gray-900">{conversation.title}</h1>
           </div>
           <div className="flex items-center space-x-2">
@@ -361,3 +280,4 @@ const ChatInterface: React.FC = () => {
 };
 
 export default ChatInterface;
+

@@ -19,3 +19,4 @@ const PageTitle: React.FC<PageTitleProps> = ({ title, subtitle, actions }) => {
 };
 
 export default PageTitle;
+

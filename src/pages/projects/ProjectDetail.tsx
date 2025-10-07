@@ -188,6 +188,7 @@ const ProjectDetail: React.FC = () => {
           {/* Conversations tab */}
           {activeTab === 'conversations' && (
             <div className="space-y-6">
+              {/* Conversations list remains here, toolbar moved to sidebar per new design */}
               {conversations.length > 0 ? (
                 <div className="space-y-4">
                   {conversations.map((conversation, index) => (
@@ -232,23 +233,7 @@ const ProjectDetail: React.FC = () => {
                     />
                   </svg>
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No conversations yet</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Get started by creating a new conversation.
-                  </p>
-                  <div className="mt-6">
-                    <Link to={`/projects/${projectId}/chat/new`}>
-                      <Button
-                        variant="primary"
-                        leftIcon={
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                          </svg>
-                        }
-                      >
-                        New Conversation
-                      </Button>
-                    </Link>
-                  </div>
+                  <p className="mt-1 text-sm text-gray-500">Start a new conversation from the sidebar.</p>
                 </div>
               )}
             </div>
