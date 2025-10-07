@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -86,6 +86,7 @@ const RecentProject: React.FC<RecentProjectProps> = ({ name, description, lastUp
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { openCreateProject } = useOutletContext<{ openCreateProject: () => void }>();
   
   // Mock data for dashboard
   const stats = [
@@ -205,8 +206,8 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-lg shadow-card p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Link to="/projects/new">
-            <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">
+          <button onClick={openCreateProject} className="text-left">
+            <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center w-full">
               <div className="p-2 bg-primary-100 rounded-full mr-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-600" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -214,7 +215,7 @@ const Dashboard: React.FC = () => {
               </div>
               <span className="text-sm font-medium">New Project</span>
             </div>
-          </Link>
+          </button>
           
           <Link to="/members">
             <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import React, { useEffect, useRef, useState } from 'react';
 
 import Button from '../../components/ui/Button';
@@ -18,13 +18,7 @@ const ChatInterface: React.FC = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
-  // Mock conversation data
-  const conversation = {
-    id: chatId,
-    title: chatId && chatId.startsWith('1') ? 'Social Media Strategy' : '',
-    createdAt: '2023-10-01T12:00:00Z',
-  };
+  const location = useLocation();
   
   // Mock conversations list
   const conversations = [
@@ -49,6 +43,42 @@ const ChatInterface: React.FC = () => {
       updatedAt: '2023-10-02T11:30:00Z',
     },
   ];
+  
+  // Resolve title for the current chat
+  const isNewChatId = chatId ? /^\d{13,}$/.test(chatId) : false;
+
+  // Prefer title passed via navigation state or query string for new chats
+  const locationState = location.state as { title?: string } | null;
+  const stateTitle = locationState?.title;
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const queryTitle = searchParams.get('title') || undefined;
+
+  // Persist and retrieve titles for new chats using localStorage so refresh keeps it
+  const storageKey = chatId ? `chatTitle:${chatId}` : '';
+  const storedTitle = typeof window !== 'undefined' && storageKey
+    ? window.localStorage.getItem(storageKey) || undefined
+    : undefined;
+
+  const resolvedNewChatTitle = ((): string | undefined => {
+    const titleCandidate = stateTitle ?? queryTitle ?? storedTitle;
+    if (titleCandidate && storageKey) {
+      try {
+        window.localStorage.setItem(storageKey, titleCandidate);
+      } catch {}
+    }
+    return titleCandidate;
+  })();
+
+  // Mock conversation data
+  const conversation = {
+    id: chatId,
+    // For existing seeded chats, derive the title from the list; for brand-new (timestamp-like) chats, use resolved title
+    title:
+      chatId && !isNewChatId
+        ? (conversations.find((c) => c.id === chatId)?.title ?? `Chat ${chatId}`)
+        : (resolvedNewChatTitle ?? ''),
+    createdAt: '2023-10-01T12:00:00Z',
+  };
   
   // Load initial messages
   useEffect(() => {
@@ -150,7 +180,7 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden">
+    <div className="h-full flex overflow-hidden">
       {/* Chat interface */}
       <div className="flex-1 flex flex-col bg-light-200">
         {/* Chat header */}
