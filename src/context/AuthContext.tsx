@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI } from '../services/authService';
 
 interface User {
   id: string;
@@ -13,7 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
@@ -26,58 +27,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in on mount
-    const checkAuthStatus = async () => {
-      const token = localStorage.getItem('token');
-      
-      if (token) {
-        try {
-          // This would be an API call to validate the token and get user data
-          // For now, we'll simulate it
-          setTimeout(() => {
-            setUser({
-              id: '1',
-              username: 'demouser',
-              email: 'demo@example.com',
-              role: 'admin',
-              companyId: '123'
-            });
-            setIsLoading(false);
-          }, 500);
-        } catch (error) {
-          console.error('Authentication error:', error);
-          localStorage.removeItem('token');
-          setUser(null);
-          setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-      }
-    };
-    
-    checkAuthStatus();
+    // Check if user has a token in localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Set a basic user object - actual user data will be fetched by individual components
+      // and 401 errors will be handled globally by the API service
+      setUser({
+        id: '1', // Placeholder - will be updated when real API calls are made
+        username: 'User',
+        email: 'user@example.com',
+        role: 'user',
+        companyId: '1'
+      });
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
     try {
-      // This would be an API call to your backend
-      // For now, we'll simulate a successful login
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const response = await loginUser(email, password);
       
-      // Simulate successful login
-      const mockUser = {
-        id: '1',
-        username: 'demouser',
-        email: email,
-        role: 'admin' as const,
-        companyId: '123'
-      };
-      
-      // Store token in localStorage
-      localStorage.setItem('token', 'mock-jwt-token');
-      setUser(mockUser);
+      if (response.success && response.token && response.user) {
+        localStorage.setItem('token', response.token);
+        setUser({
+          id: response.user.id || '1',
+          username: response.user.username || response.user.email,
+          email: response.user.email,
+          role: response.user.role || 'user',
+          companyId: response.user.companyId
+        });
+      } else {
+        throw new Error(response.error || 'Login failed');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -86,24 +69,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (fullName: string, email: string, password: string) => {
     setIsLoading(true);
     
     try {
-      // This would be an API call to your backend
-      // For now, we'll simulate a successful registration
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const response = await registerUser({
+        email,
+        senha: password,
+        nome: fullName
+      });
       
-      // After registration, automatically log the user in
-      const mockUser = {
-        id: '1',
-        username: username,
-        email: email,
-        role: 'user' as const
-      };
-      
-      localStorage.setItem('token', 'mock-jwt-token');
-      setUser(mockUser);
+      if (response.success && response.token && response.user) {
+        localStorage.setItem('token', response.token);
+        setUser({
+          id: response.user.id || '1',
+          username: response.user.username || response.user.email,
+          email: response.user.email,
+          role: response.user.role || 'user',
+          companyId: response.user.companyId
+        });
+      } else {
+        throw new Error(response.error || 'Registration failed');
+      }
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -121,9 +108,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // This would be an API call to your backend
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // Success is handled by the component
+      const response = await forgotPasswordAPI(email);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to send reset email');
+      }
     } catch (error) {
       console.error('Forgot password error:', error);
       throw error;
@@ -136,9 +124,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // This would be an API call to your backend
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // Success is handled by the component
+      const response = await resetPasswordAPI(token, newPassword);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to reset password');
+      }
     } catch (error) {
       console.error('Reset password error:', error);
       throw error;

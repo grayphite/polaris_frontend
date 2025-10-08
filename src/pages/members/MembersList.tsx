@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 import Button from '../../components/ui/Button';
-import { motion } from 'framer-motion';
 
 interface Member {
   id: string;
@@ -18,9 +19,9 @@ const MembersList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('member');
+  
+  // Get the openInviteModal function from MainLayout context
+  const { openInviteModal } = useOutletContext<{ openInviteModal: () => void }>();
   
   // Mock data for members
   const members: Member[] = [
@@ -101,14 +102,6 @@ const MembersList: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
   
-  const handleInvite = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, you would make an API call to send the invitation
-    console.log('Inviting:', inviteEmail, 'with role:', inviteRole);
-    setShowInviteModal(false);
-    setInviteEmail('');
-    setInviteRole('member');
-  };
   
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
@@ -150,7 +143,7 @@ const MembersList: React.FC = () => {
               <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
             </svg>
           }
-          onClick={() => setShowInviteModal(true)}
+          onClick={openInviteModal}
         >
           Invite Member
         </Button>
@@ -313,7 +306,7 @@ const MembersList: React.FC = () => {
                     <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
                   </svg>
                 }
-                onClick={() => setShowInviteModal(true)}
+                onClick={openInviteModal}
               >
                 Invite Member
               </Button>
@@ -322,79 +315,6 @@ const MembersList: React.FC = () => {
         )}
       </div>
       
-      {/* Invite modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
-          >
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Invite Team Member</h3>
-            </div>
-            
-            <form onSubmit={handleInvite} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    placeholder="colleague@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                    Role
-                  </label>
-                  <select
-                    id="role"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value)}
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                    <option value="superadmin">Super Admin</option>
-                  </select>
-                </div>
-                
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">
-                    An invitation will be sent to this email address. They'll be able to join your organization once they accept.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="mt-6 flex justify-end space-x-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowInviteModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!inviteEmail}
-                >
-                  Send Invitation
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 };

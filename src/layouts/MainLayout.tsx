@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/common/Sidebar';
+import InviteModal from '../components/ui/InviteModal';
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -92,6 +93,9 @@ const MainLayout: React.FC = () => {
   const [newChatName, setNewChatName] = useState('');
   const [activeProjectForChat, setActiveProjectForChat] = useState<string | null>(null);
 
+  // Invite modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
   const handleCreateProject = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const name = newProjectName.trim();
@@ -129,6 +133,12 @@ const MainLayout: React.FC = () => {
       window.localStorage.setItem(`chatTitle:${newId}`, name);
     } catch {}
     navigate(`/projects/${pid}/chat/${newId}`, { state: { title: name } });
+  };
+
+  const handleInviteSubmit = (email: string, role: string) => {
+    // In a real app, you would make an API call to send the invitation
+    console.log('Inviting:', email, 'with role:', role);
+    setShowInviteModal(false);
   };
 
   return (
@@ -240,9 +250,19 @@ const MainLayout: React.FC = () => {
         
         {/* Page content */}
         <main className="flex-1 overflow-auto bg-light-200 p-4">
-          <Outlet context={{ openCreateProject: () => setShowCreateProject(true) }} />
+          <Outlet context={{ 
+            openCreateProject: () => setShowCreateProject(true),
+            openInviteModal: () => setShowInviteModal(true)
+          }} />
         </main>
       </div>
+
+      {/* Invite Modal */}
+      <InviteModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSubmit={handleInviteSubmit}
+      />
     </div>
   );
 };
