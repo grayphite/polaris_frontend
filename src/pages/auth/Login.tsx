@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { showErrorToast } from '../../utils/toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -47,9 +48,7 @@ const Login: React.FC = () => {
       navigate('/');
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({
-        email: 'Invalid email or password',
-      });
+      showErrorToast('Invalid email or password');
     }
   };
 

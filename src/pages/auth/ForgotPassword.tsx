@@ -5,6 +5,7 @@ import Input from '../../components/ui/Input';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { showErrorToast } from '../../utils/toast';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ const ForgotPassword: React.FC = () => {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Forgot password error:', error);
-      setError('Failed to send password reset email. Please try again.');
+      showErrorToast('Failed to send password reset email. Please try again.');
     }
   };
 

@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { showErrorToast } from '../../utils/toast';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -81,9 +82,7 @@ const Register: React.FC = () => {
       navigate('/');
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({
-        email: 'Registration failed. Please try again.',
-      });
+      showErrorToast('Registration failed. Please try again.');
     }
   };
 

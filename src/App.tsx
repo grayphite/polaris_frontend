@@ -1,4 +1,6 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import AuthLayout from './layouts/AuthLayout';
 import { AuthProvider } from './context/AuthContext';
@@ -72,6 +74,9 @@ function App() {
           {/* Not found route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        
+        {/* Toast Container */}
+        <ToastContainer />
       </Router>
     </AuthProvider>
   );
