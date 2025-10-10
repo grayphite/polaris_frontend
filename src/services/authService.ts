@@ -40,7 +40,7 @@ export async function loginUser(email: string, password: string): Promise<LoginR
 }
 
 export async function forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-  return makeRequest('/users/forgot-password', {
+  return makeRequest('/users/forget-password', {
     method: 'POST',
     data: { email },
   });
@@ -52,6 +52,16 @@ export async function resetPassword(token: string, newPassword: string): Promise
     data: {
       token,
       senha: newPassword,
+    },
+  });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  return makeRequest('/users/change-password', {
+    method: 'POST',
+    data: {
+      current_password: currentPassword,
+      new_password: newPassword,
     },
   });
 }
