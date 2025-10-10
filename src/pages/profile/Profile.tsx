@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { changePassword } from '../../services/authService';
+import { changePassword, updateProfile } from '../../services/authService';
 import { showSuccessToast, showErrorToast } from '../../utils/toast';
 
 const Profile: React.FC = () => {
@@ -12,7 +12,8 @@ const Profile: React.FC = () => {
   
   // Form state
   const [formData, setFormData] = useState({
-    name: user?.username || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     email: user?.email || '',
     jobTitle: 'Product Manager',
     phone: '+1 (555) 123-4567',
@@ -66,14 +67,42 @@ const Profile: React.FC = () => {
     e.preventDefault();
     setIsSaving(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // In a real app, you would make an API call to update the profile
-    console.log('Saving profile:', formData);
-    
-    setIsSaving(false);
-    setIsEditing(false);
+    try {
+      if (!user?.id) {
+        showErrorToast('User ID not found');
+        return;
+      }
+
+      const response = await updateProfile(
+        user.id,
+        formData.firstName,
+        formData.lastName
+      );
+      
+      if (response.success) {
+        showSuccessToast('Profile updated successfully!');
+        
+        // Update user in localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          userData.firstName = formData.firstName;
+          userData.lastName = formData.lastName;
+          userData.username = `${formData.firstName} ${formData.lastName}`.trim();
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+        
+        setIsEditing(false);
+      } else {
+        showErrorToast('Failed to update profile');
+      }
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update profile. Please try again.';
+      showErrorToast(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -178,7 +207,7 @@ const Profile: React.FC = () => {
             <div className="flex-shrink-0">
               <div className="relative">
                 <div className="h-32 w-32 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-4xl font-semibold">
-                  {formData.name.charAt(0).toUpperCase()}
+                  {formData.firstName.charAt(0).toUpperCase()}
                 </div>
                 {isEditing && (
                   <button className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-md border border-gray-200 hover:bg-gray-50">
@@ -190,7 +219,7 @@ const Profile: React.FC = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{formData.name}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{`${formData.firstName} ${formData.lastName}`}</h2>
               <p className="text-gray-500">{formData.jobTitle}</p>
               <div className="mt-2 flex items-center text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -224,15 +253,29 @@ const Profile: React.FC = () => {
               <form className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                      Full Name
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                      First Name
                     </label>
                     <input
                       type="text"
-                      id="name"
-                      name="name"
+                      id="firstName"
+                      name="firstName"
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      value={formData.name}
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      name="lastName"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      value={formData.lastName}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -245,9 +288,9 @@ const Profile: React.FC = () => {
                       type="email"
                       id="email"
                       name="email"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 cursor-not-allowed"
                       value={formData.email}
-                      onChange={handleInputChange}
+                      disabled
                     />
                   </div>
                   
@@ -259,9 +302,9 @@ const Profile: React.FC = () => {
                       type="text"
                       id="jobTitle"
                       name="jobTitle"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 cursor-not-allowed"
                       value={formData.jobTitle}
-                      onChange={handleInputChange}
+                      disabled
                     />
                   </div>
                   
@@ -273,9 +316,9 @@ const Profile: React.FC = () => {
                       type="text"
                       id="phone"
                       name="phone"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 cursor-not-allowed"
                       value={formData.phone}
-                      onChange={handleInputChange}
+                      disabled
                     />
                   </div>
                   
@@ -286,9 +329,9 @@ const Profile: React.FC = () => {
                     <select
                       id="timezone"
                       name="timezone"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 cursor-not-allowed"
                       value={formData.timezone}
-                      onChange={handleInputChange}
+                      disabled
                     >
                       <option value="America/New_York">Eastern Time (ET)</option>
                       <option value="America/Chicago">Central Time (CT)</option>
@@ -308,9 +351,9 @@ const Profile: React.FC = () => {
                       id="bio"
                       name="bio"
                       rows={3}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-500 cursor-not-allowed"
                       value={formData.bio}
-                      onChange={handleInputChange}
+                      disabled
                     />
                     <p className="mt-2 text-sm text-gray-500">
                       Brief description for your profile.

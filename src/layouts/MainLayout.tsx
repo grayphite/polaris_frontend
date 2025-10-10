@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/common/Sidebar';
 import InviteModal from '../components/ui/InviteModal';
+import { isAdmin } from '../utils/permissions';
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -215,27 +216,34 @@ const MainLayout: React.FC = () => {
                   >
                     Your Profile
                   </NavLink>
-                  <NavLink
-                    to="/members"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    Manage Team
-                  </NavLink>
-                  <NavLink
-                    to="/company-profile"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    Company Profile
-                  </NavLink>
-                  <NavLink
-                    to="/subscription"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    Subscription
-                  </NavLink>
+                  
+                  {/* Admin-only menu items */}
+                  {isAdmin(user) && (
+                    <>
+                      <NavLink
+                        to="/members"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Manage Team
+                      </NavLink>
+                      <NavLink
+                        to="/company-profile"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Company Profile
+                      </NavLink>
+                      <NavLink
+                        to="/subscription"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Subscription
+                      </NavLink>
+                    </>
+                  )}
+                  
                   <button
                     onClick={handleLogout}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

@@ -9,13 +9,15 @@ import { showErrorToast } from '../../utils/toast';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<{
-    fullName?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
@@ -40,14 +42,20 @@ const Register: React.FC = () => {
     // Validation
     let hasErrors = false;
     const newErrors: {
-      fullName?: string;
+      firstName?: string;
+      lastName?: string;
       email?: string;
       password?: string;
       confirmPassword?: string;
     } = {};
     
-    if (!formData.fullName) {
-      newErrors.fullName = 'Full name is required';
+    if (!formData.firstName) {
+      newErrors.firstName = 'First name is required';
+      hasErrors = true;
+    }
+    
+    if (!formData.lastName) {
+      newErrors.lastName = 'Last name is required';
       hasErrors = true;
     }
     
@@ -78,7 +86,7 @@ const Register: React.FC = () => {
     }
     
     try {
-      await register(formData.fullName, formData.email, formData.password);
+      await register(formData.firstName, formData.lastName, formData.email, formData.password);
       navigate('/');
     } catch (error) {
       console.error('Registration error:', error);
@@ -99,21 +107,39 @@ const Register: React.FC = () => {
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Full Name"
-          type="text"
-          name="fullName"
-          placeholder="John Doe"
-          value={formData.fullName}
-          onChange={handleChange}
-          error={errors.fullName}
-          leftIcon={
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-            </svg>
-          }
-          autoComplete="name"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="First Name"
+            type="text"
+            name="firstName"
+            placeholder="John"
+            value={formData.firstName}
+            onChange={handleChange}
+            error={errors.firstName}
+            leftIcon={
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            }
+            autoComplete="given-name"
+          />
+          
+          <Input
+            label="Last Name"
+            type="text"
+            name="lastName"
+            placeholder="Doe"
+            value={formData.lastName}
+            onChange={handleChange}
+            error={errors.lastName}
+            leftIcon={
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            }
+            autoComplete="family-name"
+          />
+        </div>
         
         <Input
           label="Email Address"

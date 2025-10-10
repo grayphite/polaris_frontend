@@ -2,6 +2,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { isAdmin } from '../utils/permissions';
 
 interface StatCardProps {
   title: string;
@@ -113,7 +114,8 @@ const Dashboard: React.FC = () => {
       change: '25%',
       isPositive: true,
     },
-    {
+    // Admin-only stats
+    ...(isAdmin(user) ? [{
       title: 'Team Members',
       value: 8,
       icon: (
@@ -121,7 +123,7 @@ const Dashboard: React.FC = () => {
           <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
         </svg>
       ),
-    },
+    }] : []),
     {
       title: 'Subscription',
       value: 'Pro Plan',
@@ -217,27 +219,32 @@ const Dashboard: React.FC = () => {
             </div>
           </button>
           
-          <Link to="/members">
-            <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">
-              <div className="p-2 bg-secondary-100 rounded-full mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium">Invite Team Member</span>
-            </div>
-          </Link>
-          
-          <Link to="/subscription">
-            <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">
-              <div className="p-2 bg-purple-100 rounded-full mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium">Manage Subscription</span>
-            </div>
-          </Link>
+          {/* Admin-only quick actions */}
+          {isAdmin(user) && (
+            <>
+              <Link to="/members">
+                <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">
+                  <div className="p-2 bg-secondary-100 rounded-full mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Invite Team Member</span>
+                </div>
+              </Link>
+              
+              <Link to="/subscription">
+                <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-full mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Manage Subscription</span>
+                </div>
+              </Link>
+            </>
+          )}
           
           <Link to="/profile">
             <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center">

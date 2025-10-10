@@ -3,7 +3,8 @@ import { makeRequest } from './api';
 export interface RegisterUserData {
   email: string;
   senha: string;
-  nome?: string;
+  first_name: string;
+  last_name: string;
 }
 
 export interface RegisterResponse {
@@ -62,6 +63,16 @@ export async function changePassword(currentPassword: string, newPassword: strin
     data: {
       current_password: currentPassword,
       new_password: newPassword,
+    },
+  });
+}
+
+export async function updateProfile(userId: string, firstName: string, lastName: string): Promise<{ success: boolean; message: string; user?: any }> {
+  return makeRequest(`/users/${userId}`, {
+    method: 'PUT',
+    data: {
+      first_name: firstName,
+      last_name: lastName,
     },
   });
 }
