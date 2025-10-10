@@ -4,8 +4,10 @@ import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPass
 interface User {
   id: string;
   username: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: 'user' | 'admin' | 'superadmin';
+  role: 'admin' | 'member';
   companyId?: string;
 }
 
@@ -14,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, password: string) => Promise<void>;
+  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
@@ -29,16 +31,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check if user has a token in localStorage
     const token = localStorage.getItem('token');
-    if (token) {
-      // Set a basic user object - actual user data will be fetched by individual components
-      // and 401 errors will be handled globally by the API service
-      setUser({
-        id: '1', // Placeholder - will be updated when real API calls are made
-        username: 'User',
-        email: 'user@example.com',
-        role: 'user',
-        companyId: '1'
-      });
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
+      try {
+        // Restore user data from localStorage
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('Failed to parse stored user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setIsLoading(false);
   }, []);
@@ -50,14 +55,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await loginUser(email, password);
       
       if (response.success && response.token && response.user) {
-        localStorage.setItem('token', response.token);
-        setUser({
+        const userData = {
           id: response.user.id || '1',
-          username: response.user.username || response.user.email,
+          username: `${response.user.first_name} ${response.user.last_name}`.trim(),
+          firstName: response.user.first_name,
+          lastName: response.user.last_name,
           email: response.user.email,
-          role: response.user.role || 'user',
+          role: (response.user.role === 'admin' ? 'admin' : 'member') as 'admin' | 'member',
           companyId: response.user.companyId
-        });
+        };
+        
+        // Store both token and user data in localStorage
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
       } else {
         throw new Error(response.error || 'Login failed');
       }
@@ -69,25 +80,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (fullName: string, email: string, password: string) => {
+  const register = async (firstName: string, lastName: string, email: string, password: string) => {
     setIsLoading(true);
     
     try {
       const response = await registerUser({
         email,
         senha: password,
-        nome: fullName
+        first_name: firstName,
+        last_name: lastName
       });
       
       if (response.success && response.token && response.user) {
-        localStorage.setItem('token', response.token);
-        setUser({
+        const userData = {
           id: response.user.id || '1',
-          username: response.user.username || response.user.email,
+          username: `${response.user.first_name} ${response.user.last_name}`.trim(),
+          firstName: response.user.first_name,
+          lastName: response.user.last_name,
           email: response.user.email,
-          role: response.user.role || 'user',
+          role: (response.user.role === 'admin' ? 'admin' : 'member') as 'admin' | 'member',
           companyId: response.user.companyId
-        });
+        };
+        
+        // Store both token and user data in localStorage
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
       } else {
         throw new Error(response.error || 'Registration failed');
       }
@@ -101,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 

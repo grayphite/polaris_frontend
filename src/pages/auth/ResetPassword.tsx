@@ -27,11 +27,13 @@ const ResetPassword: React.FC = () => {
     
     if (tokenParam) {
       setToken(tokenParam);
-    } else {
-      // No token provided, redirect to forgot password
+      // Remove token from URL for security reasons
+      navigate('/reset-password', { replace: true });
+    } else if (!token) {
+      // No token in URL and no token in state, redirect to forgot password
       navigate('/forgot-password');
     }
-  }, [location, navigate]);
+  }, [location, navigate, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

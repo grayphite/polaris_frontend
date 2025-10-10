@@ -8,7 +8,7 @@ interface Member {
   id: string;
   name: string;
   email: string;
-  role: 'superadmin' | 'admin' | 'member';
+  role: 'admin' | 'member';
   status: 'active' | 'invited' | 'inactive';
   avatarUrl?: string;
   joinedAt: string;
@@ -29,7 +29,7 @@ const MembersList: React.FC = () => {
       id: '1',
       name: 'Alex Johnson',
       email: 'alex@example.com',
-      role: 'superadmin',
+      role: 'admin',
       status: 'active',
       joinedAt: '2023-01-15',
       projects: 12,
@@ -105,10 +105,10 @@ const MembersList: React.FC = () => {
   
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
-      case 'superadmin':
-        return 'bg-purple-100 text-purple-800';
       case 'admin':
         return 'bg-blue-100 text-blue-800';
+      case 'member':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -174,7 +174,6 @@ const MembersList: React.FC = () => {
               onChange={(e) => setFilterRole(e.target.value)}
             >
               <option value="all">All Roles</option>
-              <option value="superadmin">Super Admin</option>
               <option value="admin">Admin</option>
               <option value="member">Member</option>
             </select>
