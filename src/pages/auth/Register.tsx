@@ -87,7 +87,7 @@ const Register: React.FC = () => {
     
     try {
       await register(formData.firstName, formData.lastName, formData.email, formData.password);
-      navigate('/');
+      navigate('/projects/1');
     } catch (error) {
       console.error('Registration error:', error);
       showErrorToast('Registration failed. Please try again.');

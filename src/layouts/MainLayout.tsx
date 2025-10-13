@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/common/Sidebar';
 import InviteModal from '../components/ui/InviteModal';
-import { isAdmin } from '../utils/permissions';
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -189,7 +188,7 @@ const MainLayout: React.FC = () => {
                 </svg>
               </button>
               <h2 className="ml-1 sm:ml-2 text-base sm:text-lg font-medium truncate">
-                {location.pathname === '/' ? 'Dashboard' : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
+                {location.pathname === '/' ? 'Projects' : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
               </h2>
             </div>
             
@@ -217,32 +216,28 @@ const MainLayout: React.FC = () => {
                     Your Profile
                   </NavLink>
                   
-                  {/* Admin-only menu items */}
-                  {isAdmin(user) && (
-                    <>
-                      <NavLink
-                        to="/members"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Manage Team
-                      </NavLink>
-                      <NavLink
-                        to="/company-profile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Company Profile
-                      </NavLink>
-                      <NavLink
-                        to="/subscription"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Subscription
-                      </NavLink>
-                    </>
-                  )}
+                  {/* All menu items accessible to all users */}
+                  <NavLink
+                    to="/members"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    Manage Team
+                  </NavLink>
+                  {/* <NavLink
+                    to="/company-profile"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    Company Profile
+                  </NavLink> */}
+                  {/* <NavLink
+                    to="/subscription"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    Subscription
+                  </NavLink> */}
                   
                   <button
                     onClick={handleLogout}
