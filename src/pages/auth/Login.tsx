@@ -49,6 +49,9 @@ const Login: React.FC = () => {
     } catch (error) {
       console.error('Login error:', error);
       showErrorToast('Invalid email or password');
+      // Clear input fields on error
+      setEmail('');
+      setPassword('');
     }
   };
 

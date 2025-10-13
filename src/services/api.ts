@@ -31,12 +31,15 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized globally
-    if (error.response?.status === 401) {
-      // Clear token and user data, then redirect to login
+    // Handle 401 Unauthorized globally, but skip redirect for auth endpoints
+    const status = error?.response?.status;
+    const hadAuthHeader = !!error?.config?.headers?.Authorization;
+
+    if (status === 401 && hadAuthHeader) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+      return;
     }
     
     // Log error for debugging
