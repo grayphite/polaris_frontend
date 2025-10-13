@@ -1,5 +1,5 @@
 /**
- * Permission utilities for role-based access control
+ * Permission utilities - all users have access to everything
  */
 
 export type UserRole = 'admin' | 'member';
@@ -27,78 +27,64 @@ export const isMember = (user: User | null): boolean => {
 };
 
 /**
- * Check if user can access members list
+ * Check if user can access members list - all users can access
  */
 export const canAccessMembers = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can invite members
- */
-export const canInviteMembers = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can access company profile
- */
-export const canAccessCompanyProfile = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can edit company profile
- */
-export const canEditCompanyProfile = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can access subscription page
- */
-export const canAccessSubscription = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can manage subscription (change plans, cancel, etc.)
- */
-export const canManageSubscription = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can edit/deactivate other members
- */
-export const canManageMembers = (user: User | null): boolean => {
-  return isAdmin(user);
-};
-
-/**
- * Check if user can create projects
- */
-export const canCreateProjects = (user: User | null): boolean => {
-  // Both admin and member can create projects
   return user !== null;
 };
 
 /**
- * Check if user can access a specific route
+ * Check if user can invite members - all users can invite
  */
-export const canAccessRoute = (user: User | null, route: string): boolean => {
-  // Admin can access everything
-  if (isAdmin(user)) {
-    return true;
-  }
-
-  // Member restrictions
-  const restrictedRoutes = [
-    '/members',
-    '/company-profile',
-    '/subscription'
-  ];
-
-  return !restrictedRoutes.some(restrictedRoute => route.startsWith(restrictedRoute));
+export const canInviteMembers = (user: User | null): boolean => {
+  return user !== null;
 };
 
+/**
+ * Check if user can access company profile - all users can access
+ */
+export const canAccessCompanyProfile = (user: User | null): boolean => {
+  return user !== null;
+};
+
+/**
+ * Check if user can edit company profile - all users can edit
+ */
+export const canEditCompanyProfile = (user: User | null): boolean => {
+  return user !== null;
+};
+
+/**
+ * Check if user can access subscription page - all users can access
+ */
+export const canAccessSubscription = (user: User | null): boolean => {
+  return user !== null;
+};
+
+/**
+ * Check if user can manage subscription - all users can manage
+ */
+export const canManageSubscription = (user: User | null): boolean => {
+  return user !== null;
+};
+
+/**
+ * Check if user can edit/deactivate other members - all users can manage
+ */
+export const canManageMembers = (user: User | null): boolean => {
+  return user !== null;
+};
+
+/**
+ * Check if user can create projects - all users can create
+ */
+export const canCreateProjects = (user: User | null): boolean => {
+  return user !== null;
+};
+
+/**
+ * Check if user can access a specific route - all users can access all routes
+ */
+export const canAccessRoute = (user: User | null, route: string): boolean => {
+  return user !== null;
+};

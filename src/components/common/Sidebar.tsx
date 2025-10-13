@@ -76,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/')}>Polaris</h1>
+                <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/projects/1')}>Polaris</h1>
                 <button 
                   onClick={onToggle}
                   className="md:hidden text-gray-400 hover:text-white"
@@ -289,14 +289,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <p className="text-sm font-medium truncate">{user?.username || 'User'}</p>
                   <p className="text-xs text-gray-400 truncate">{user?.email || 'user@example.com'}</p>
                 </div>
-                <button
+                {/* <button
                   onClick={onLogout}
                   className="ml-auto text-gray-400 hover:text-white flex-shrink-0"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L12 12.586V8z" clipRule="evenodd" />
                   </svg>
-                </button>
+                </button> */}
               </div>
             </div>
           </motion.aside>

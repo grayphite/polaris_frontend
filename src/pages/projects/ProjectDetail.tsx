@@ -171,7 +171,7 @@ const ProjectDetail: React.FC = () => {
             >
               Members
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab('settings')}
               className={`py-4 px-6 text-sm font-medium ${
                 activeTab === 'settings'
@@ -180,7 +180,7 @@ const ProjectDetail: React.FC = () => {
               }`}
             >
               Settings
-            </button>
+            </button> */}
           </nav>
         </div>
         

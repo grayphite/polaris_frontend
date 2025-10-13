@@ -184,8 +184,8 @@ const Profile: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
+        {/* <h1 className="text-2xl font-bold text-gray-900">My Profile</h1> */}
         {!isEditing ? (
           <Button
             variant="primary"
@@ -239,7 +239,7 @@ const Profile: React.FC = () => {
                 </svg>
                 <span>{formData.email}</span>
               </div>
-              <div className="mt-1 flex items-center text-gray-500">
+              {/* <div className="mt-1 flex items-center text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                 </svg>
@@ -250,7 +250,7 @@ const Profile: React.FC = () => {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                 </svg>
                 <span>{formData.timezone}</span>
-              </div>
+              </div> */}
             </div>
           </div>
           
@@ -305,7 +305,7 @@ const Profile: React.FC = () => {
                     />
                   </div>
                   
-                  <div>
+                  {/* <div>
                     <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700">
                       Job Title
                     </label>
@@ -369,21 +369,22 @@ const Profile: React.FC = () => {
                     <p className="mt-2 text-sm text-gray-500">
                       Brief description for your profile.
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </form>
             </motion.div>
           ) : (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium text-gray-900">About</h3>
-              <p className="mt-1 text-gray-600">{formData.bio}</p>
-            </div>
+            <></>
+            // <div className="mt-6">
+            //   <h3 className="text-lg font-medium text-gray-900">About</h3>
+            //   <p className="mt-1 text-gray-600">{formData.bio}</p>
+            // </div>
           )}
         </div>
       </div>
       
       {/* Notification preferences */}
-      <div className="bg-white rounded-lg shadow-card overflow-hidden">
+      {/* <div className="bg-white rounded-lg shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Notification Preferences</h3>
         </div>
@@ -444,7 +445,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
       
       {/* Change password */}
       <div className="bg-white rounded-lg shadow-card overflow-hidden">

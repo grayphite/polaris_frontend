@@ -1,4 +1,4 @@
-import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -6,7 +6,7 @@ import AuthLayout from './layouts/AuthLayout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ChatInterface from './pages/chat/ChatInterface';
 import CompanyProfile from './pages/profile/CompanyProfile';
-import Dashboard from './pages/Dashboard';
+// import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/auth/ForgotPassword';
 // Pages
 import Login from './pages/auth/Login';
@@ -21,7 +21,6 @@ import React from 'react';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import Subscription from './pages/subscription/Subscription';
-import { canAccessRoute } from './utils/permissions';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -35,18 +34,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Role-based route protection
-const RoleProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  const location = useLocation();
-  
-  // Check if user has permission to access this route
-  if (!canAccessRoute(user, location.pathname)) {
-    return <Navigate to="/404" replace />;
-  }
-  
-  return <>{children}</>;
-};
 
 function App() {
   return (
@@ -67,7 +54,8 @@ function App() {
               <MainLayout />
             </ProtectedRoute>
           }>
-            <Route path="/" element={<Dashboard />} />
+            {/* <Route path="/" element={<Dashboard />} /> */}
+            <Route path="/" element={<Navigate to="/projects/1" replace />} />
             
             {/* Projects routes */}
             <Route path="/projects" element={<ProjectsList />} />
@@ -77,24 +65,10 @@ function App() {
             {/* Profile routes */}
             <Route path="/profile" element={<Profile />} />
             
-            {/* Admin-only routes */}
-            <Route path="/members" element={
-              <RoleProtectedRoute>
-                <MembersList />
-              </RoleProtectedRoute>
-            } />
-            
-            <Route path="/company-profile" element={
-              <RoleProtectedRoute>
-                <CompanyProfile />
-              </RoleProtectedRoute>
-            } />
-            
-            <Route path="/subscription" element={
-              <RoleProtectedRoute>
-                <Subscription />
-              </RoleProtectedRoute>
-            } />
+            {/* All routes accessible to all users */}
+            <Route path="/members" element={<MembersList />} />
+            <Route path="/company-profile" element={<CompanyProfile />} />
+            <Route path="/subscription" element={<Subscription />} />
           </Route>
           
           {/* Not found route */}
