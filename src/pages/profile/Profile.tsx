@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -8,7 +8,7 @@ import { changePassword, updateProfile } from '../../services/authService';
 import { showSuccessToast, showErrorToast } from '../../utils/toast';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser, isLoading } = useAuth();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -41,6 +41,27 @@ const Profile: React.FC = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Update form data when user data becomes available
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+      }));
+    }
+  }, [user]);
+  
+  // Show loading state while user data is being loaded
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -79,23 +100,16 @@ const Profile: React.FC = () => {
         formData.lastName
       );
       
-      if (response.success) {
-        showSuccessToast('Profile updated successfully!');
-        
-        // Update user in localStorage
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          userData.firstName = formData.firstName;
-          userData.lastName = formData.lastName;
-          userData.username = `${formData.firstName} ${formData.lastName}`.trim();
-          localStorage.setItem('user', JSON.stringify(userData));
-        }
-        
-        setIsEditing(false);
-      } else {
-        showErrorToast('Failed to update profile');
-      }
+      showSuccessToast('Profile updated successfully!');
+      
+      // Update user in context and localStorage
+      updateUser({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        username: `${formData.firstName} ${formData.lastName}`.trim()
+      });
+      
+      setIsEditing(false);
     } catch (error: any) {
       console.error('Error updating profile:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update profile. Please try again.';
@@ -150,18 +164,15 @@ const Profile: React.FC = () => {
         passwordData.newPassword
       );
       
-      if (response.success) {
-        showSuccessToast(response.message || 'Password changed successfully!');
-        
-        // Reset form
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        });
-      } else {
-        showErrorToast(response.message || 'Failed to change password');
-      }
+      // If we reach here, the request was successful (200 status)
+      showSuccessToast('Password changed successfully!');
+      
+      // Reset form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
     } catch (error: any) {
       console.error('Error changing password:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to change password. Please try again.';
