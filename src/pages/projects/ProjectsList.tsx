@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
+import { useProjects } from '../../context/ProjectsContext';
 import { motion } from 'framer-motion';
 
 interface Project {
@@ -16,11 +17,12 @@ interface Project {
 }
 
 const ProjectsList: React.FC = () => {
+  const { projects: sidebarProjects, getDetails } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');
   
   // Mock data for projects
-  const projects: Project[] = [
+  const demoProjects: Project[] = [
     {
       id: '1',
       name: 'Marketing Campaign',
@@ -82,6 +84,35 @@ const ProjectsList: React.FC = () => {
       tags: ['development', 'mobile'],
     },
   ];
+
+  // Merge demo data with only user-created projects detected via localStorage
+  const projects: Project[] = useMemo(() => {
+    const createdProjects: Project[] = (sidebarProjects || [])
+      .map((p) => {
+        const key = `projectDetails:${p.id}`;
+        let details: string | null = null;
+        try {
+          details = window.localStorage.getItem(key);
+        } catch {}
+        if (!details) return null; // not a user-created project, skip
+        return {
+          id: p.id,
+          name: p.name,
+          description: details,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          conversationsCount: 0,
+          members: 1,
+          tags: [],
+        } as Project;
+      })
+      .filter((p): p is Project => Boolean(p));
+
+    // No id collisions expected (created ids are timestamps), but keep defensive filter
+    const createdIds = new Set(createdProjects.map((p) => p.id));
+    const rest = demoProjects.filter((p) => !createdIds.has(p.id));
+    return [...createdProjects, ...rest];
+  }, [sidebarProjects]);
   
   // Filter projects based on search query and filter
   const filteredProjects = projects.filter(project => {
@@ -103,18 +134,17 @@ const ProjectsList: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-        <Link to="/projects/new">
-          <Button
+        <Button
             variant="primary"
             leftIcon={
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
             }
+            onClick={() => { /* open handled in sidebar; route to sidebar action via hash */ const el = document.querySelector('#app-sidebar'); if (el) { const event = new CustomEvent('sidebar:create-project'); window.dispatchEvent(event as any); } }}
           >
             New Project
           </Button>
-        </Link>
       </div>
       
       {/* Search and filter */}
@@ -213,7 +243,6 @@ const ProjectsList: React.FC = () => {
               : "You haven't created any projects yet."}
           </p>
           <div className="mt-6">
-            <Link to="/projects/new">
               <Button
                 variant="primary"
                 leftIcon={
@@ -221,10 +250,10 @@ const ProjectsList: React.FC = () => {
                     <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                   </svg>
                 }
+                onClick={() => { const event = new CustomEvent('sidebar:create-project'); window.dispatchEvent(event as any); }}
               >
                 New Project
               </Button>
-            </Link>
           </div>
         </div>
       )}
