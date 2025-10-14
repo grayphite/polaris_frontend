@@ -1,6 +1,8 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useProjects } from '../../context/ProjectsContext';
+import { fetchProjectById } from '../../services/projectService';
+import { setProjectDetails } from '../../services/projectsStorage';
 
 import Button from '../../components/ui/Button';
 import { motion } from 'framer-motion';
@@ -43,6 +45,22 @@ const ProjectDetail: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
   }, [projectId, projects]);
+
+  // Fetch latest details for the current project when mounted or id changes
+  useEffect(() => {
+    if (!projectId) return;
+    (async () => {
+      try {
+        const data = await fetchProjectById(projectId);
+        if (data?.details) {
+          setProjectDetails(projectId, data.details);
+        }
+        // If backend returns a different name, we keep UI name from context for now
+      } catch {
+        // Silently fall back to local details when API is not ready
+      }
+    })();
+  }, [projectId]);
   
   // Use conversations from context (selected project) or empty for new projects
   const conversations: Conversation[] = useMemo(() => {
