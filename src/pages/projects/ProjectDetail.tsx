@@ -1,7 +1,9 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useProjects } from '../../context/ProjectsContext';
+import { useChats } from '../../context/ChatContext';
 import { fetchProjectById } from '../../services/projectService';
+import Loader from '../../components/common/Loader';
 import { setProjectDetails } from '../../services/projectsStorage';
 
 import Button from '../../components/ui/Button';
@@ -27,8 +29,10 @@ const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'conversations' | 'members' | 'settings'>('conversations');
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   
-  const { projects, conversationsByProject } = useProjects();
+  const { projects } = useProjects();
+  const { chatsByProject, getChatDetails } = useChats();
 
   const project = useMemo(() => {
     const ctxProject = (projects || []).find(p => p.id === projectId);
@@ -51,6 +55,7 @@ const ProjectDetail: React.FC = () => {
     if (!projectId) return;
     (async () => {
       try {
+        setIsLoadingConversations(true);
         const data = await fetchProjectById(projectId);
         if (data?.details) {
           setProjectDetails(projectId, data.details);
@@ -58,22 +63,24 @@ const ProjectDetail: React.FC = () => {
         // If backend returns a different name, we keep UI name from context for now
       } catch {
         // Silently fall back to local details when API is not ready
+      } finally {
+        setIsLoadingConversations(false);
       }
     })();
   }, [projectId]);
   
   // Use conversations from context (selected project) or empty for new projects
   const conversations: Conversation[] = useMemo(() => {
-    const list = projectId ? (conversationsByProject[projectId] || []) : [];
+    const list = projectId ? (chatsByProject[projectId] || []) : [];
     if (list.length === 0) return [];
     return list.map((c, idx) => ({
       id: c.id,
       title: c.title,
-      lastMessage: 'Conversation preview is not available in demo mode.',
+      lastMessage: getChatDetails(c.id) || 'No details available.',
       updatedAt: new Date(Date.now() - idx * 60_000).toISOString(),
       messageCount: 0,
     }));
-  }, [conversationsByProject, projectId]);
+  }, [chatsByProject, projectId]);
   
   // Mock data for members
   const members: ProjectMember[] = [
@@ -198,7 +205,9 @@ const ProjectDetail: React.FC = () => {
           {activeTab === 'conversations' && (
             <div className="space-y-6">
               {/* Conversations list remains here, toolbar moved to sidebar per new design */}
-              {conversations.length > 0 ? (
+              {isLoadingConversations ? (
+                <div className="py-8"><Loader /></div>
+              ) : conversations.length > 0 ? (
                 <div className="space-y-4">
                   {conversations.map((conversation, index) => (
                     <motion.div

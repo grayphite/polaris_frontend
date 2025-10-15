@@ -1,7 +1,10 @@
 import { useLocation, useParams } from 'react-router-dom';
+import { useChats } from '../../context/ChatContext';
+import { fetchChatById } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
 
 import Button from '../../components/ui/Button';
+import Loader from '../../components/common/Loader';
 
 interface Message {
   id: string;
@@ -20,29 +23,8 @@ const ChatInterface: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const location = useLocation();
   
-  // Mock conversations list
-  const conversations = [
-    {
-      id: '1',
-      title: 'Social Media Strategy',
-      updatedAt: '2023-10-05T14:45:00Z',
-    },
-    {
-      id: '2',
-      title: 'Email Campaign Planning',
-      updatedAt: '2023-10-04T09:20:00Z',
-    },
-    {
-      id: '3',
-      title: 'Content Calendar',
-      updatedAt: '2023-10-03T16:10:00Z',
-    },
-    {
-      id: '4',
-      title: 'Budget Allocation',
-      updatedAt: '2023-10-02T11:30:00Z',
-    },
-  ];
+  const { chatsByProject, getChatDetails, hydrateProjectChats } = useChats();
+  const [isMetaLoading, setIsMetaLoading] = useState(false);
   
   // Resolve title for the current chat
   const isNewChatId = chatId ? /^\d{13,}$/.test(chatId) : false;
@@ -72,13 +54,17 @@ const ChatInterface: React.FC = () => {
   // Mock conversation data
   const conversation = {
     id: chatId,
-    // For existing seeded chats, derive the title from the list; for brand-new (timestamp-like) chats, use resolved title
-    title:
-      chatId && !isNewChatId
-        ? (conversations.find((c) => c.id === chatId)?.title ?? `Chat ${chatId}`)
-        : (resolvedNewChatTitle ?? ''),
+    title: (() => {
+      if (!chatId) return '';
+      const list = projectId ? (chatsByProject[projectId] || []) : [];
+      const fromContext = list.find(c => c.id === chatId)?.title;
+      if (fromContext) return fromContext;
+      if (isNewChatId) return resolvedNewChatTitle ?? '';
+      return `Chat ${chatId}`;
+    })(),
     createdAt: '2023-10-01T12:00:00Z',
-  };
+    details: chatId ? getChatDetails(chatId) : '',
+  } as const;
   
   // Load initial messages
   useEffect(() => {
@@ -110,6 +96,29 @@ const ChatInterface: React.FC = () => {
       },
     ]);
   }, [chatId]);
+
+  // Always fetch fresh chat data when switching to a chat to ensure latest title/details
+  useEffect(() => {
+    (async () => {
+      if (!chatId) return;
+      setIsMetaLoading(true);
+      try {
+        const data = await fetchChatById(chatId);
+        if (data?.id && data.projectId) {
+          // Always hydrate with fresh data to ensure we have latest title/details
+          hydrateProjectChats(data.projectId, [{
+            id: data.id,
+            title: data.title,
+            details: data.details
+          }]);
+        }
+      } catch {
+        // Silent fallback - chat might not exist on backend yet
+      } finally {
+        setIsMetaLoading(false);
+      }
+    })();
+  }, [chatId, hydrateProjectChats]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -186,9 +195,17 @@ const ChatInterface: React.FC = () => {
         {/* Chat header */}
         <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center">
-            <h1 className="text-xl font-semibold text-gray-900">{conversation.title}</h1>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold text-gray-900">{conversation.title}</h1>
+                {isMetaLoading && <Loader size="sm" color="gray" />}
+              </div>
+              {!!conversation.details && (
+                <p className="text-sm text-gray-500 mt-0.5 line-clamp-1" title={conversation.details}>{conversation.details}</p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
+          {/* <div className="flex items-center space-x-2">
             <button className="p-2 rounded-full hover:bg-gray-100">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
@@ -204,7 +221,7 @@ const ChatInterface: React.FC = () => {
                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
               </svg>
             </button>
-          </div>
+          </div> */}
         </div>
         
         {/* Messages */}
