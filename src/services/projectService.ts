@@ -1,6 +1,11 @@
 import { makeRequest } from './api';
 
-export type ProjectDTO = { id: string; name: string; details?: string };
+export type ProjectDTO = {
+  id: string;
+  name: string;
+  details?: string;
+  chats?: Array<{ id: string; title: string; details?: string }>; // optional embedded chats
+};
 
 export async function fetchProjects(): Promise<ProjectDTO[]> {
   return makeRequest<ProjectDTO[]>('/projects', { method: 'GET' });

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getProjectDetails, removeProjectDetails, seedProjectDetails, setProjectDetails } from '../services/projectsStorage';
+import { useChats } from './ChatContext';
 import { createProjectApi, deleteProjectApi, fetchProjectById, fetchProjects, updateProjectApi } from '../services/projectService';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 
@@ -27,6 +28,7 @@ type ProjectsContextValue = {
 const ProjectsContext = createContext<ProjectsContextValue | undefined>(undefined);
 
 export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { hydrateProjectChats, clearProjectChats } = useChats();
   const location = useLocation();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([
@@ -67,6 +69,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setProjects(remote.map(r => ({ id: r.id, name: r.name })));
           // If backend returns details, store them for detail consumers
           remote.forEach(r => { if (r.details) setProjectDetails(r.id, r.details!); });
+          // Hydrate embedded chats when present
+          remote.forEach(r => { if (Array.isArray(r.chats) && r.chats.length) hydrateProjectChats(r.id, r.chats!.map(c => ({ id: c.id, title: c.title, details: c.details })) ); });
         }
       } catch (err) {
         // Silent fallback; keep demo projects
@@ -77,11 +81,14 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     })();
   }, []);
 
-  // Ensure active project (from URL) is present and hydrated
+  // Ensure active project (from URL) is present and hydrated - only for project detail pages, not chat pages
   useEffect(() => {
-    const match = location.pathname.match(/^\/projects\/([^\/]+)/);
+    const match = location.pathname.match(/^\/projects\/([^\/]+)(?:\/|$)/);
     const activeId = match ? match[1] : null;
-    if (!activeId) return;
+    const isProjectDetailPage = location.pathname === `/projects/${activeId}`;
+    
+    if (!activeId || !isProjectDetailPage) return;
+    
     const exists = projects.some(p => p.id === activeId);
     if (!exists) {
       // add placeholder so sidebar highlights
@@ -98,12 +105,16 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             return next;
           });
           if (data.details) setProjectDetails(data.id, data.details);
+          if (Array.isArray((data as any).chats) && (data as any).chats.length) {
+            const chats = (data as any).chats.map((c: any) => ({ id: c.id, title: c.title, details: c.details }));
+            hydrateProjectChats(data.id, chats);
+          }
         }
       } catch (err: any) {
         const status = err?.response?.status;
         if (status === 404) {
           showErrorToast('Project not found');
-          navigate('/projects');
+        //   navigate('/projects');
         }
       }
     })();
@@ -162,6 +173,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return rest;
     });
     removeProjectDetails(projectId);
+    clearProjectChats(projectId);
     (async () => {
       try {
         await deleteProjectApi(projectId);
