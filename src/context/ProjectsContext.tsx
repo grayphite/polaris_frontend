@@ -1,20 +1,31 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getProjectDetails, removeProjectDetails, seedProjectDetails, setProjectDetails } from '../services/projectsStorage';
 import { useChats } from './ChatContext';
 import { createProjectApi, deleteProjectApi, fetchProjectById, fetchProjects, updateProjectApi } from '../services/projectService';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 
-export type Project = { id: string; name: string };
+export type Project = { id: string; name: string; description?: string; created_at?: string; updated_at?: string };
 export type Conversation = { id: string; title: string };
 
 type ProjectsContextValue = {
   projects: Project[];
   conversationsByProject: Record<string, Conversation[]>;
-  getDetails: (projectId: string) => string;
   projectsLoading: boolean;
-  createProject: (name: string, details: string) => string; // returns id
-  updateProject: (projectId: string, name: string, details: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  pagination: {
+    current_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+    pages: number;
+    per_page: number;
+    total: number;
+  } | null;
+  loadProjects: () => Promise<void>;
+  createProject: (name: string, description: string) => string; // returns id
+  updateProject: (projectId: string, name: string, description: string) => void;
   deleteProject: (projectId: string) => void;
   startConversation: (projectId: string, title: string) => string; // returns conversation id
   // UI flags for create/edit modal hosted in Sidebar
@@ -23,6 +34,11 @@ type ProjectsContextValue = {
   editProjectId: string | null;
   beginEditProject: (projectId: string) => void;
   endEditProject: () => void;
+  // Sidebar projects state
+  sidebarProjects: Project[];
+  sidebarLoading: boolean;
+  sidebarHasMore: boolean;
+  loadMoreSidebarProjects: () => Promise<void>;
 };
 
 const ProjectsContext = createContext<ProjectsContextValue | undefined>(undefined);
@@ -31,54 +47,102 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { hydrateProjectChats, clearProjectChats } = useChats();
   const location = useLocation();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>([
-    { id: '1', name: 'Marketing Campaign' },
-    { id: '2', name: 'Product Roadmap' },
-    { id: '3', name: 'Customer Research' },
-  ]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pagination, setPagination] = useState<{
+    current_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+    pages: number;
+    per_page: number;
+    total: number;
+  } | null>(null);
 
-  const [conversationsByProject, setConversationsByProject] = useState<Record<string, Conversation[]>>({
-    '1': [
-      { id: '1', title: 'Social Media Strategy' },
-      { id: '2', title: 'Email Campaign Planning' },
-      { id: '3', title: 'Content Calendar' },
-    ],
-    '2': [
-      { id: '4', title: 'Roadmap Q4' },
-      { id: '5', title: 'Stakeholder Feedback' },
-    ],
-    '3': [
-      { id: '6', title: 'Interview Notes' },
-    ],
-  });
+  const [conversationsByProject, setConversationsByProject] = useState<Record<string, Conversation[]>>({});
 
-  // Seed demo details once and attempt to load projects from API
-  useEffect(() => {
-    seedProjectDetails({
-      '1': 'Q4 marketing strategy and content planning for the new product launch. This project includes all marketing materials, social media strategy, and PR planning.',
-      '2': 'Feature planning and prioritization for next quarter across product areas.',
-      '3': 'Analysis of customer feedback and market trends to inform roadmap.',
-    });
-    // Try loading projects from API; fall back to seeded list on failure
-    (async () => {
-      try {
-        setProjectsLoading(true);
-        const remote = await fetchProjects();
-        if (Array.isArray(remote) && remote.length) {
-          setProjects(remote.map(r => ({ id: r.id, name: r.name })));
-          // If backend returns details, store them for detail consumers
-          remote.forEach(r => { if (r.details) setProjectDetails(r.id, r.details!); });
-          // Hydrate embedded chats when present
-          remote.forEach(r => { if (Array.isArray(r.chats) && r.chats.length) hydrateProjectChats(r.id, r.chats!.map(c => ({ id: c.id, title: c.title, details: c.details })) ); });
+  // Sidebar projects state
+  const [sidebarProjects, setSidebarProjects] = useState<Project[]>([]);
+  const [sidebarLoading, setSidebarLoading] = useState<boolean>(false);
+  const [sidebarHasMore, setSidebarHasMore] = useState<boolean>(true);
+  const [sidebarPage, setSidebarPage] = useState<number>(1);
+
+  // Load projects function
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const response = await fetchProjects(currentPage, 10, searchQuery, false);
+      setProjects(response.projects.map(r => ({ 
+        id: r.id.toString(), 
+        name: r.name,
+        description: r.description,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      })));
+      setPagination(response.pagination);
+      
+      // Hydrate embedded chats when present
+      response.projects.forEach(r => { 
+        if (Array.isArray(r.chats) && r.chats.length) {
+          hydrateProjectChats(r.id.toString(), r.chats!.map(c => ({ 
+            id: c.id, 
+            title: c.title, 
+            details: c.details 
+          }))); 
         }
-      } catch (err) {
-        // Silent fallback; keep demo projects
-        console.warn('Projects API not available, using demo data');
-      } finally {
-        setProjectsLoading(false);
-      }
-    })();
+      });
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  // Load more sidebar projects function
+  const loadMoreSidebarProjects = async () => {
+    if (sidebarLoading || !sidebarHasMore) return;
+    
+    setSidebarLoading(true);
+    try {
+      const response = await fetchProjects(sidebarPage, 10, '', false);
+      const newProjects = response.projects.map(r => ({ 
+        id: r.id.toString(), 
+        name: r.name,
+        description: r.description,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      }));
+      
+      setSidebarProjects(prev => [...prev, ...newProjects]);
+      setSidebarPage(prev => prev + 1);
+      setSidebarHasMore(response.pagination.has_next);
+      
+      // Hydrate embedded chats when present
+      response.projects.forEach(r => { 
+        if (Array.isArray(r.chats) && r.chats.length) {
+          hydrateProjectChats(r.id.toString(), r.chats!.map(c => ({ 
+            id: c.id, 
+            title: c.title, 
+            details: c.details 
+          }))); 
+        }
+      });
+    } catch (err) {
+      console.error('Failed to load more sidebar projects:', err);
+    } finally {
+      setSidebarLoading(false);
+    }
+  };
+
+  // Load projects on mount and when search/page changes
+  useEffect(() => {
+    loadProjects();
+  }, [currentPage, searchQuery]);
+
+  // Load initial sidebar projects on mount
+  useEffect(() => {
+    loadMoreSidebarProjects();
   }, []);
 
   // Ensure active project (from URL) is present and hydrated - only for project detail pages, not chat pages
@@ -100,21 +164,30 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const data = await fetchProjectById(activeId);
         if (data?.id) {
           setProjects(prev => {
-            const present = prev.some(p => p.id === data.id);
-            const next = present ? prev.map(p => (p.id === data.id ? { id: data.id, name: data.name || p.name } : p)) : [{ id: data.id, name: data.name || 'Project' }, ...prev];
+            const present = prev.some(p => p.id === data.id.toString());
+            const next = present ? prev.map(p => (p.id === data.id.toString() ? { 
+              id: data.id.toString(), 
+              name: data.name || p.name,
+              description: data.description || p.description
+            } : p)) : [{ 
+              id: data.id.toString(), 
+              name: data.name || 'Project',
+              description: data.description
+            }, ...prev];
             return next;
           });
-          if (data.details) setProjectDetails(data.id, data.details);
           if (Array.isArray((data as any).chats) && (data as any).chats.length) {
             const chats = (data as any).chats.map((c: any) => ({ id: c.id, title: c.title, details: c.details }));
-            hydrateProjectChats(data.id, chats);
+            hydrateProjectChats(data.id.toString(), chats);
           }
         }
       } catch (err: any) {
         const status = err?.response?.status;
         if (status === 404) {
           showErrorToast('Project not found');
-        //   navigate('/projects');
+          // Remove the placeholder project that was added
+          setProjects(prev => prev.filter(p => p.id !== activeId));
+          navigate('/projects');
         }
       }
     })();
@@ -124,28 +197,35 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [openCreateProject, setOpenCreateProject] = useState(false);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
-  const getDetails = (projectId: string) => getProjectDetails(projectId);
-
-  const createProject = (name: string, details: string) => {
+  const createProject = (name: string, description: string) => {
     const optimisticId = Date.now().toString();
-    setProjects(prev => [{ id: optimisticId, name }, ...prev]);
+    const newProject = { id: optimisticId, name, description };
+    setProjects(prev => [newProject, ...prev]);
+    setSidebarProjects(prev => [newProject, ...prev]); // Also add to sidebar
     setConversationsByProject(prev => ({ ...prev, [optimisticId]: [] }));
-    setProjectDetails(optimisticId, details);
     (async () => {
       try {
-        const created = await createProjectApi(name, details);
-        // Reconcile optimistic id with server id if different
-        if (created?.id && created.id !== optimisticId) {
-          setProjects(prev => prev.map(p => (p.id === optimisticId ? { id: created.id, name: created.name || name } : p)));
+        const created = await createProjectApi(name, description);
+        if (created?.id) {
+          const realProject = { 
+            id: created.id.toString(), 
+            name: created.name || name,
+            description: created.description || description,
+            created_at: created.created_at,
+            updated_at: created.updated_at
+          };
+          // Update with real data from API
+          setProjects(prev => prev.map(p => (p.id === optimisticId ? realProject : p)));
+          setSidebarProjects(prev => prev.map(p => (p.id === optimisticId ? realProject : p))); // Also update sidebar
           setConversationsByProject(prev => {
             const list = prev[optimisticId] || [];
             const { [optimisticId]: _removed, ...rest } = prev;
-            return { ...rest, [created.id]: list };
+            return { ...rest, [created.id.toString()]: list };
           });
-          setProjectDetails(created.id, created.details || details);
-          removeProjectDetails(optimisticId);
+          // Navigate to correct project ID
+          navigate(`/projects/${created.id}`);
         }
-        showSuccessToast('Project created');
+        showSuccessToast('Project Created Successfully!');
       } catch (err) {
         showErrorToast('Failed to create project');
       }
@@ -153,13 +233,14 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return optimisticId;
   };
 
-  const updateProject = (projectId: string, name: string, details: string) => {
-    setProjects(prev => prev.map(p => (p.id === projectId ? { ...p, name } : p)));
-    setProjectDetails(projectId, details);
+  const updateProject = (projectId: string, name: string, description: string) => {
+    const updatedProject = { id: projectId, name, description, created_at: undefined, updated_at: undefined };
+    setProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p)));
+    setSidebarProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p))); // Also update sidebar
     (async () => {
       try {
-        await updateProjectApi(projectId, name, details);
-        showSuccessToast('Project updated');
+        await updateProjectApi(projectId, name, description);
+        showSuccessToast('Project Updated Successfully!');
       } catch (err) {
         showErrorToast('Failed to update project');
       }
@@ -168,16 +249,16 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteProject = (projectId: string) => {
     setProjects(prev => prev.filter(p => p.id !== projectId));
+    setSidebarProjects(prev => prev.filter(p => p.id !== projectId)); // Also remove from sidebar
     setConversationsByProject(prev => {
       const { [projectId]: _removed, ...rest } = prev;
       return rest;
     });
-    removeProjectDetails(projectId);
     clearProjectChats(projectId);
     (async () => {
       try {
         await deleteProjectApi(projectId);
-        showSuccessToast('Project deleted');
+        showSuccessToast('Project Deleted Successfully!');
       } catch (err) {
         showErrorToast('Failed to delete project');
       }
@@ -202,11 +283,25 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setOpenCreateProject(false);
   };
 
+  // Custom setSearchQuery that also resets page to 1 when query actually changes
+  const handleSetSearchQuery = (query: string) => {
+    if (query === searchQuery) return; // no-op if nothing changed
+    setSearchQuery(query);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
   const value = useMemo<ProjectsContextValue>(() => ({
     projects,
     conversationsByProject,
-    getDetails,
     projectsLoading,
+    searchQuery,
+    setSearchQuery: handleSetSearchQuery,
+    currentPage,
+    setCurrentPage,
+    pagination,
+    loadProjects,
     createProject,
     updateProject,
     deleteProject,
@@ -216,7 +311,11 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     editProjectId,
     beginEditProject,
     endEditProject,
-  }), [projects, conversationsByProject, openCreateProject, editProjectId]);
+    sidebarProjects,
+    sidebarLoading,
+    sidebarHasMore,
+    loadMoreSidebarProjects,
+  }), [projects, conversationsByProject, projectsLoading, searchQuery, currentPage, pagination, openCreateProject, editProjectId, sidebarProjects, sidebarLoading, sidebarHasMore, loadMoreSidebarProjects]);
 
   return (
     <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>

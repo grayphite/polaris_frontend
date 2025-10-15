@@ -25,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [searchProjectId, setSearchProjectId] = React.useState<string | null>(null);
   const [projectSearch, setProjectSearch] = React.useState('');
   const [menuOpenForProject, setMenuOpenForProject] = React.useState<string | null>(null);
+  const [menuDirection, setMenuDirection] = React.useState<'down' | 'up'>('down');
   const [deleteProjectId, setDeleteProjectId] = React.useState<string | null>(null);
   const [showCreateProject, setShowCreateProject] = React.useState(false);
   const [newProjectName, setNewProjectName] = React.useState('');
@@ -42,8 +43,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const {
     projects,
+    sidebarProjects,
+    sidebarLoading,
+    sidebarHasMore,
+    loadMoreSidebarProjects,
     conversationsByProject,
-    getDetails,
     createProject,
     updateProject,
     deleteProject,
@@ -51,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     editProjectId,
     endEditProject,
   } = useProjects();
-  const { chatsByProject, createChat, updateChat, deleteChat, getChatDetails } = useChats();
+  const { chatsByProject, createChat, updateChat, deleteChat } = useChats();
   const navigate = useNavigate();
 
   const conversations = selectedProjectId ? (chatsByProject[selectedProjectId] || []) : [];
@@ -99,6 +103,31 @@ const Sidebar: React.FC<SidebarProps> = ({
     setTimeout(() => menuItemRefs[clamped].current?.focus(), 0);
   };
 
+  const calculateMenuDirection = (triggerElement: HTMLElement) => {
+    const sidebar = document.querySelector('#app-sidebar');
+    if (!sidebar) return 'down';
+    
+    const triggerRect = triggerElement.getBoundingClientRect();
+    const sidebarRect = sidebar.getBoundingClientRect();
+    const menuHeight = 100; // Account for padding and shadows
+    
+    // Account for potential padding/margins in the sidebar
+    const sidebarPadding = 16;
+    const usableSpaceBelow = sidebarRect.bottom - triggerRect.bottom - sidebarPadding;
+    const usableSpaceAbove = triggerRect.top - sidebarRect.top - sidebarPadding;
+    
+    // If we're in bottom 30% of sidebar, flip upward
+    const sidebarHeight = sidebarRect.bottom - sidebarRect.top;
+    const triggerPositionInSidebar = (triggerRect.top - sidebarRect.top) / sidebarHeight;
+    const isNearBottom = triggerPositionInSidebar > 0.7; // Bottom 30%
+    
+    if ((usableSpaceBelow < menuHeight || isNearBottom) && usableSpaceAbove >= menuHeight) {
+      return 'up';
+    }
+    
+    return 'down';
+  };
+
   const openCreate = () => {
     setIsEditingProject(false);
     setNewProjectName('');
@@ -111,25 +140,24 @@ const Sidebar: React.FC<SidebarProps> = ({
     const project = projects.find(p => p.id === projectId);
     setIsEditingProject(true);
     setNewProjectName(project?.name || '');
-    setNewProjectDetails(getDetails(projectId));
+    setNewProjectDetails(project?.description || '');
     setShowCreateProject(true);
   };
 
   const submitProject = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const name = newProjectName.trim();
-    const details = newProjectDetails.trim();
-    if (!name || !details) return;
+    const description = newProjectDetails.trim();
+    if (!name || !description) return;
     if (isEditingProject && editProjectId) {
-      updateProject(editProjectId, name, details);
+      updateProject(editProjectId, name, description);
       setShowCreateProject(false);
       endEditProject();
       navigate(`/projects/${editProjectId}`);
       return;
     }
-    const id = createProject(name, details);
+    createProject(name, description);
     setShowCreateProject(false);
-    navigate(`/projects/${id}`);
   };
 
   const handleDelete = (projectId: string) => {
@@ -143,12 +171,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (!title || !details) return;
     setIsSubmittingChat(true);
     try {
-      const cid = createChat(projectId, title, details);
+      const cid = await createChat(projectId, title, details);
+      navigate(`/projects/${projectId}/chat/${cid}`);
+    } catch {
+      // On failure, user already saw toast; go back to project page
+      // navigate(`/projects/${projectId}`);
+    } finally {
       setShowCreateChat(false);
       setNewChatName('');
       setNewChatDetails('');
-      navigate(`/projects/${projectId}/chat/${cid}`);
-    } finally {
       setIsSubmittingChat(false);
     }
   };
@@ -156,9 +187,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const openEditChat = (chatId: string, title: string) => {
     setChatEditId(chatId);
     setChatEditTitle(title);
-    // Get details from context first, then fallback to localStorage
-    const chatDetails = getChatDetails(chatId);
-    setChatEditDetails(chatDetails);
+    // Get details from context
+    const chat = conversations.find(c => c.id === chatId);
+    setChatEditDetails(chat?.details || '');
   };
 
   const submitEditChat = (e?: React.FormEvent) => {
@@ -179,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: -280 }}
             transition={{ duration: 0.2 }}
-            className={`bg-dark-300 text-white w-64 flex-shrink-0 fixed md:relative inset-y-0 left-0 h-screen md:h-auto z-30 flex flex-col`}
+            className={`bg-dark-300 text-white w-64 flex-shrink-0 fixed md:relative inset-y-0 left-0 h-screen z-30 flex flex-col overflow-hidden`}
             role={!isDesktop ? 'dialog' : undefined}
             aria-modal={!isDesktop ? true : undefined}
             aria-label="Sidebar navigation"
@@ -187,7 +218,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/projects/1')}>Polaris</h1>
+                <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/projects')}>Polaris</h1>
                 <button 
                   onClick={onToggle}
                   className="md:hidden text-gray-400 hover:text-white"
@@ -200,7 +231,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            <nav className="p-4 pb-28 flex-1 overflow-y-auto">
+            <div className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <Link to="/projects" className="text-sm uppercase tracking-wide text-gray-400">Projects</Link>
                 <button
@@ -214,14 +245,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               </div>
 
-              <ul className="space-y-3 mb-6">
-                {projects.map((p) => (
+              <div style={{ height: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'none' }}>
+                <ul className="space-y-3">
+                {sidebarProjects.map((p) => (
                   <li key={p.id}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <NavLink
                         to={`/projects/${p.id}`}
                         className={({ isActive }) =>
-                          `flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
+                          `flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-sm min-w-0 ${
                             isActive ? 'bg-dark-200 text-white' : 'text-gray-300 hover:bg-dark-200 hover:text-white'
                           }`
                         }
@@ -229,9 +261,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                           <path d="M2 6a2 2 0 012-2h3.5a1 1 0 01.8.4l.9 1.2H16a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                         </svg>
-                        <span className="truncate">{p.name}</span>
+                        <span className="truncate min-w-0" title={p.name}>{p.name}</span>
                       </NavLink>
-                      <div className="relative" ref={menuContainerRef}>
+                      <div className="relative flex-shrink-0" ref={menuContainerRef}>
                         <button
                           ref={menuTriggerRef}
                           className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
@@ -240,7 +272,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                           aria-controls={menuOpenForProject === p.id ? `project-menu-${p.id}` : undefined}
                           id={`project-menu-trigger-${p.id}`}
                           title="Project options"
-                          onClick={() => { setMenuOpenForProject(prev => (prev === p.id ? null : p.id)); setMenuFocusIndex(0); }}
+                          onClick={(e) => { 
+                            const direction = calculateMenuDirection(e.currentTarget);
+                            setMenuDirection(direction);
+                            setMenuOpenForProject(prev => (prev === p.id ? null : p.id)); 
+                            setMenuFocusIndex(0); 
+                          }}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10 3a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4z" />
@@ -251,7 +288,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                             id={`project-menu-${p.id}`}
                             role="menu"
                             aria-labelledby={`project-menu-trigger-${p.id}`}
-                            className="absolute right-0 mt-1 w-40 bg-white text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 origin-top-right transform transition ease-out duration-150"
+                            className={`absolute right-0 w-40 bg-white text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
+                              menuDirection === 'up' 
+                                ? 'bottom-full mb-1 origin-bottom-right' 
+                                : 'top-full mt-1 origin-top-right'
+                            }`}
                             onMouseDown={(e) => { e.stopPropagation(); }}
                             onKeyDown={(e) => {
                               if (e.key === 'ArrowDown') { e.preventDefault(); focusMenuItem(menuFocusIndex + 1); }
@@ -376,8 +417,44 @@ const Sidebar: React.FC<SidebarProps> = ({
                     )}
                   </li>
                 ))}
-              </ul>
-            </nav>
+                </ul>
+                
+                {/* Load More Button */}
+                {sidebarHasMore && (
+                  <div className="mt-4">
+                    <button
+                      onClick={loadMoreSidebarProjects}
+                      disabled={sidebarLoading}
+                      className="w-full px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-200 rounded-md border border-dark-200 hover:border-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sidebarLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+                          Loading...
+                        </div>
+                      ) : (
+                        'Load More Projects'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* User Profile Section */}
+            <div className="p-4 border-t border-gray-700 mt-auto">
+              <div className="flex items-center min-w-0 gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold">
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.username || 'User'}</p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email || 'user@example.com'}</p>
+                </div>
+              </div>
+            </div>
 
             {showCreateProject && (
               <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -405,7 +482,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onChange={(e) => setNewProjectName(e.target.value)}
                       autoFocus
                     />
-                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Details</label>
+                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description</label>
                     <textarea
                       className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="Brief description, scope, goals..."
@@ -608,27 +685,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
 
-            <div className="p-4 border-t border-gray-700 mt-auto">
-              <div className="flex items-center min-w-0 gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold">
-                    {user?.username?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{user?.username || 'User'}</p>
-                  <p className="text-xs text-gray-400 truncate">{user?.email || 'user@example.com'}</p>
-                </div>
-                {/* <button
-                  onClick={onLogout}
-                  className="ml-auto text-gray-400 hover:text-white flex-shrink-0"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L12 12.586V8z" clipRule="evenodd" />
-                  </svg>
-                </button> */}
-              </div>
-            </div>
           </motion.aside>
         )}
       </AnimatePresence>

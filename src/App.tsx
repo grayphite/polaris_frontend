@@ -58,7 +58,7 @@ function App() {
             </ProtectedRoute>
           }>
             {/* <Route path="/" element={<Dashboard />} /> */}
-            <Route path="/" element={<Navigate to="/projects/1" replace />} />
+            <Route path="/" element={<Navigate to="/projects" replace />} />
             
             {/* Projects routes */}
             <Route path="/projects" element={<ProjectsList />} />

@@ -23,7 +23,7 @@ const ChatInterface: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const location = useLocation();
   
-  const { chatsByProject, getChatDetails, hydrateProjectChats } = useChats();
+  const { chatsByProject, hydrateProjectChats } = useChats();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   
   // Resolve title for the current chat
@@ -63,7 +63,12 @@ const ChatInterface: React.FC = () => {
       return `Chat ${chatId}`;
     })(),
     createdAt: '2023-10-01T12:00:00Z',
-    details: chatId ? getChatDetails(chatId) : '',
+    details: (() => {
+      if (!chatId) return '';
+      const list = projectId ? (chatsByProject[projectId] || []) : [];
+      const chat = list.find(c => c.id === chatId);
+      return chat?.details || '';
+    })(),
   } as const;
   
   // Load initial messages
