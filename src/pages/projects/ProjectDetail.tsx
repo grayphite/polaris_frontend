@@ -122,7 +122,7 @@ const ProjectDetail: React.FC = () => {
               Created on {formatDate(project.createdAt)} • Last updated {formatDate(project.updatedAt)}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <Link to={`/projects/${projectId}/chat/new`}>
               <Button
                 variant="primary"
@@ -135,7 +135,7 @@ const ProjectDetail: React.FC = () => {
                 New Conversation
               </Button>
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
       
