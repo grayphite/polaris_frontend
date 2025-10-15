@@ -169,7 +169,7 @@ const MainLayout: React.FC = () => {
           </header>
           
           {/* Page content */}
-          <main className="flex-1 overflow-auto bg-light-200 p-4">
+          <main className="flex-1 min-h-0 overflow-auto bg-light-200 p-4">
             <Outlet context={{ 
               openInviteModal: () => setShowInviteModal(true)
             }} />

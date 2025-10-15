@@ -4,7 +4,6 @@ import { useProjects } from '../../context/ProjectsContext';
 import { useChats } from '../../context/ChatContext';
 import { fetchProjectById } from '../../services/projectService';
 import Loader from '../../components/common/Loader';
-import { setProjectDetails } from '../../services/projectsStorage';
 
 import Button from '../../components/ui/Button';
 import { motion } from 'framer-motion';
@@ -32,42 +31,19 @@ const ProjectDetail: React.FC = () => {
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   
   const { projects } = useProjects();
-  const { chatsByProject, getChatDetails } = useChats();
+  const { chatsByProject } = useChats();
 
   const project = useMemo(() => {
     const ctxProject = (projects || []).find(p => p.id === projectId);
-    const detailsKey = `projectDetails:${projectId}`;
-    let storedDetails: string | null = null;
-    try {
-      storedDetails = window.localStorage.getItem(detailsKey);
-    } catch {}
     return {
       id: projectId,
       name: ctxProject?.name || 'Project',
-      description: storedDetails || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      description: ctxProject?.description || '',
+      createdAt: ctxProject?.created_at || new Date().toISOString(),
+      updatedAt: ctxProject?.updated_at || new Date().toISOString(),
     };
   }, [projectId, projects]);
 
-  // Fetch latest details for the current project when mounted or id changes
-  useEffect(() => {
-    if (!projectId) return;
-    (async () => {
-      try {
-        setIsLoadingConversations(true);
-        const data = await fetchProjectById(projectId);
-        if (data?.details) {
-          setProjectDetails(projectId, data.details);
-        }
-        // If backend returns a different name, we keep UI name from context for now
-      } catch {
-        // Silently fall back to local details when API is not ready
-      } finally {
-        setIsLoadingConversations(false);
-      }
-    })();
-  }, [projectId]);
   
   // Use conversations from context (selected project) or empty for new projects
   const conversations: Conversation[] = useMemo(() => {
@@ -76,7 +52,7 @@ const ProjectDetail: React.FC = () => {
     return list.map((c, idx) => ({
       id: c.id,
       title: c.title,
-      lastMessage: getChatDetails(c.id) || 'No details available.',
+      lastMessage: c.details || 'No details available.',
       updatedAt: new Date(Date.now() - idx * 60_000).toISOString(),
       messageCount: 0,
     }));

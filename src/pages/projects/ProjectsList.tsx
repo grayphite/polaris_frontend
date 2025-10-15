@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useProjects } from '../../context/ProjectsContext';
 import { motion } from 'framer-motion';
+import Loader from '../../components/common/Loader';
 
 interface Project {
   id: string;
@@ -17,123 +18,79 @@ interface Project {
 }
 
 const ProjectsList: React.FC = () => {
-  const { projects: sidebarProjects, getDetails } = useProjects();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { 
+    projects, 
+    projectsLoading, 
+    searchQuery, 
+    setSearchQuery, 
+    currentPage, 
+    setCurrentPage, 
+    pagination 
+  } = useProjects();
   const [filter, setFilter] = useState('all');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [didMount, setDidMount] = useState(false);
   
-  // Mock data for projects
-  const demoProjects: Project[] = [
-    {
-      id: '1',
-      name: 'Marketing Campaign',
-      description: 'Q4 marketing strategy and content planning',
-      createdAt: '2023-09-15',
-      updatedAt: '2023-10-05',
-      conversationsCount: 8,
-      members: 4,
-      tags: ['marketing', 'content'],
-    },
-    {
-      id: '2',
-      name: 'Product Roadmap',
-      description: 'Feature planning and prioritization for next quarter',
-      createdAt: '2023-08-20',
-      updatedAt: '2023-10-03',
-      conversationsCount: 12,
-      members: 6,
-      tags: ['product', 'planning'],
-    },
-    {
-      id: '3',
-      name: 'Customer Research',
-      description: 'Analysis of customer feedback and market trends',
-      createdAt: '2023-09-01',
-      updatedAt: '2023-09-28',
-      conversationsCount: 5,
-      members: 3,
-      tags: ['research', 'customers'],
-    },
-    {
-      id: '4',
-      name: 'Website Redesign',
-      description: 'Redesigning company website for better UX and conversion',
-      createdAt: '2023-07-10',
-      updatedAt: '2023-09-20',
-      conversationsCount: 15,
-      members: 5,
-      tags: ['design', 'website'],
-    },
-    {
-      id: '5',
-      name: 'Sales Strategy',
-      description: 'Developing new sales approach for enterprise clients',
-      createdAt: '2023-09-10',
-      updatedAt: '2023-10-01',
-      conversationsCount: 7,
-      members: 4,
-      tags: ['sales', 'strategy'],
-    },
-    {
-      id: '6',
-      name: 'Mobile App Development',
-      description: 'Building companion mobile app for our main product',
-      createdAt: '2023-08-05',
-      updatedAt: '2023-09-25',
-      conversationsCount: 20,
-      members: 8,
-      tags: ['development', 'mobile'],
-    },
-  ];
-
-  // Merge demo data with only user-created projects detected via localStorage
-  const projects: Project[] = useMemo(() => {
-    const createdProjects: Project[] = (sidebarProjects || [])
-      .map((p) => {
-        const key = `projectDetails:${p.id}`;
-        let details: string | null = null;
-        try {
-          details = window.localStorage.getItem(key);
-        } catch {}
-        if (!details) return null; // not a user-created project, skip
-        return {
-          id: p.id,
-          name: p.name,
-          description: details,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          conversationsCount: 0,
-          members: 1,
-          tags: [],
-        } as Project;
-      })
-      .filter((p): p is Project => Boolean(p));
-
-    // No id collisions expected (created ids are timestamps), but keep defensive filter
-    const createdIds = new Set(createdProjects.map((p) => p.id));
-    const rest = demoProjects.filter((p) => !createdIds.has(p.id));
-    return [...createdProjects, ...rest];
-  }, [sidebarProjects]);
+  // Convert API projects to display format
+  const displayProjects: Project[] = useMemo(() => {
+    return projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      conversationsCount: 0,
+      members: 1,
+      tags: [],
+    } as Project));
+  }, [projects]);
   
-  // Filter projects based on search query and filter
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = 
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    if (filter === 'all') return matchesSearch;
-    if (filter === 'recent') {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      return matchesSearch && new Date(project.updatedAt) >= oneWeekAgo;
+  // Initialize local input from context once to avoid initial no-op debounce
+  useEffect(() => {
+    if (!didMount) {
+      setLocalSearchQuery(searchQuery || '');
+      setDidMount(true);
     }
-    return matchesSearch;
-  });
+  }, [didMount, searchQuery]);
+
+  // Debounced search effect with guard to avoid redundant updates
+  useEffect(() => {
+    if (!didMount) return; // skip first render
+    const timer = setTimeout(() => {
+      if (localSearchQuery !== searchQuery) {
+        setSearchQuery(localSearchQuery);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSearchQuery, searchQuery, setSearchQuery, didMount]);
+  
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalSearchQuery(e.target.value);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
+    <div className="h-full flex flex-col">
+      <div className="space-y-6 flex-1">
+      {/* Search and New Project in same row */}
+      <div className="flex items-center justify-between">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search projects..."
+            className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm shadow-sm"
+            value={localSearchQuery}
+            onChange={handleSearchChange}
+          />
+        </div>
+        
+        {/* New Project Button */}
         <Button
             variant="primary"
             leftIcon={
@@ -147,42 +104,15 @@ const ProjectsList: React.FC = () => {
           </Button>
       </div>
       
-      {/* Search and filter */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Search projects..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex-shrink-0">
-            <select
-              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">All Projects</option>
-              <option value="recent">Recently Updated</option>
-              <option value="mine">My Projects</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
       {/* Projects grid */}
-      {filteredProjects.length > 0 ? (
+      {projectsLoading ? (
+        <div className="h-full flex items-center justify-center">
+          <Loader size="lg" color="primary" />
+          {/* <p className="mt-2 text-gray-500">Loading projects...</p> */}
+        </div>
+      ) : displayProjects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project, index) => (
+          {displayProjects.map((project, index) => (
             <motion.div
               key={project.id}
               initial={{ opacity: 0, y: 20 }}
@@ -238,22 +168,135 @@ const ProjectsList: React.FC = () => {
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No projects found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchQuery
-              ? `No projects match "${searchQuery}"`
+            {localSearchQuery
+              ? `No projects match "${localSearchQuery}"`
               : "You haven't created any projects yet."}
           </p>
-          <div className="mt-6">
-              <Button
-                variant="primary"
-                leftIcon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+        </div>
+      )}
+
+      </div>
+
+      {/* Pagination */}
+      {pagination && pagination.pages > 1 && (
+        <div className="mt-auto flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={!pagination.has_prev}
+              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={!pagination.has_next}
+              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing{' '}
+                <span className="font-medium">
+                  {((pagination.current_page - 1) * pagination.per_page) + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-medium">
+                  {Math.min(pagination.current_page * pagination.per_page, pagination.total)}
+                </span>{' '}
+                of{' '}
+                <span className="font-medium">{pagination.total}</span>{' '}
+                results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={!pagination.has_prev}
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
                   </svg>
-                }
-                onClick={() => { const event = new CustomEvent('sidebar:create-project'); window.dispatchEvent(event as any); }}
-              >
-                New Project
-              </Button>
+                </button>
+                
+                {/* Show page numbers with ellipsis for large page counts */}
+                {(() => {
+                  const currentPage = pagination.current_page;
+                  const totalPages = pagination.pages;
+                  const pages = [];
+                  
+                  if (totalPages <= 7) {
+                    // Show all pages if 7 or fewer
+                    for (let i = 1; i <= totalPages; i++) {
+                      pages.push(i);
+                    }
+                  } else {
+                    // Show first page
+                    pages.push(1);
+                    
+                    if (currentPage > 4) {
+                      pages.push('...');
+                    }
+                    
+                    // Show pages around current page
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+                    
+                    for (let i = start; i <= end; i++) {
+                      if (i !== 1 && i !== totalPages) {
+                        pages.push(i);
+                      }
+                    }
+                    
+                    if (currentPage < totalPages - 3) {
+                      pages.push('...');
+                    }
+                    
+                    // Show last page
+                    if (totalPages > 1) {
+                      pages.push(totalPages);
+                    }
+                  }
+                  
+                  return pages.map((page, index) => (
+                    page === '...' ? (
+                      <span key={`ellipsis-${index}`} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page as number)}
+                        className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                          page === pagination.current_page
+                            ? 'z-10 bg-primary-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
+                            : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  ));
+                })()}
+                
+                <button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!pagination.has_next}
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
           </div>
         </div>
       )}
