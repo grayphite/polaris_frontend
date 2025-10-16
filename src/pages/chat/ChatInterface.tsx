@@ -51,7 +51,7 @@ const ChatInterface: React.FC = () => {
     return titleCandidate;
   })();
 
-  // Mock conversation data
+  // Get conversation data from context
   const conversation = {
     id: chatId,
     title: (() => {
@@ -60,9 +60,9 @@ const ChatInterface: React.FC = () => {
       const fromContext = list.find(c => c.id === chatId)?.title;
       if (fromContext) return fromContext;
       if (isNewChatId) return resolvedNewChatTitle ?? '';
-      return `Chat ${chatId}`;
+      return '';
     })(),
-    createdAt: '2023-10-01T12:00:00Z',
+    createdAt: '',
     details: (() => {
       if (!chatId) return '';
       const list = projectId ? (chatsByProject[projectId] || []) : [];
@@ -70,60 +70,28 @@ const ChatInterface: React.FC = () => {
       return chat?.details || '';
     })(),
   } as const;
-  
-  // Load initial messages
-  useEffect(() => {
-    // In a real app, you would fetch messages from an API
-    // For brand new conversations, start blank
-    if (chatId && /^\d{13,}$/.test(chatId)) {
-      setMessages([]);
-      return;
-    }
-    // Otherwise load mock history
-    setMessages([
-      {
-        id: '1',
-        content: "Hi there! I'm your AI assistant. How can I help you with your social media strategy today?",
-        role: 'assistant',
-        timestamp: '2023-10-01T12:01:00Z',
-      },
-      {
-        id: '2',
-        content: "I need help planning our Instagram content for the product launch next month. We're targeting millennials and Gen Z.",
-        role: 'user',
-        timestamp: '2023-10-01T12:02:30Z',
-      },
-      {
-        id: '3',
-        content: "Great! For Instagram content targeting millennials and Gen Z for a product launch...",
-        role: 'assistant',
-        timestamp: '2023-10-01T12:03:45Z',
-      },
-    ]);
-  }, [chatId]);
-
-  // Always fetch fresh chat data when switching to a chat to ensure latest title/details
-  useEffect(() => {
-    (async () => {
-      if (!chatId) return;
-      setIsMetaLoading(true);
-      try {
-        const data = await fetchChatById(chatId);
-        if (data?.id && data.projectId) {
-          // Always hydrate with fresh data to ensure we have latest title/details
-          hydrateProjectChats(data.projectId, [{
-            id: data.id,
-            title: data.title,
-            details: data.details
-          }]);
-        }
-      } catch {
-        // Silent fallback - chat might not exist on backend yet
-      } finally {
-        setIsMetaLoading(false);
-      }
-    })();
-  }, [chatId, hydrateProjectChats]);
+  // Commented out fetchChatById - we already have chat data from project chats API
+  // useEffect(() => {
+  //   (async () => {
+  //     if (!chatId || !projectId) return;
+  //     setIsMetaLoading(true);
+  //     try {
+  //       const data = await fetchChatById(chatId);
+  //       if (data?.id && data.project_id) {
+  //         // Always hydrate with fresh data to ensure we have latest title/details
+  //         hydrateProjectChats(data.project_id.toString(), [{
+  //           id: data.id.toString(),
+  //           title: data.name,
+  //           details: data.description
+  //         }]);
+  //       }
+  //     } catch {
+  //       // Silent fallback - chat might not exist on backend yet
+  //     } finally {
+  //       setIsMetaLoading(false);
+  //     }
+  //   })();
+  // }, [chatId, projectId, hydrateProjectChats]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
