@@ -3,8 +3,37 @@ import React, { useEffect, useState } from 'react';
 
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/common/Sidebar';
-import { ProjectsProvider } from '../context/ProjectsContext';
+import { ProjectsProvider, useProjects } from '../context/ProjectsContext';
+import { ChatProvider, useChats } from '../context/ChatContext';
 import InviteModal from '../components/ui/InviteModal';
+
+
+// Component to load chats for first project
+const ChatLoader: React.FC = () => {
+  const { projects } = useProjects();
+  const { ensureInitialChatsLoaded } = useChats();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!projects || projects.length === 0) return;
+    
+    // Check if we're on a project page
+    const match = location.pathname.match(/^\/projects\/([^\/]+)/);
+    const selectedProjectId = match ? match[1] : null;
+    
+    if (selectedProjectId) {
+      // Fetch initial chats for both sidebar and conversations tab
+      ensureInitialChatsLoaded(selectedProjectId);
+    } else {
+      // If not on a project page, redirect to first project
+      const firstProjectId = projects[0].id;
+      navigate(`/projects/${firstProjectId}`, { replace: true });
+    }
+  }, [projects, location.pathname]);
+
+  return null;
+};
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -59,6 +88,7 @@ const MainLayout: React.FC = () => {
     return match ? match[1] : null;
   })();
 
+
   // Conversations moved to ProjectsProvider
 
   // Project modal state handled by Sidebar via context
@@ -80,7 +110,9 @@ const MainLayout: React.FC = () => {
 
   return (
     <ProjectsProvider>
-      <div className="min-h-screen bg-light-200 flex">
+      <ChatProvider>
+        <ChatLoader />
+        <div className="h-screen bg-light-200 flex">
         <Sidebar
           open={sidebarOpen}
           isDesktop={isDesktop}
@@ -88,9 +120,9 @@ const MainLayout: React.FC = () => {
         />
 
         {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col h-full">
           {/* Header */}
-          <header className="bg-white shadow-sm z-10">
+          <header className="bg-white shadow-sm z-10 flex-shrink-0">
           <div className="px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center min-w-0 gap-3">
               <button
@@ -169,7 +201,7 @@ const MainLayout: React.FC = () => {
           </header>
           
           {/* Page content */}
-          <main className="flex-1 min-h-0 overflow-auto bg-light-200 p-4">
+          <main className="flex-1 overflow-y-auto bg-light-200 p-4">
             <Outlet context={{ 
               openInviteModal: () => setShowInviteModal(true)
             }} />
@@ -182,7 +214,8 @@ const MainLayout: React.FC = () => {
           onClose={() => setShowInviteModal(false)}
           onSubmit={handleInviteSubmit}
         />
-      </div>
+        </div>
+      </ChatProvider>
     </ProjectsProvider>
   );
 };

@@ -23,7 +23,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     return match ? match[1] : null;
   })();
   const [searchProjectId, setSearchProjectId] = React.useState<string | null>(null);
-  const [projectSearch, setProjectSearch] = React.useState('');
+  const [localSidebarSearch, setLocalSidebarSearch] = React.useState('');
+  const [sidebarSearchDidMount, setSidebarSearchDidMount] = React.useState(false);
   const [menuOpenForProject, setMenuOpenForProject] = React.useState<string | null>(null);
   const [menuDirection, setMenuDirection] = React.useState<'down' | 'up'>('down');
   const [deleteProjectId, setDeleteProjectId] = React.useState<string | null>(null);
@@ -36,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [newChatDetails, setNewChatDetails] = React.useState('');
   const [isSubmittingChat, setIsSubmittingChat] = React.useState(false);
   const [chatMenuOpenId, setChatMenuOpenId] = React.useState<string | null>(null);
+  const [chatMenuDirection, setChatMenuDirection] = React.useState<'down' | 'up'>('down');
   const [chatEditId, setChatEditId] = React.useState<string | null>(null);
   const [chatEditTitle, setChatEditTitle] = React.useState('');
   const [chatEditDetails, setChatEditDetails] = React.useState('');
@@ -55,10 +57,46 @@ const Sidebar: React.FC<SidebarProps> = ({
     editProjectId,
     endEditProject,
   } = useProjects();
-  const { chatsByProject, createChat, updateChat, deleteChat } = useChats();
+  const { 
+    chatsByProject, 
+    sidebarChatsByProject,
+    loadingProjects,
+    loadingSidebarProjects, 
+    createChat, 
+    updateChat, 
+    deleteChat, 
+    sidebarSearchQuery, 
+    setSidebarSearchQuery, 
+    ensureSidebarChatsLoaded,
+    sidebarChatsHasMore,
+    loadMoreSidebarChats
+  } = useChats();
   const navigate = useNavigate();
 
-  const conversations = selectedProjectId ? (chatsByProject[selectedProjectId] || []) : [];
+  const conversations = selectedProjectId ? (sidebarChatsByProject[selectedProjectId] || []) : [];
+
+  // Initialize local sidebar search from context once to avoid initial no-op debounce
+  React.useEffect(() => {
+    if (!sidebarSearchDidMount) {
+      setLocalSidebarSearch(sidebarSearchQuery || '');
+      setSidebarSearchDidMount(true);
+    }
+  }, [sidebarSearchDidMount, sidebarSearchQuery]);
+
+  // Debounced sidebar search effect with guard to avoid redundant updates
+  React.useEffect(() => {
+    if (!sidebarSearchDidMount) return; // skip first render
+    const timer = setTimeout(() => {
+      if (localSidebarSearch !== sidebarSearchQuery) {
+        setSidebarSearchQuery(localSidebarSearch);
+        // Load sidebar chats when search changes
+        if (selectedProjectId) {
+          ensureSidebarChatsLoaded(selectedProjectId);
+        }
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSidebarSearch, sidebarSearchQuery, setSidebarSearchQuery, selectedProjectId, ensureSidebarChatsLoaded, sidebarSearchDidMount]);
 
   // Listen to external request to open create modal (from ProjectsList button)
   React.useEffect(() => {
@@ -70,6 +108,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   // Accessibility: close any open project menu on outside click or Escape
   const menuContainerRef = React.useRef<HTMLDivElement | null>(null);
   const menuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  
+  // Chat menu refs
+  const chatMenuContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const chatMenuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
   React.useEffect(() => {
     if (!menuOpenForProject) return;
     const onDocMouseDown = (e: MouseEvent) => {
@@ -93,6 +135,31 @@ const Sidebar: React.FC<SidebarProps> = ({
       document.removeEventListener('keydown', onKey);
     };
   }, [menuOpenForProject]);
+
+  // Accessibility: close any open chat menu on outside click or Escape
+  React.useEffect(() => {
+    if (!chatMenuOpenId) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (chatMenuContainerRef.current && !chatMenuContainerRef.current.contains(target) && chatMenuTriggerRef.current && !chatMenuTriggerRef.current.contains(target)) {
+        setChatMenuOpenId(null);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setChatMenuOpenId(null);
+        // return focus to trigger after closing
+        setTimeout(() => chatMenuTriggerRef.current?.focus(), 0);
+      }
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [chatMenuOpenId]);
 
   // Keyboard navigation inside menu
   const [menuFocusIndex, setMenuFocusIndex] = React.useState(0);
@@ -166,12 +233,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleStartNewConversation = async (projectId: string) => {
-    const title = (newChatName || '').trim();
-    const details = (newChatDetails || '').trim();
-    if (!title || !details) return;
+    const name = (newChatName || '').trim();
+    const description = (newChatDetails || '').trim();
+    if (!name || !description) return;
     setIsSubmittingChat(true);
     try {
-      const cid = await createChat(projectId, title, details);
+      const cid = await createChat(projectId, name, description);
       navigate(`/projects/${projectId}/chat/${cid}`);
     } catch {
       // On failure, user already saw toast; go back to project page
@@ -195,10 +262,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const submitEditChat = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!selectedProjectId || !chatEditId) return;
-    const title = chatEditTitle.trim();
-    const details = chatEditDetails.trim();
-    if (!title || !details) return;
-    updateChat(selectedProjectId, chatEditId, title, details);
+    const name = chatEditTitle.trim();
+    const description = chatEditDetails.trim();
+    if (!name || !description) return;
+    updateChat(selectedProjectId, chatEditId, name, description);
     setChatEditId(null);
   };
   return (
@@ -333,7 +400,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             title="Search conversations"
                             onClick={() => {
                               setSearchProjectId(prev => (typeof prev === 'function' ? (prev as any)(p.id) : (prev === p.id ? null : p.id)));
-                              setProjectSearch('');
+                              setLocalSidebarSearch('');
                             }}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -357,15 +424,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                               type="text"
                               className="w-full text-sm px-3 py-1.5 rounded-md bg-dark-200/40 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
                               placeholder="Search conversations..."
-                              value={projectSearch}
-                              onChange={(e) => setProjectSearch(e.target.value)}
+                              value={localSidebarSearch}
+                              onChange={(e) => setLocalSidebarSearch(e.target.value)}
                             />
                           </div>
                         )}
 
                         <ul className="mt-2 space-y-1 pl-7">
-                          {conversations
-                            .filter(c => c.title.toLowerCase().includes(projectSearch.toLowerCase()))
+                          {loadingSidebarProjects.has(p.id) ? (
+                            <li className="px-3 py-2 text-sm text-gray-400 flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                              Loading conversations...
+                            </li>
+                          ) : conversations
+                            .filter(c => c.title.toLowerCase().includes(sidebarSearchQuery.toLowerCase()))
                             .map((c) => (
                               <li key={c.id}>
                                 <div className="flex items-center gap-2">
@@ -380,18 +452,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                                   >
                                     {c.title}
                                   </NavLink>
-                                  <div className="relative">
+                                  <div className="relative" ref={chatMenuContainerRef}>
                                     <button
+                                      ref={chatMenuTriggerRef}
                                       className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
                                       title="Chat options"
-                                      onClick={() => setChatMenuOpenId(prev => prev === c.id ? null : c.id)}
+                                      onClick={(e) => { 
+                                        const direction = calculateMenuDirection(e.currentTarget);
+                                        setChatMenuDirection(direction);
+                                        setChatMenuOpenId(prev => prev === c.id ? null : c.id); 
+                                      }}
                                     >
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M10 3a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4z" />
                                       </svg>
                                     </button>
                                     {chatMenuOpenId === c.id && (
-                                      <div className="absolute right-0 mt-1 w-40 bg-white text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20">
+                                      <div className={`absolute right-0 w-40 bg-white text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
+                                        chatMenuDirection === 'up' 
+                                          ? 'bottom-full mb-1 origin-bottom-right' 
+                                          : 'top-full mt-1 origin-top-right'
+                                      }`}>
                                         <button
                                           type="button"
                                           className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -413,6 +494,26 @@ const Sidebar: React.FC<SidebarProps> = ({
                               </li>
                             ))}
                         </ul>
+                        
+                        {/* Load More Chats Button */}
+                        {sidebarChatsHasMore && !sidebarSearchQuery && selectedProjectId === p.id && (
+                          <div className="mt-2 pl-7">
+                            <button
+                              onClick={() => loadMoreSidebarChats(p.id)}
+                              disabled={loadingSidebarProjects.has(p.id)}
+                              className="w-full px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-200 rounded-md border border-dark-200 hover:border-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingSidebarProjects.has(p.id) ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                  Loading more chats...
+                                </div>
+                              ) : (
+                                'Load More Chats'
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </li>
@@ -587,7 +688,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => { deleteChat(selectedProjectId, chatDeleteId); setChatDeleteId(null); }}
+                        onClick={async () => { 
+                          const success = await deleteChat(selectedProjectId, chatDeleteId); 
+                          setChatDeleteId(null);
+                          if (success) {
+                            // Navigate to project page if we deleted the current chat
+                            const currentPath = window.location.pathname;
+                            if (currentPath.includes(`/chat/${chatDeleteId}`)) {
+                              navigate(`/projects/${selectedProjectId}`);
+                            }
+                          }
+                        }}
                         className="px-4 py-2 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white"
                       >
                         Delete

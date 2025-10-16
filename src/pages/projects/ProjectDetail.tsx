@@ -29,9 +29,20 @@ const ProjectDetail: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'conversations' | 'members' | 'settings'>('conversations');
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [didMount, setDidMount] = useState(false);
   
   const { projects } = useProjects();
-  const { chatsByProject } = useChats();
+  const { 
+    chatsByProject, 
+    ensureProjectChatsLoaded,
+    ensureInitialChatsLoaded, 
+    conversationsSearchQuery, 
+    setConversationsSearchQuery, 
+    currentPage, 
+    setCurrentPage, 
+    pagination 
+  } = useChats();
 
   const project = useMemo(() => {
     const ctxProject = (projects || []).find(p => p.id === projectId);
@@ -44,17 +55,55 @@ const ProjectDetail: React.FC = () => {
     };
   }, [projectId, projects]);
 
+  // Load chats when component mounts or projectId changes
+  useEffect(() => {
+    if (projectId) {
+      setIsLoadingConversations(true);
+      ensureInitialChatsLoaded(projectId)
+        .finally(() => setIsLoadingConversations(false));
+    }
+  }, [projectId]); // Removed ensureInitialChatsLoaded from dependencies
+
+  // Initialize local input from context once to avoid initial no-op debounce
+  useEffect(() => {
+    if (!didMount) {
+      setLocalSearchQuery(conversationsSearchQuery || '');
+      setDidMount(true);
+    }
+  }, [didMount, conversationsSearchQuery]);
+
+  // Debounced search effect with guard to avoid redundant updates
+  useEffect(() => {
+    if (!didMount) return; // skip first render
+    const timer = setTimeout(() => {
+      if (localSearchQuery !== conversationsSearchQuery) {
+        setConversationsSearchQuery(localSearchQuery);
+        setCurrentPage(1); // Reset to first page when searching
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSearchQuery, conversationsSearchQuery, setConversationsSearchQuery, didMount]);
+
+  // Load chats when search query or page changes
+  useEffect(() => {
+    if (projectId) {
+      setIsLoadingConversations(true);
+      ensureProjectChatsLoaded(projectId)
+        .finally(() => setIsLoadingConversations(false));
+    }
+  }, [conversationsSearchQuery, currentPage, projectId]);
+
   
   // Use conversations from context (selected project) or empty for new projects
   const conversations: Conversation[] = useMemo(() => {
     const list = projectId ? (chatsByProject[projectId] || []) : [];
     if (list.length === 0) return [];
-    return list.map((c, idx) => ({
+    return list.map((c) => ({
       id: c.id,
       title: c.title,
       lastMessage: c.details || 'No details available.',
-      updatedAt: new Date(Date.now() - idx * 60_000).toISOString(),
-      messageCount: 0,
+      updatedAt: c.updated_at || c.created_at || new Date().toISOString(),
+      messageCount: c.message_count || 0,
     }));
   }, [chatsByProject, projectId]);
   
@@ -111,9 +160,9 @@ const ProjectDetail: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full flex flex-col">
       {/* Project header */}
-      <div className="bg-white rounded-lg shadow-card p-6">
+      <div className="bg-white rounded-lg shadow-card p-6 flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
@@ -140,7 +189,7 @@ const ProjectDetail: React.FC = () => {
       </div>
       
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-card">
+      <div className="bg-white rounded-lg shadow-card flex-1 flex flex-col">
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
             <button
@@ -176,15 +225,32 @@ const ProjectDetail: React.FC = () => {
           </nav>
         </div>
         
-        <div className="p-6">
+        <div className="p-6 flex-1 flex flex-col">
           {/* Conversations tab */}
           {activeTab === 'conversations' && (
-            <div className="space-y-6">
-              {/* Conversations list remains here, toolbar moved to sidebar per new design */}
+            <div className="space-y-6 h-full flex flex-col">
+              {/* Search bar */}
+              <div className="relative max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm shadow-sm"
+                  value={localSearchQuery}
+                  onChange={(e) => setLocalSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              {/* Conversations list + Pagination in one scroll region */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
               {isLoadingConversations ? (
                 <div className="py-8"><Loader /></div>
               ) : conversations.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 pb-6">
                   {conversations.map((conversation, index) => (
                     <motion.div
                       key={conversation.id}
@@ -230,6 +296,131 @@ const ProjectDetail: React.FC = () => {
                   <p className="mt-1 text-sm text-gray-500">Start a new conversation from the sidebar.</p>
                 </div>
               )}
+
+              {/* Pagination */}
+              {pagination && pagination.pages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={!pagination.has_prev}
+                      className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={!pagination.has_next}
+                      className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing{' '}
+                        <span className="font-medium">
+                          {((pagination.current_page - 1) * (pagination.per_page || 10)) + 1}
+                        </span>{' '}
+                        to{' '}
+                        <span className="font-medium">
+                          {Math.min(pagination.current_page * (pagination.per_page || 10), pagination.total || 0)}
+                        </span>{' '}
+                        of{' '}
+                        <span className="font-medium">{pagination.total || 0}</span>{' '}
+                        results
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                        <button
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={!pagination.has_prev}
+                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="sr-only">Previous</span>
+                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        
+                        {/* Show page numbers with ellipsis for large page counts */}
+                        {(() => {
+                          const currentPage = pagination.current_page;
+                          const totalPages = pagination.pages;
+                          const pages = [];
+                          
+                          if (totalPages <= 7) {
+                            // Show all pages if 7 or fewer
+                            for (let i = 1; i <= totalPages; i++) {
+                              pages.push(i);
+                            }
+                          } else {
+                            // Show first page
+                            pages.push(1);
+                            
+                            if (currentPage > 4) {
+                              pages.push('...');
+                            }
+                            
+                            // Show pages around current page
+                            const start = Math.max(2, currentPage - 1);
+                            const end = Math.min(totalPages - 1, currentPage + 1);
+                            
+                            for (let i = start; i <= end; i++) {
+                              if (i !== 1 && i !== totalPages) {
+                                pages.push(i);
+                              }
+                            }
+                            
+                            if (currentPage < totalPages - 3) {
+                              pages.push('...');
+                            }
+                            
+                            // Show last page
+                            if (totalPages > 1) {
+                              pages.push(totalPages);
+                            }
+                          }
+                          
+                          return pages.map((page, index) => (
+                            page === '...' ? (
+                              <span key={`ellipsis-${index}`} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">
+                                ...
+                              </span>
+                            ) : (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentPage(page as number)}
+                                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                                  page === pagination.current_page
+                                    ? 'z-10 bg-primary-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
+                                    : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            )
+                          ));
+                        })()}
+                        
+                        <button
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={!pagination.has_next}
+                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="sr-only">Next</span>
+                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             </div>
           )}
           
