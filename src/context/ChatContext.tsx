@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback, useRef } from 'react';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import { createChatApi, deleteChatApi, fetchChats, updateChatApi, ChatsResponse } from '../services/chatService';
 
@@ -72,6 +72,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   } | null>(null);
   const [sidebarCurrentPage, setSidebarCurrentPage] = useState(1);
   const [sidebarChatsHasMore, setSidebarChatsHasMore] = useState(false);
+  
+  // Use ref to access current sidebarSearchQuery without causing dependency issues
+  const sidebarSearchQueryRef = useRef(sidebarSearchQuery);
+  sidebarSearchQueryRef.current = sidebarSearchQuery;
 
 
   const hydrateProjectChats = (projectId: string, chats: Array<{ 
@@ -117,7 +121,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const hydrateSidebarChats = (projectId: string, chats: Array<{ 
+  const hydrateSidebarChats = useCallback((projectId: string, chats: Array<{ 
     id: string; 
     title: string; 
     details?: string;
@@ -128,11 +132,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!Array.isArray(chats)) return;
     
     setSidebarChatsByProject(prev => {
-      if (replace || sidebarSearchQuery) {
-        // For search results or explicit replace, completely replace the chats
-        return { 
-          ...prev, 
-          [projectId]: chats.map(c => ({ 
+      if (replace || sidebarSearchQuery || append) {
+        // For search results, explicit replace, or load more, completely replace the chats
+        if (append) {
+          // For load more, append to existing chats
+          const current = prev[projectId] || [];
+          const newChats = chats.map(c => ({ 
             id: c.id, 
             projectId, 
             title: c.title, 
@@ -140,21 +145,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             created_at: c.created_at,
             updated_at: c.updated_at,
             message_count: c.message_count
-          }))
-        };
-      } else if (append) {
-        // For load more, append to existing chats
-        const current = prev[projectId] || [];
-        const newChats = chats.map(c => ({ 
-          id: c.id, 
-          projectId, 
-          title: c.title, 
-          details: c.details,
-          created_at: c.created_at,
-          updated_at: c.updated_at,
-          message_count: c.message_count
-        }));
-        return { ...prev, [projectId]: [...current, ...newChats] };
+          }));
+          return { ...prev, [projectId]: [...current, ...newChats] };
+        } else {
+          // For search results or explicit replace, completely replace the chats
+          return { 
+            ...prev, 
+            [projectId]: chats.map(c => ({ 
+              id: c.id, 
+              projectId, 
+              title: c.title, 
+              details: c.details,
+              created_at: c.created_at,
+              updated_at: c.updated_at,
+              message_count: c.message_count
+            }))
+          };
+        }
       } else {
         // For normal loading, merge by id, prefer incoming
         const current = prev[projectId] || [];
@@ -171,7 +178,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...prev, [projectId]: Object.values(byId) };
       }
     });
-  };
+  }, [sidebarSearchQuery]);
 
   const ensureProjectChatsLoaded = async (projectId: string) => {
     
@@ -260,7 +267,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const ensureSidebarChatsLoaded = async (projectId: string) => {
+  const ensureSidebarChatsLoaded = useCallback(async (projectId: string) => {
     
     // Check if already loading
     if (loadingSidebarProjects.has(projectId)) return;
@@ -268,7 +275,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoadingSidebarProjects(prev => new Set(prev).add(projectId));
     
     try {
-      const response = await fetchChats(projectId, 1, 4, sidebarSearchQuery); // Use page 1 and limit 4 for sidebar
+      const response = await fetchChats(projectId, 1, 4, sidebarSearchQueryRef.current); // Use page 1 and limit 4 for sidebar
       if (response && response.chats) {
         hydrateSidebarChats(projectId, response.chats.map(r => ({ 
           id: r.id.toString(), 
@@ -299,7 +306,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return newSet;
       });
     }
-  };
+  }, [loadingSidebarProjects, hydrateSidebarChats, setSidebarCurrentPage, setSidebarChatsHasMore]);
 
   const loadMoreSidebarChats = async (projectId: string) => {
     if (!sidebarChatsHasMore || loadingSidebarProjects.has(projectId)) return;

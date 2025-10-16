@@ -114,7 +114,13 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updated_at: r.updated_at
       }));
       
-      setSidebarProjects(prev => [...prev, ...newProjects]);
+      // Prevent duplicates by filtering out projects that already exist in sidebar
+      setSidebarProjects(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewProjects = newProjects.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueNewProjects];
+      });
+      
       setSidebarPage(prev => prev + 1);
       setSidebarHasMore(response.pagination.has_next);
       
@@ -144,6 +150,43 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     loadMoreSidebarProjects();
   }, []);
+
+  // Ensure selected project appears in sidebar when not present
+  useEffect(() => {
+    const match = location.pathname.match(/^\/projects\/([^\/]+)/);
+    const selectedProjectId = match ? match[1] : null;
+    
+    if (selectedProjectId && !sidebarProjects.some(p => p.id === selectedProjectId)) {
+      // Fetch and add the project to sidebar
+      (async () => {
+        try {
+          const data = await fetchProjectById(selectedProjectId);
+          if (data?.id) {
+            setSidebarProjects(prev => {
+              // Check if it's already there (race condition protection)
+              if (prev.some(p => p.id === data.id.toString())) return prev;
+              
+              return [{
+                id: data.id.toString(),
+                name: data.name,
+                description: data.description,
+                created_at: data.created_at,
+                updated_at: data.updated_at
+              }, ...prev];
+            });
+            
+            // Hydrate embedded chats if present
+            if (Array.isArray((data as any).chats) && (data as any).chats.length) {
+              const chats = (data as any).chats.map((c: any) => ({ id: c.id, title: c.title, details: c.details }));
+              hydrateProjectChats(data.id.toString(), chats);
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load selected project for sidebar:', err);
+        }
+      })();
+    }
+  }, [location.pathname, sidebarProjects]);
 
   // Ensure active project (from URL) is present and hydrated - only for project detail pages, not chat pages
   useEffect(() => {
