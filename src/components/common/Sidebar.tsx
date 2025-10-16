@@ -46,6 +46,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Ref for the scrollable container
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  // Ref for the search input
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const {
     projects,
@@ -108,6 +110,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [sidebarSearchQuery, selectedProjectId]);
 
+  // Focus search input when it becomes visible
+  React.useEffect(() => {
+    if (searchProjectId && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchProjectId]);
+
   // Scroll to selected project when it changes (e.g., when navigating from projects page)
   React.useEffect(() => {
     if (selectedProjectId && scrollContainerRef.current) {
@@ -151,9 +160,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuContainerRef = React.useRef<HTMLDivElement | null>(null);
   const menuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
   
-  // Chat menu refs
-  const chatMenuContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const chatMenuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  // Simple approach - no refs needed for basic modal functionality
   React.useEffect(() => {
     if (!menuOpenForProject) return;
     const onDocMouseDown = (e: MouseEvent) => {
@@ -178,28 +185,32 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [menuOpenForProject]);
 
-  // Accessibility: close any open chat menu on outside click or Escape
+  // Close chat menu on outside click or Escape key
   React.useEffect(() => {
     if (!chatMenuOpenId) return;
-    const onDocMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (chatMenuContainerRef.current && !chatMenuContainerRef.current.contains(target) && chatMenuTriggerRef.current && !chatMenuTriggerRef.current.contains(target)) {
+    
+    const handleOutsideClick = (e: MouseEvent) => {
+      // Check if click is outside any chat menu
+      const target = e.target as Element;
+      const isInsideChatMenu = target.closest('[data-chat-menu]');
+      if (!isInsideChatMenu) {
         setChatMenuOpenId(null);
       }
     };
-    const onKey = (e: KeyboardEvent) => {
+    
+    const handleEscapeKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         setChatMenuOpenId(null);
-        // return focus to trigger after closing
-        setTimeout(() => chatMenuTriggerRef.current?.focus(), 0);
       }
     };
-    document.addEventListener('mousedown', onDocMouseDown);
-    document.addEventListener('keydown', onKey);
+    
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscapeKey);
+    
     return () => {
-      document.removeEventListener('mousedown', onDocMouseDown);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [chatMenuOpenId]);
 
@@ -455,9 +466,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                             className="p-1.5 rounded-md text-gray-300 hover:bg-dark-200 hover:text-white"
                             title="Search conversations"
                             onClick={() => {
+                              const isOpening = searchProjectId !== p.id;
                               setSearchProjectId(prev => (typeof prev === 'function' ? (prev as any)(p.id) : (prev === p.id ? null : p.id)));
                               // Don't clear the search when opening the search field
-                              if (searchProjectId !== p.id) {
+                              if (isOpening) {
                                 setLocalSidebarSearch('');
                               }
                             }}
@@ -480,6 +492,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {searchProjectId === p.id && (
                           <div className="mt-2 pl-7 pr-3">
                             <input
+                              ref={searchInputRef}
                               type="text"
                               className="w-full text-sm px-3 py-1.5 rounded-md bg-dark-200/40 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
                               placeholder="Search conversations..."
@@ -509,9 +522,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                                   >
                                     {c.title}
                                   </NavLink>
-                                  <div className="relative" ref={chatMenuContainerRef}>
+                                  <div className="relative" data-chat-menu>
                                     <button
-                                      ref={chatMenuTriggerRef}
                                       className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
                                       title="Chat options"
                                       onClick={(e) => { 
