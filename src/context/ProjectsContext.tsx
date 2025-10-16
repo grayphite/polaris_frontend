@@ -153,6 +153,13 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     if (!activeId || !isProjectDetailPage) return;
     
+    // Check if this is an optimistic ID (timestamp-based) - if so, don't make API call
+    // Optimistic IDs are generated using Date.now().toString() and are typically 13 digits
+    const isOptimisticId = /^\d{13}$/.test(activeId);
+    if (isOptimisticId) {
+      return; // Don't fetch optimistic IDs from API
+    }
+    
     const exists = projects.some(p => p.id === activeId);
     if (!exists) {
       // add placeholder so sidebar highlights
