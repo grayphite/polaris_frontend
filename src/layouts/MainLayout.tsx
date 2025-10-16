@@ -16,8 +16,6 @@ const ChatLoader: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!projects || projects.length === 0) return;
-    
     // Check if we're on a project page
     const match = location.pathname.match(/^\/projects\/([^\/]+)/);
     const selectedProjectId = match ? match[1] : null;
@@ -25,11 +23,18 @@ const ChatLoader: React.FC = () => {
     if (selectedProjectId) {
       // Fetch initial chats for both sidebar and conversations tab
       ensureInitialChatsLoaded(selectedProjectId);
-    } else {
-      // If not on a project page, redirect to first project
-      const firstProjectId = projects[0].id;
-      navigate(`/projects/${firstProjectId}`, { replace: true });
+    } else if (location.pathname === '/') {
+      // Handle root path navigation
+      if (projects && projects.length > 0) {
+        // If projects exist, redirect to first project
+        const firstProjectId = projects[0].id;
+        navigate(`/projects/${firstProjectId}`, { replace: true });
+      } else {
+        // If no projects exist, redirect to projects list
+        navigate('/projects', { replace: true });
+      }
     }
+    // If we're on /projects, don't redirect - let the user stay on the projects list page
   }, [projects, location.pathname]);
 
   return null;

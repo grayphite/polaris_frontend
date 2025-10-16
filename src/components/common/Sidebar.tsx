@@ -36,6 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [newChatName, setNewChatName] = React.useState('');
   const [newChatDetails, setNewChatDetails] = React.useState('');
   const [isSubmittingChat, setIsSubmittingChat] = React.useState(false);
+  const [isSubmittingProject, setIsSubmittingProject] = React.useState(false);
   const [chatMenuOpenId, setChatMenuOpenId] = React.useState<string | null>(null);
   const [chatMenuDirection, setChatMenuDirection] = React.useState<'down' | 'up'>('down');
   const [chatEditId, setChatEditId] = React.useState<string | null>(null);
@@ -211,11 +212,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowCreateProject(true);
   };
 
-  const submitProject = (e?: React.FormEvent) => {
+  const submitProject = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const name = newProjectName.trim();
     const description = newProjectDetails.trim();
     if (!name || !description) return;
+    
     if (isEditingProject && editProjectId) {
       updateProject(editProjectId, name, description);
       setShowCreateProject(false);
@@ -223,8 +225,18 @@ const Sidebar: React.FC<SidebarProps> = ({
       navigate(`/projects/${editProjectId}`);
       return;
     }
-    createProject(name, description);
-    setShowCreateProject(false);
+    
+    setIsSubmittingProject(true);
+    try {
+      await createProject(name, description);
+      setShowCreateProject(false);
+      setNewProjectName('');
+      setNewProjectDetails('');
+    } catch (err) {
+      // Error handling is done in the context
+    } finally {
+      setIsSubmittingProject(false);
+    }
   };
 
   const handleDelete = (projectId: string) => {
@@ -603,9 +615,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         type="submit"
                         className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-                        disabled={!newProjectName.trim() || !newProjectDetails.trim()}
+                        disabled={!newProjectName.trim() || !newProjectDetails.trim() || isSubmittingProject}
                       >
-                        {isEditingProject ? 'Save' : 'Create'}
+                        {isSubmittingProject ? 'Creating…' : (isEditingProject ? 'Save' : 'Create')}
                       </button>
                     </div>
                   </form>

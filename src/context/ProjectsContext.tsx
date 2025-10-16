@@ -24,7 +24,7 @@ type ProjectsContextValue = {
     total: number;
   } | null;
   loadProjects: () => Promise<void>;
-  createProject: (name: string, description: string) => string; // returns id
+  createProject: (name: string, description: string) => Promise<string>; // returns id
   updateProject: (projectId: string, name: string, description: string) => void;
   deleteProject: (projectId: string) => void;
   startConversation: (projectId: string, title: string) => string; // returns conversation id
@@ -153,6 +153,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     if (!activeId || !isProjectDetailPage) return;
     
+    
     const exists = projects.some(p => p.id === activeId);
     if (!exists) {
       // add placeholder so sidebar highlights
@@ -197,40 +198,32 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [openCreateProject, setOpenCreateProject] = useState(false);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
-  const createProject = (name: string, description: string) => {
-    const optimisticId = Date.now().toString();
-    const newProject = { id: optimisticId, name, description };
-    setProjects(prev => [newProject, ...prev]);
-    setSidebarProjects(prev => [newProject, ...prev]); // Also add to sidebar
-    setConversationsByProject(prev => ({ ...prev, [optimisticId]: [] }));
-    (async () => {
-      try {
-        const created = await createProjectApi(name, description);
-        if (created?.id) {
-          const realProject = { 
-            id: created.id.toString(), 
-            name: created.name || name,
-            description: created.description || description,
-            created_at: created.created_at,
-            updated_at: created.updated_at
-          };
-          // Update with real data from API
-          setProjects(prev => prev.map(p => (p.id === optimisticId ? realProject : p)));
-          setSidebarProjects(prev => prev.map(p => (p.id === optimisticId ? realProject : p))); // Also update sidebar
-          setConversationsByProject(prev => {
-            const list = prev[optimisticId] || [];
-            const { [optimisticId]: _removed, ...rest } = prev;
-            return { ...rest, [created.id.toString()]: list };
-          });
-          // Navigate to correct project ID
-          navigate(`/projects/${created.id}`);
-        }
+  const createProject = async (name: string, description: string) => {
+    try {
+      const created = await createProjectApi(name, description);
+      if (created?.id) {
+        const realProject = { 
+          id: created.id.toString(), 
+          name: created.name || name,
+          description: created.description || description,
+          created_at: created.created_at,
+          updated_at: created.updated_at
+        };
+        // Add the real project to state
+        setProjects(prev => [realProject, ...prev]);
+        setSidebarProjects(prev => [realProject, ...prev]);
+        setConversationsByProject(prev => ({ ...prev, [created.id.toString()]: [] }));
+        
         showSuccessToast('Project Created Successfully!');
-      } catch (err) {
-        showErrorToast('Failed to create project');
+        // Navigate to the real project ID
+        navigate(`/projects/${created.id}`);
+        return created.id.toString();
       }
-    })();
-    return optimisticId;
+      throw new Error('Invalid project create response');
+    } catch (err) {
+      showErrorToast('Failed to create project');
+      throw err;
+    }
   };
 
   const updateProject = (projectId: string, name: string, description: string) => {
