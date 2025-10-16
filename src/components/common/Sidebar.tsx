@@ -44,6 +44,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [chatEditDetails, setChatEditDetails] = React.useState('');
   const [chatDeleteId, setChatDeleteId] = React.useState<string | null>(null);
 
+  // Ref for the scrollable container
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+
   const {
     projects,
     sidebarProjects,
@@ -70,7 +73,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     setSidebarSearchQuery, 
     ensureSidebarChatsLoaded,
     sidebarChatsHasMore,
-    loadMoreSidebarChats
+    loadMoreSidebarChats,
+    setSidebarCurrentPage,
+    setSidebarChatsHasMore
   } = useChats();
   const navigate = useNavigate();
 
@@ -90,14 +95,50 @@ const Sidebar: React.FC<SidebarProps> = ({
     const timer = setTimeout(() => {
       if (localSidebarSearch !== sidebarSearchQuery) {
         setSidebarSearchQuery(localSidebarSearch);
-        // Load sidebar chats when search changes
-        if (selectedProjectId) {
-          ensureSidebarChatsLoaded(selectedProjectId);
-        }
+        setSidebarCurrentPage(1); // Reset to first page when searching
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [localSidebarSearch, sidebarSearchQuery, setSidebarSearchQuery, selectedProjectId, ensureSidebarChatsLoaded, sidebarSearchDidMount]);
+  }, [localSidebarSearch, sidebarSearchQuery, setSidebarSearchQuery, sidebarSearchDidMount]);
+
+  // Load sidebar chats when search query changes
+  React.useEffect(() => {
+    if (selectedProjectId) {
+      ensureSidebarChatsLoaded(selectedProjectId);
+    }
+  }, [sidebarSearchQuery, selectedProjectId]);
+
+  // Scroll to selected project when it changes (e.g., when navigating from projects page)
+  React.useEffect(() => {
+    if (selectedProjectId && scrollContainerRef.current) {
+      // Small delay to ensure DOM is updated
+      const timeoutId = setTimeout(() => {
+        // Find the project element in the sidebar
+        const projectElement = document.querySelector(`[data-project-id="${selectedProjectId}"]`);
+        if (projectElement && scrollContainerRef.current) {
+          // Calculate if the element is visible in the scroll container
+          const container = scrollContainerRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = projectElement.getBoundingClientRect();
+          
+          // Check if element is not fully visible
+          const isElementAbove = elementRect.top < containerRect.top;
+          const isElementBelow = elementRect.bottom > containerRect.bottom;
+          
+          if (isElementAbove || isElementBelow) {
+            // Scroll the element into view with some padding
+            projectElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedProjectId]);
 
   // Listen to external request to open create modal (from ProjectsList button)
   React.useEffect(() => {
@@ -324,16 +365,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               </div>
 
-              <div style={{ height: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'none' }}>
+              <div 
+                ref={scrollContainerRef}
+                style={{ height: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'none' }}
+              >
                 <ul className="space-y-3">
                 {sidebarProjects.map((p) => (
-                  <li key={p.id}>
+                  <li key={p.id} data-project-id={p.id}>
                     <div className="flex items-center gap-2 min-w-0">
                       <NavLink
                         to={`/projects/${p.id}`}
                         className={({ isActive }) =>
-                          `flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-sm min-w-0 ${
-                            isActive ? 'bg-dark-200 text-white' : 'text-gray-300 hover:bg-dark-200 hover:text-white'
+                          `flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-sm min-w-0 transition-colors duration-200 ${
+                            isActive ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-300 hover:bg-dark-200 hover:text-white'
                           }`
                         }
                       >
@@ -412,7 +456,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                             title="Search conversations"
                             onClick={() => {
                               setSearchProjectId(prev => (typeof prev === 'function' ? (prev as any)(p.id) : (prev === p.id ? null : p.id)));
-                              setLocalSidebarSearch('');
+                              // Don't clear the search when opening the search field
+                              if (searchProjectId !== p.id) {
+                                setLocalSidebarSearch('');
+                              }
                             }}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -448,16 +495,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                               Loading conversations...
                             </li>
-                          ) : conversations
-                            .filter(c => c.title.toLowerCase().includes(sidebarSearchQuery.toLowerCase()))
-                            .map((c) => (
+                          ) : conversations.map((c) => (
                               <li key={c.id}>
                                 <div className="flex items-center gap-2">
                                   <NavLink
                                     to={`/projects/${selectedProjectId}/chat/${c.id}`}
                                     className={({ isActive }) =>
-                                      `flex-1 block px-3 py-2 rounded-md text-sm truncate ${
-                                        isActive ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-dark-200 hover:text-white'
+                                      `flex-1 block px-3 py-2 rounded-md text-sm truncate transition-colors duration-200 ${
+                                        isActive ? 'text-white shadow-sm border border-primary-600' : 'text-gray-300 hover:bg-dark-200 hover:text-white'
                                       }`
                                     }
                                     title={c.title}
