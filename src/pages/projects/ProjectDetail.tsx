@@ -1,5 +1,9 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useProjects } from '../../context/ProjectsContext';
+import { useChats } from '../../context/ChatContext';
+import { fetchProjectById } from '../../services/projectService';
+import Loader from '../../components/common/Loader';
 
 import Button from '../../components/ui/Button';
 import { motion } from 'framer-motion';
@@ -24,47 +28,35 @@ const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'conversations' | 'members' | 'settings'>('conversations');
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   
-  // Mock data for project
-  const project = {
-    id: projectId,
-    name: 'Marketing Campaign',
-    description: 'Q4 marketing strategy and content planning for the new product launch. This project includes all marketing materials, social media strategy, and PR planning.',
-    createdAt: '2023-09-15T10:30:00Z',
-    updatedAt: '2023-10-05T14:45:00Z',
-  };
+  const { projects } = useProjects();
+  const { chatsByProject } = useChats();
+
+  const project = useMemo(() => {
+    const ctxProject = (projects || []).find(p => p.id === projectId);
+    return {
+      id: projectId,
+      name: ctxProject?.name || 'Project',
+      description: ctxProject?.description || '',
+      createdAt: ctxProject?.created_at || new Date().toISOString(),
+      updatedAt: ctxProject?.updated_at || new Date().toISOString(),
+    };
+  }, [projectId, projects]);
+
   
-  // Mock data for conversations
-  const conversations: Conversation[] = [
-    {
-      id: '1',
-      title: 'Social Media Strategy',
-      lastMessage: 'We should focus on Instagram and TikTok for the younger demographic.',
-      updatedAt: '2023-10-05T14:45:00Z',
-      messageCount: 24,
-    },
-    {
-      id: '2',
-      title: 'Email Campaign Planning',
-      lastMessage: 'The sequence should have 5 emails with increasing urgency.',
-      updatedAt: '2023-10-04T09:20:00Z',
-      messageCount: 18,
-    },
-    {
-      id: '3',
-      title: 'Content Calendar',
-      lastMessage: 'Let\'s schedule the blog posts to align with the product features reveal.',
-      updatedAt: '2023-10-03T16:10:00Z',
-      messageCount: 32,
-    },
-    {
-      id: '4',
-      title: 'Budget Allocation',
-      lastMessage: 'We need to increase the PPC budget for the launch week.',
-      updatedAt: '2023-10-02T11:30:00Z',
-      messageCount: 15,
-    },
-  ];
+  // Use conversations from context (selected project) or empty for new projects
+  const conversations: Conversation[] = useMemo(() => {
+    const list = projectId ? (chatsByProject[projectId] || []) : [];
+    if (list.length === 0) return [];
+    return list.map((c, idx) => ({
+      id: c.id,
+      title: c.title,
+      lastMessage: c.details || 'No details available.',
+      updatedAt: new Date(Date.now() - idx * 60_000).toISOString(),
+      messageCount: 0,
+    }));
+  }, [chatsByProject, projectId]);
   
   // Mock data for members
   const members: ProjectMember[] = [
@@ -130,7 +122,7 @@ const ProjectDetail: React.FC = () => {
               Created on {formatDate(project.createdAt)} • Last updated {formatDate(project.updatedAt)}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <Link to={`/projects/${projectId}/chat/new`}>
               <Button
                 variant="primary"
@@ -143,7 +135,7 @@ const ProjectDetail: React.FC = () => {
                 New Conversation
               </Button>
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
       
@@ -189,7 +181,9 @@ const ProjectDetail: React.FC = () => {
           {activeTab === 'conversations' && (
             <div className="space-y-6">
               {/* Conversations list remains here, toolbar moved to sidebar per new design */}
-              {conversations.length > 0 ? (
+              {isLoadingConversations ? (
+                <div className="py-8"><Loader /></div>
+              ) : conversations.length > 0 ? (
                 <div className="space-y-4">
                   {conversations.map((conversation, index) => (
                     <motion.div

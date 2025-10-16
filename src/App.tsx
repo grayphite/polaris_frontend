@@ -21,6 +21,7 @@ import React from 'react';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import Subscription from './pages/subscription/Subscription';
+import { ChatProvider } from './context/ChatContext';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -51,11 +52,13 @@ function App() {
           {/* Protected routes */}
           <Route element={
             <ProtectedRoute>
-              <MainLayout />
+              <ChatProvider>
+                <MainLayout />
+              </ChatProvider>
             </ProtectedRoute>
           }>
             {/* <Route path="/" element={<Dashboard />} /> */}
-            <Route path="/" element={<Navigate to="/projects/1" replace />} />
+            <Route path="/" element={<Navigate to="/projects" replace />} />
             
             {/* Projects routes */}
             <Route path="/projects" element={<ProjectsList />} />

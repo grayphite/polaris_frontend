@@ -21,7 +21,7 @@ const NotFound: React.FC = () => {
         </div>
         
         <div className="space-y-4">
-          <Link to="/projects/1">
+          <Link to="/projects">
             <Button variant="primary" size="lg" fullWidth>
               Go to Projects
             </Button>

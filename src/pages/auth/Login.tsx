@@ -45,7 +45,7 @@ const Login: React.FC = () => {
     
     try {
       await login(email, password);
-      navigate('/projects/1');
+      navigate('/projects');
     } catch (error) {
       console.error('Login error:', error);
       showErrorToast('Invalid email or password');
