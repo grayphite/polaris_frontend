@@ -1,10 +1,11 @@
 import { useLocation, useParams } from 'react-router-dom';
 import { useChats } from '../../context/ChatContext';
-import { fetchChatById } from '../../services/chatService';
+import { fetchChatById, sendMessageApi, getChatMessages } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
 
 import Button from '../../components/ui/Button';
 import Loader from '../../components/common/Loader';
+import { showErrorToast } from '../../utils/toast';
 
 interface Message {
   id: string;
@@ -13,17 +14,44 @@ interface Message {
   timestamp: string;
 }
 
+const sortMessagesByTimestamp = (messages: Message[]) => {
+  return [...messages].sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime();
+    const timeB = new Date(b.timestamp).getTime();
+    
+    // Primary sort: by timestamp
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+    
+    // Secondary sort: user messages before assistant messages (for same timestamp)
+    if (a.role === 'user' && b.role === 'assistant') return -1;
+    if (a.role === 'assistant' && b.role === 'user') return 1;
+    
+    return 0;
+  });
+};
+
 const ChatInterface: React.FC = () => {
   const { projectId, chatId } = useParams<{ projectId: string; chatId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef<number>(0);
+  const isPaginationLoadRef = useRef(false);
   const location = useLocation();
   
-  const { chatsByProject, hydrateProjectChats } = useChats();
+  const { chatsByProject, hydrateProjectChats, updateChat } = useChats();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   
   // Resolve title for the current chat
@@ -93,9 +121,69 @@ const ChatInterface: React.FC = () => {
   //   })();
   // }, [chatId, projectId, hydrateProjectChats]);
   
-  // Scroll to bottom when messages change
+  // Load message history when chat opens
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const loadMessages = async () => {
+      if (!chatId || !projectId) return;
+      
+      setIsLoadingHistory(true);
+      setCurrentPage(1);
+      setMessages([]);
+      lastScrollTop.current = 0;
+      
+      try {
+        const response = await getChatMessages(chatId, 1, 10);
+        if (response.success && response.ai_chats) {
+          // Convert API messages to UI message format
+          const loadedMessages: Message[] = [];
+          
+          response.ai_chats.forEach((aiChat) => {
+            // Add user message
+            loadedMessages.push({
+              id: `user-${aiChat.id}`,
+              content: aiChat.user_question,
+              role: 'user',
+              timestamp: aiChat.created_at,
+            });
+            
+            // Add assistant message
+            loadedMessages.push({
+              id: `assistant-${aiChat.id}`,
+              content: aiChat.ai_answer,
+              role: 'assistant',
+              timestamp: aiChat.created_at,
+            });
+          });
+          
+          // Always set messages, even if empty array
+          setMessages(sortMessagesByTimestamp(loadedMessages));
+          setHasMoreMessages(response.pagination.has_next);
+        } else {
+          // Handle unexpected response format
+          setMessages([]);
+          setHasMoreMessages(false);
+        }
+      } catch (error) {
+        console.error('Failed to load message history:', error);
+        showErrorToast('Failed to load messages. Please try again.');
+        setMessages([]); // Clear messages on error to show empty state
+        setHasMoreMessages(false);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    
+    loadMessages();
+  }, [chatId, projectId]);
+  
+  // Scroll to bottom when messages change (but not when loading more)
+  useEffect(() => {
+    // Don't auto-scroll when loading older messages via pagination
+    if (!isPaginationLoadRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Reset pagination flag after scroll effect
+    isPaginationLoadRef.current = false;
   }, [messages]);
   
   // Auto-resize textarea
@@ -106,6 +194,65 @@ const ChatInterface: React.FC = () => {
     }
   }, [input]);
   
+  // Load more messages when scrolling to top
+  const loadMoreMessages = async () => {
+    if (!chatId || !hasMoreMessages || isLoadingMore) return;
+    
+    setIsLoadingMore(true);
+    const nextPage = currentPage + 1;
+    
+    try {
+      const response = await getChatMessages(chatId, nextPage, 10);
+      if (response.success && response.ai_chats) {
+        const olderMessages: Message[] = [];
+        
+        response.ai_chats.forEach((aiChat) => {
+          olderMessages.push({
+            id: `user-${aiChat.id}`,
+            content: aiChat.user_question,
+            role: 'user',
+            timestamp: aiChat.created_at,
+          });
+          
+          olderMessages.push({
+            id: `assistant-${aiChat.id}`,
+            content: aiChat.ai_answer,
+            role: 'assistant',
+            timestamp: aiChat.created_at,
+          });
+        });
+        
+        // Prepend older messages to the beginning
+        isPaginationLoadRef.current = true; // Set flag before updating messages
+        setMessages((prev) => sortMessagesByTimestamp([...olderMessages, ...prev]));
+        setCurrentPage(nextPage);
+        setHasMoreMessages(response.pagination.has_next);
+      }
+    } catch (error) {
+      console.error('Failed to load more messages:', error);
+      showErrorToast('Failed to load more messages.');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+  
+  // Handle scroll event
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const currentScrollTop = target.scrollTop;
+    
+    // Check if user is scrolling UP (decreasing scrollTop)
+    const isScrollingUp = currentScrollTop < lastScrollTop.current;
+    
+    // Update last scroll position
+    lastScrollTop.current = currentScrollTop;
+    
+    // Only load more when scrolling UP and near the top
+    if (isScrollingUp && currentScrollTop < 100 && hasMoreMessages && !isLoadingMore) {
+      loadMoreMessages();
+    }
+  };
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
@@ -113,7 +260,10 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim()) return;
+    if (!input.trim() || !chatId) return;
+    
+    // Capture if this is the first message before state updates
+    const isFirstMessage = messages.length === 0;
     
     // Add user message
     const userMessage: Message = {
@@ -124,37 +274,50 @@ const ChatInterface: React.FC = () => {
     };
     
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     
-    // Simulate AI response
+    // Call real AI API
     setIsTyping(true);
     
-    // In a real app, you would make an API call to your backend
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        content: generateResponse(input),
-        role: 'assistant',
-        timestamp: new Date().toISOString(),
-      };
+    try {
+      const response = await sendMessageApi(chatId, currentInput);
       
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (response.success && response.ai_chat) {
+        // Update both messages to use backend timestamp for consistency
+        const userMessageWithBackendTime: Message = {
+          id: `user-${response.ai_chat.id}`,
+          content: currentInput,
+          role: 'user',
+          timestamp: response.ai_chat.created_at,
+        };
+        
+        const assistantMessage: Message = {
+          id: `assistant-${response.ai_chat.id}`,
+          content: response.ai_chat.ai_answer,
+          role: 'assistant',
+          timestamp: response.ai_chat.created_at,
+        };
+        
+        setMessages((prev) => {
+          // Remove the optimistic user message and add both with backend timestamp
+          const withoutOptimistic = prev.filter(m => m.id !== userMessage.id);
+          return sortMessagesByTimestamp([...withoutOptimistic, userMessageWithBackendTime, assistantMessage]);
+        });
+        
+        // Auto-rename chat based on first message response only
+        if (response.ai_chat.chat_name && projectId && isFirstMessage) {
+          updateChat(projectId, chatId, response.ai_chat.chat_name, '');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      showErrorToast('Failed to send message. Please try again.');
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
   
-  // Simple mock response generator
-  const generateResponse = (userInput: string): string => {
-    const responses = [
-      "That's a great point about social media strategy. I recommend focusing on creating authentic content that resonates with your target audience. Consider using user-generated content and engaging with your followers regularly.",
-      "For your Instagram campaign, I suggest using a mix of Stories, Reels, and feed posts. Stories are great for behind-the-scenes content, Reels for trending challenges, and feed posts for polished product features.",
-      "When targeting Gen Z and millennials, remember that authenticity is key. They value brands that take stands on social issues and demonstrate their values consistently.",
-      "For your content calendar, I recommend planning themes for each week of the month. This creates consistency while allowing for variety in your content.",
-      "Hashtag strategy is important for discoverability. Use a mix of popular, niche, and branded hashtags. Aim for about 5-10 hashtags per post for optimal reach.",
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
   
   const formatTime = (timestamp: string): string => {
     const date = new Date(timestamp);
@@ -197,47 +360,84 @@ const ChatInterface: React.FC = () => {
           </div> */}
         </div>
         
+        {/* Loading history indicator */}
+        {isLoadingHistory && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-sm text-gray-500">Loading conversation...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoadingHistory && messages.length === 0 && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <p className="text-lg font-medium mb-1">Start a conversation</p>
+              <p className="text-sm">Send a message to begin chatting</p>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+        {!isLoadingHistory && messages.length > 0 && (
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-6" 
+            style={{scrollbarWidth: 'none'}}
+            onScroll={handleScroll}
+          >
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <div className="flex justify-center py-2">
+                <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            
+            {messages.map((message) => (
               <div
-                className={`max-w-3xl rounded-lg px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-white border border-gray-200'
-                }`}
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="whitespace-pre-wrap">{message.content}</div>
                 <div
-                  className={`text-xs mt-1 text-right ${
-                    message.role === 'user' ? 'text-primary-100' : 'text-gray-500'
+                  className={`max-w-3xl rounded-lg px-4 py-3 ${
+                    message.role === 'user'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white border border-gray-200'
                   }`}
                 >
-                  {formatTime(message.timestamp)}
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                  <div
+                    className={`text-xs mt-1 text-right ${
+                      message.role === 'user' ? 'text-primary-100' : 'text-gray-500'
+                    }`}
+                  >
+                    {formatTime(message.timestamp)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-          
-          {/* Typing indicator */}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
-                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-100"></div>
-                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-200"></div>
+            ))}
+            
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
+                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-100"></div>
+                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-200"></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        )}
         
         {/* Input area */}
         <div className="bg-white border-t border-gray-200 p-4">
@@ -268,7 +468,7 @@ const ChatInterface: React.FC = () => {
                       <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  <button
+                  {/* <button
                     type="button"
                     className="p-1.5 rounded-full hover:bg-gray-200"
                     title="Format text"
@@ -276,7 +476,7 @@ const ChatInterface: React.FC = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                     </svg>
-                  </button>
+                  </button> */}
                 </div>
                 <div className="text-xs text-gray-500">
                   Press Enter to send, Shift+Enter for new line

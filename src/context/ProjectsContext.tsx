@@ -26,7 +26,7 @@ type ProjectsContextValue = {
   loadProjects: () => Promise<void>;
   createProject: (name: string, description: string) => Promise<string>; // returns id
   updateProject: (projectId: string, name: string, description: string) => void;
-  deleteProject: (projectId: string) => void;
+  deleteProject: (projectId: string) => Promise<boolean>;
   startConversation: (projectId: string, title: string) => string; // returns conversation id
   // UI flags for create/edit modal hosted in Sidebar
   openCreateProject: boolean;
@@ -283,22 +283,23 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     })();
   };
 
-  const deleteProject = (projectId: string) => {
-    setProjects(prev => prev.filter(p => p.id !== projectId));
-    setSidebarProjects(prev => prev.filter(p => p.id !== projectId)); // Also remove from sidebar
-    setConversationsByProject(prev => {
-      const { [projectId]: _removed, ...rest } = prev;
-      return rest;
-    });
-    clearProjectChats(projectId);
-    (async () => {
-      try {
-        await deleteProjectApi(projectId);
-        showSuccessToast('Project Deleted Successfully!');
-      } catch (err) {
-        showErrorToast('Failed to delete project');
-      }
-    })();
+  const deleteProject = async (projectId: string) => {
+    try {
+      await deleteProjectApi(projectId);
+      // Only update state after successful API call
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setSidebarProjects(prev => prev.filter(p => p.id !== projectId));
+      setConversationsByProject(prev => {
+        const { [projectId]: _removed, ...rest } = prev;
+        return rest;
+      });
+      clearProjectChats(projectId);
+      showSuccessToast('Project Deleted Successfully!');
+      return true;
+    } catch (err) {
+      showErrorToast('Failed to delete project');
+      return false;
+    }
   };
 
   const startConversation = (projectId: string, title: string) => {

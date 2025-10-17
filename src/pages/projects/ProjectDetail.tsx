@@ -6,7 +6,6 @@ import { fetchProjectById } from '../../services/projectService';
 import Loader from '../../components/common/Loader';
 
 import Button from '../../components/ui/Button';
-import CreateChatModal from '../../components/ui/CreateChatModal';
 import { motion } from 'framer-motion';
 
 interface Conversation {
@@ -32,7 +31,7 @@ const ProjectDetail: React.FC = () => {
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [didMount, setDidMount] = useState(false);
-  const [showCreateChatModal, setShowCreateChatModal] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   
   const { projects } = useProjects();
   const { 
@@ -43,7 +42,8 @@ const ProjectDetail: React.FC = () => {
     setConversationsSearchQuery, 
     currentPage, 
     setCurrentPage, 
-    pagination 
+    pagination,
+    createChat
   } = useChats();
 
   const project = useMemo(() => {
@@ -144,9 +144,6 @@ const ProjectDetail: React.FC = () => {
     }
   };
 
-  const handleChatCreated = (chatId: string) => {
-    navigate(`/projects/${projectId}/chat/${chatId}`);
-  };
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -180,14 +177,26 @@ const ProjectDetail: React.FC = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="primary"
-              onClick={() => setShowCreateChatModal(true)}
+              isLoading={isCreatingChat}
+              onClick={async () => {
+                if (!projectId) return;
+                setIsCreatingChat(true);
+                try {
+                  const chatId = await createChat(projectId, 'New Chat', '');
+                  navigate(`/projects/${projectId}/chat/${chatId}`);
+                } catch {
+                  // Error handled in context
+                } finally {
+                  setIsCreatingChat(false);
+                }
+              }}
               leftIcon={
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                 </svg>
               }
             >
-              New Conversation
+              {isCreatingChat ? 'Creating...' : 'New Conversation'}
             </Button>
           </div>
         </div>
@@ -271,7 +280,7 @@ const ProjectDetail: React.FC = () => {
                               <p className="mt-1 text-sm text-gray-500 line-clamp-2">{conversation.lastMessage}</p>
                             </div>
                             <span className="bg-light-300 text-xs px-2 py-1 rounded-full">
-                              {conversation.messageCount} messages
+                              {conversation.messageCount === 0 ? '-' : `${conversation.messageCount} messages`}
                             </span>
                           </div>
                           <div className="mt-3 text-xs text-gray-500">
@@ -558,15 +567,6 @@ const ProjectDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Create Chat Modal */}
-      {projectId && (
-        <CreateChatModal
-          isOpen={showCreateChatModal}
-          onClose={() => setShowCreateChatModal(false)}
-          projectId={projectId}
-          onSuccess={handleChatCreated}
-        />
-      )}
     </div>
   );
 };

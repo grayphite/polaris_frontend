@@ -17,7 +17,7 @@ type ChatContextValue = {
   sidebarChatsByProject: Record<string, Chat[]>;
   loadingProjects: Set<string>;
   loadingSidebarProjects: Set<string>;
-  createChat: (projectId: string, name: string, description: string) => Promise<string>; // returns real id
+  createChat: (projectId: string, name: string, description?: string) => Promise<string>; // returns real id
   updateChat: (projectId: string, chatId: string, name: string, description: string) => void;
   deleteChat: (projectId: string, chatId: string) => Promise<boolean>;
   hydrateProjectChats: (projectId: string, chats: Array<{ id: string; title: string; details?: string }>, replace?: boolean) => void;
@@ -195,8 +195,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: r.name, 
           details: r.description,
           created_at: r.created_at,
-          updated_at: r.created_at,
-          message_count: 0
+          updated_at: r.updated_at,
+          message_count: r.aichat_count ?? 0
         })), true); // Always replace when fetching from API
         setPagination(response.pagination);
       } else {
@@ -234,8 +234,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: r.name, 
           details: r.description,
           created_at: r.created_at,
-          updated_at: r.created_at,
-          message_count: 0
+          updated_at: r.updated_at,
+          message_count: r.aichat_count ?? 0
         }));
         
         // Load into both data sources for initial display
@@ -282,8 +282,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: r.name, 
           details: r.description,
           created_at: r.created_at,
-          updated_at: r.created_at,
-          message_count: 0
+          updated_at: r.updated_at,
+          message_count: r.aichat_count ?? 0
         })), true); // Always replace when fetching from API
         
         // Update sidebar pagination state
@@ -323,8 +323,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: r.name, 
             details: r.description,
             created_at: r.created_at,
-            updated_at: r.created_at,
-            message_count: 0
+            updated_at: r.updated_at,
+            message_count: r.aichat_count ?? 0
           })), false, true); // Append to existing chats
           
           // Update sidebar pagination state
@@ -356,7 +356,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const createChat = async (projectId: string, name: string, description: string) => {
+  const createChat = async (projectId: string, name: string, description: string = '') => {
     try {
       const created = await createChatApi(projectId, name, description);
       if (created?.id) {
@@ -387,7 +387,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         });
         
-        showSuccessToast('Chat created');
+        // showSuccessToast('Chat created');
         return created.id.toString();
       }
       throw new Error('Invalid chat create response');
@@ -412,7 +412,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (async () => {
       try {
         await updateChatApi(chatId, name, description);
-        showSuccessToast('Chat updated');
+        // showSuccessToast('Chat Updated Successfully!');
       } catch (err) {
         showErrorToast('Failed to update chat');
       }

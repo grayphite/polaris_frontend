@@ -1,11 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { showErrorToast } from '../utils/toast';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://11.1.1.182:5000/api';
 
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,16 +31,22 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized globally, but skip redirect for auth endpoints
+    // Handle 401 Unauthorized globally
     const status = error?.response?.status;
-    const hadAuthHeader = !!error?.config?.headers?.Authorization;
+      // Check if user is currently on an auth page
+      const isOnAuthPage = window.location.pathname == '/login' ||
+                           window.location.pathname == '/register' ||
+                           window.location.pathname == '/forgot-password' ||
+                           window.location.pathname == '/reset-password';
 
-    if (status === 401 && hadAuthHeader) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-      return;
-    }
+      if (status === 401 && !isOnAuthPage) {
+        // Clear auth state and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        showErrorToast('Session expired, please login again.');
+        return;
+      }
     
     // Log error for debugging
     console.error('API request failed:', error);
