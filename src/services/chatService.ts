@@ -1,4 +1,5 @@
 import { makeRequest } from './api';
+import { FileMetadata } from './fileService';
 
 export type ChatDTO = { 
   id: number; 
@@ -82,10 +83,14 @@ export type AIChatMessageDTO = {
   ai_model_provider: string;
   conversation_context: string;
   chat_name?: string; // Add optional chat_name field for auto-naming
+  file_references?: string[]; // Array of file IDs
+  file_reference_details?: FileMetadata[]; // Array of file objects from backend
   context_metadata: {
     api_version: string;
     model_used: string;
     request_timestamp: string;
+    file_count?: number;
+    file_references?: string[]; // File IDs in message history
   };
   created_at: string;
   updated_at: string;
@@ -116,14 +121,28 @@ export interface GetMessagesResponse {
 // Send message to AI chat
 export async function sendMessageApi(
   chatId: string, 
-  userQuestion: string
+  userQuestion: string,
+  fileReferences?: string[],
+  fileReferenceDetails?: FileMetadata[]
 ): Promise<SendMessageResponse> {
+  const payload: any = {
+    chat_id: parseInt(chatId),
+    user_question: userQuestion
+  };
+  
+  // Add file references to payload if provided
+  if (fileReferences && fileReferences.length > 0) {
+    payload.file_references = fileReferences;
+  }
+  
+  // Add file reference details to payload if provided
+  if (fileReferenceDetails && fileReferenceDetails.length > 0) {
+    payload.file_reference_details = fileReferenceDetails;
+  }
+  
   return makeRequest<SendMessageResponse>('/ai-chats/send-message', {
     method: 'POST',
-    data: {
-      chat_id: parseInt(chatId),
-      user_question: userQuestion
-    }
+    data: payload
   });
 }
 
