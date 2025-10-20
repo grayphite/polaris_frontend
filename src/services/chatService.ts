@@ -1,4 +1,5 @@
 import { makeRequest } from './api';
+import { FileMetadata } from './fileService';
 
 export type ChatDTO = { 
   id: number; 
@@ -6,8 +7,10 @@ export type ChatDTO = {
   name: string; 
   description: string;
   created_at: string;
+  updated_at: string;
   created_by: number;
   is_deleted: boolean;
+  aichat_count?: number;
 };
 
 export interface ChatsResponse {
@@ -67,6 +70,97 @@ export async function updateChatApi(chatId: string, name: string, description: s
 
 export async function deleteChatApi(chatId: string): Promise<{ success: boolean }>{
   return makeRequest<{ success: boolean }>(`/chats/${chatId}`, { method: 'DELETE' });
+}
+
+// AI Chat Message Types
+export type AIChatMessageDTO = {
+  id: number;
+  chat_id: number;
+  user_id: number;
+  user_question: string;
+  ai_answer: string;
+  ai_model: string;
+  ai_model_provider: string;
+  conversation_context: string;
+  chat_name?: string; // Add optional chat_name field for auto-naming
+  file_references?: string[]; // Array of file IDs
+  file_reference_details?: FileMetadata[]; // Array of file objects from backend
+  context_metadata: {
+    api_version: string;
+    model_used: string;
+    request_timestamp: string;
+    file_count?: number;
+    file_references?: string[]; // File IDs in message history
+  };
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  deleted_by: number | null;
+  is_deleted: boolean;
+};
+
+export interface SendMessageResponse {
+  success: boolean;
+  message: string;
+  ai_chat: AIChatMessageDTO;
+}
+
+export interface GetMessagesResponse {
+  success: boolean;
+  ai_chats: AIChatMessageDTO[];
+  pagination: {
+    current_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+    pages: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+// Send message to AI chat
+export async function sendMessageApi(
+  chatId: string, 
+  userQuestion: string,
+  fileReferences?: string[],
+  fileReferenceDetails?: FileMetadata[]
+): Promise<SendMessageResponse> {
+  const payload: any = {
+    chat_id: parseInt(chatId),
+    user_question: userQuestion
+  };
+  
+  // Add file references to payload if provided
+  if (fileReferences && fileReferences.length > 0) {
+    payload.file_references = fileReferences;
+  }
+  
+  // Add file reference details to payload if provided
+  if (fileReferenceDetails && fileReferenceDetails.length > 0) {
+    payload.file_reference_details = fileReferenceDetails;
+  }
+  
+  return makeRequest<SendMessageResponse>('/ai-chats/send-message', {
+    method: 'POST',
+    data: payload
+  });
+}
+
+// Get messages for a chat
+export async function getChatMessages(
+  chatId: string,
+  page: number = 1,
+  perPage: number = 10
+): Promise<GetMessagesResponse> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    per_page: perPage.toString(),
+  });
+  
+  return makeRequest<GetMessagesResponse>(
+    `/chats/${chatId}/ai-chats?${params.toString()}`,
+    { method: 'GET' }
+  );
 }
 
 

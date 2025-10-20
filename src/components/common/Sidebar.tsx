@@ -32,9 +32,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [newProjectName, setNewProjectName] = React.useState('');
   const [newProjectDetails, setNewProjectDetails] = React.useState('');
   const [isEditingProject, setIsEditingProject] = React.useState(false);
-  const [showCreateChat, setShowCreateChat] = React.useState(false);
-  const [newChatName, setNewChatName] = React.useState('');
-  const [newChatDetails, setNewChatDetails] = React.useState('');
   const [isSubmittingChat, setIsSubmittingChat] = React.useState(false);
   const [isSubmittingProject, setIsSubmittingProject] = React.useState(false);
   const [chatMenuOpenId, setChatMenuOpenId] = React.useState<string | null>(null);
@@ -291,45 +288,24 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const handleDelete = (projectId: string) => {
-    deleteProject(projectId);
-    if (selectedProjectId === projectId) navigate('/projects');
+  const handleDelete = async (projectId: string) => {
+    const success = await deleteProject(projectId);
+    if (success && selectedProjectId === projectId) navigate('/projects');
   };
 
-  const handleStartNewConversation = async (projectId: string) => {
-    const name = (newChatName || '').trim();
-    const description = (newChatDetails || '').trim();
-    if (!name || !description) return;
-    setIsSubmittingChat(true);
-    try {
-      const cid = await createChat(projectId, name, description);
-      navigate(`/projects/${projectId}/chat/${cid}`);
-    } catch {
-      // On failure, user already saw toast; go back to project page
-      // navigate(`/projects/${projectId}`);
-    } finally {
-      setShowCreateChat(false);
-      setNewChatName('');
-      setNewChatDetails('');
-      setIsSubmittingChat(false);
-    }
-  };
 
-  const openEditChat = (chatId: string, title: string) => {
+  const openEditChat = (chatId: string, title: string, details?: string) => {
     setChatEditId(chatId);
     setChatEditTitle(title);
-    // Get details from context
-    const chat = conversations.find(c => c.id === chatId);
-    setChatEditDetails(chat?.details || '');
+    setChatEditDetails(details || '');
   };
 
   const submitEditChat = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!selectedProjectId || !chatEditId) return;
     const name = chatEditTitle.trim();
-    const description = chatEditDetails.trim();
-    if (!name || !description) return;
-    updateChat(selectedProjectId, chatEditId, name, description);
+    if (!name) return;
+    updateChat(selectedProjectId, chatEditId, name, chatEditDetails.trim());
     setChatEditId(null);
   };
   return (
@@ -479,13 +455,32 @@ const Sidebar: React.FC<SidebarProps> = ({
                             </svg>
                           </button>
                           <button
-                            className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white"
+                            className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-70 disabled:cursor-not-allowed"
                             title="Start new conversation"
-                            onClick={() => { setShowCreateChat(true); }}
+                            disabled={isSubmittingChat}
+                            onClick={async () => { 
+                              if (!selectedProjectId) return;
+                              setIsSubmittingChat(true);
+                              try {
+                                const cid = await createChat(selectedProjectId, 'New Chat', '');
+                                navigate(`/projects/${selectedProjectId}/chat/${cid}`);
+                              } catch {
+                                // Error handled in context
+                              } finally {
+                                setIsSubmittingChat(false);
+                              }
+                            }}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                            </svg>
+                            {isSubmittingChat ? (
+                              <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                              </svg>
+                            )}
                           </button>
                         </div>
 
@@ -545,7 +540,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         <button
                                           type="button"
                                           className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                          onClick={() => { openEditChat(c.id, c.title); setChatMenuOpenId(null); }}
+                                          onClick={() => { openEditChat(c.id, c.title, c.details); setChatMenuOpenId(null); }}
                                         >
                                           Edit
                                         </button>
@@ -708,13 +703,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onChange={(e) => setChatEditTitle(e.target.value)}
                       autoFocus
                     />
-                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Details</label>
+                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description (optional)</label>
                     <textarea
                       className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      placeholder="Brief context for this chat..."
                       rows={4}
                       value={chatEditDetails}
                       onChange={(e) => setChatEditDetails(e.target.value)}
-                      required
                     />
                     <div className="mt-6 flex justify-end gap-3">
                       <button
@@ -727,7 +722,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         type="submit"
                         className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-                        disabled={!chatEditTitle.trim() || !chatEditDetails.trim()}
+                        disabled={!chatEditTitle.trim()}
                       >
                         Save
                       </button>
@@ -778,61 +773,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
 
-            {showCreateChat && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreateChat(false)} />
-                <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4">
-                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Create Chat</h3>
-                    <button
-                      onClick={() => setShowCreateChat(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                      aria-label="Close"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <form onSubmit={(e) => { e.preventDefault(); if (!selectedProjectId) return; handleStartNewConversation(selectedProjectId); }} className="p-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Chat name</label>
-                    <input
-                      type="text"
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="e.g. Brainstorm Q4 ideas"
-                      value={newChatName || ''}
-                      onChange={(e) => setNewChatName(e.target.value)}
-                      autoFocus
-                    />
-                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Details</label>
-                    <textarea
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Brief context for this chat..."
-                      rows={4}
-                      value={newChatDetails}
-                      onChange={(e) => setNewChatDetails(e.target.value)}
-                      required
-                    />
-                    <div className="mt-6 flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateChat(false)}
-                        className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-                        disabled={isSubmittingChat || !((newChatName || '').trim()) || !((newChatDetails || '').trim())}
-                      >
-                        {isSubmittingChat ? 'Creating…' : 'Create'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
 
             {/* Delete confirmation */}
             {deleteProjectId && (
@@ -854,7 +794,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => { if (deleteProjectId) handleDelete(deleteProjectId); setDeleteProjectId(null); }}
+                        onClick={async () => { 
+                          if (deleteProjectId) {
+                            await handleDelete(deleteProjectId);
+                          }
+                          setDeleteProjectId(null); 
+                        }}
                         className="px-4 py-2 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white"
                       >
                         Delete
