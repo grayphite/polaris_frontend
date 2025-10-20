@@ -124,9 +124,9 @@ const ProjectsList: React.FC = () => {
                   <div>
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-medium text-gray-900">{project.name}</h3>
-                      <span className="bg-light-300 text-gray-600 text-xs px-2 py-1 rounded-full">
+                      {/* <span className="bg-light-300 text-gray-600 text-xs px-2 py-1 rounded-full">
                         {project.conversationsCount} conversations
-                      </span>
+                      </span> */}
                     </div>
                     <p className="mt-2 text-sm text-gray-500">{project.description}</p>
                   </div>
