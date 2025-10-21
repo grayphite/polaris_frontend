@@ -1,4 +1,4 @@
-import { makeRequest } from './api';
+import { makeRequest, makeStreamRequest } from './api';
 import { FileMetadata } from './fileService';
 
 export type ChatDTO = { 
@@ -118,12 +118,13 @@ export interface GetMessagesResponse {
   };
 }
 
-// Send message to AI chat
+// Send message to AI chat with streaming support
 export async function sendMessageApi(
   chatId: string, 
   userQuestion: string,
   fileReferences?: string[],
-  fileReferenceDetails?: FileMetadata[]
+  fileReferenceDetails?: FileMetadata[],
+  onStreamChunk?: (text: string) => void
 ): Promise<SendMessageResponse> {
   const payload: any = {
     chat_id: parseInt(chatId),
@@ -140,10 +141,39 @@ export async function sendMessageApi(
     payload.file_reference_details = fileReferenceDetails;
   }
   
-  return makeRequest<SendMessageResponse>('/ai-chats/send-message', {
-    method: 'POST',
-    data: payload
-  });
+  let accumulatedText = '';
+  let completeData: any = null;
+  
+  // Use makeStreamRequest for SSE streaming
+  await makeStreamRequest(
+    '/ai-chats/send-message-stream',
+    payload,
+    (chunk) => {
+      // Handle content_block_delta events for streaming text
+      if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+        accumulatedText += chunk.delta.text;
+        if (onStreamChunk) {
+          onStreamChunk(accumulatedText);
+        }
+      }
+      
+      // Handle stream_complete event for final data
+      if (chunk.type === 'stream_complete' && chunk.ai_chat) {
+        completeData = chunk;
+      }
+    }
+  );
+  
+  // Return the complete data in the expected format
+  if (completeData && completeData.ai_chat) {
+    return {
+      success: true,
+      message: completeData.message || 'AI chat created successfully',
+      ai_chat: completeData.ai_chat,
+    };
+  }
+  
+  throw new Error('Stream completed without receiving complete data');
 }
 
 // Get messages for a chat
