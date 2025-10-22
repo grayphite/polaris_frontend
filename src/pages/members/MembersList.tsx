@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import Button from '../../components/ui/Button';
+import { formatDate } from '../../utils/dateTime';
 
 interface Member {
   id: string;
@@ -125,11 +126,6 @@ const MembersList: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
-  };
-  
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
   return (

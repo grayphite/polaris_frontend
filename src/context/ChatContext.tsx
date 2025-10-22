@@ -433,7 +433,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...prev, [projectId]: list.filter(c => c.id !== chatId) };
       });
       
-      showSuccessToast('Chat deleted');
+      // showSuccessToast('Chat deleted');
       return true;
     } catch (err) {
       showErrorToast('Failed to delete chat');

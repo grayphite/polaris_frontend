@@ -38,6 +38,8 @@ type ProjectsContextValue = {
   sidebarProjects: Project[];
   sidebarLoading: boolean;
   sidebarHasMore: boolean;
+  sidebarProjectSearchQuery: string;
+  setSidebarProjectSearchQuery: (query: string) => void;
   loadMoreSidebarProjects: () => Promise<void>;
 };
 
@@ -67,6 +69,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [sidebarLoading, setSidebarLoading] = useState<boolean>(false);
   const [sidebarHasMore, setSidebarHasMore] = useState<boolean>(true);
   const [sidebarPage, setSidebarPage] = useState<number>(1);
+  const [sidebarProjectSearchQuery, setSidebarProjectSearchQueryState] = useState<string>('');
 
   // Load projects function
   const loadProjects = async () => {
@@ -106,7 +109,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     setSidebarLoading(true);
     try {
-      const response = await fetchProjects(sidebarPage, 10, '', false);
+      const response = await fetchProjects(sidebarPage, 10, sidebarProjectSearchQuery, false);
       const newProjects = response.projects.map(r => ({ 
         id: r.id.toString(), 
         name: r.name,
@@ -152,6 +155,51 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     loadMoreSidebarProjects();
   }, []);
+
+  // Reload sidebar projects when search query changes
+  useEffect(() => {
+    // Reset sidebar projects and reload from page 1
+    setSidebarProjects([]);
+    setSidebarPage(1);
+    setSidebarHasMore(true);
+    
+    // Load first page with search
+    (async () => {
+      if (sidebarLoading) return;
+      
+      setSidebarLoading(true);
+      try {
+        const response = await fetchProjects(1, 10, sidebarProjectSearchQuery, false);
+        const newProjects = response.projects.map(r => ({ 
+          id: r.id.toString(), 
+          name: r.name,
+          description: r.description,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+          chat_count: r.chat_count
+        }));
+        
+        setSidebarProjects(newProjects);
+        setSidebarPage(2);
+        setSidebarHasMore(response.pagination.has_next);
+        
+        // Hydrate embedded chats when present
+        response.projects.forEach(r => { 
+          if (Array.isArray(r.chats) && r.chats.length) {
+            hydrateProjectChats(r.id.toString(), r.chats!.map(c => ({ 
+              id: c.id, 
+              title: c.title, 
+              details: c.details 
+            }))); 
+          }
+        });
+      } catch (err) {
+        console.error('Failed to load sidebar projects:', err);
+      } finally {
+        setSidebarLoading(false);
+      }
+    })();
+  }, [sidebarProjectSearchQuery]);
 
   // Ensure selected project appears in sidebar when not present
   useEffect(() => {
@@ -215,11 +263,15 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const next = present ? prev.map(p => (p.id === data.id.toString() ? { 
               id: data.id.toString(), 
               name: data.name || p.name,
-              description: data.description || p.description
+              description: data.description || p.description,
+              created_at: data.created_at,
+              updated_at: data.updated_at
             } : p)) : [{ 
               id: data.id.toString(), 
               name: data.name || 'Project',
-              description: data.description
+              description: data.description,
+              created_at: data.created_at,
+              updated_at: data.updated_at
             }, ...prev];
             return next;
           });
@@ -273,12 +325,26 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateProject = (projectId: string, name: string, description: string) => {
-    const updatedProject = { id: projectId, name, description, created_at: undefined, updated_at: undefined };
+    // Preserve the created_at from existing project
+    const existingProject = projects.find(p => p.id === projectId);
+    const updatedProject = { 
+      id: projectId, 
+      name, 
+      description, 
+      created_at: existingProject?.created_at, 
+      updated_at: existingProject?.updated_at 
+    };
     setProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p)));
     setSidebarProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p))); // Also update sidebar
     (async () => {
       try {
-        await updateProjectApi(projectId, name, description);
+        const response = await updateProjectApi(projectId, name, description);
+        // Update with the new updated_at from backend response
+        if (response?.updated_at) {
+          const finalProject = { ...updatedProject, updated_at: response.updated_at };
+          setProjects(prev => prev.map(p => (p.id === projectId ? finalProject : p)));
+          setSidebarProjects(prev => prev.map(p => (p.id === projectId ? finalProject : p)));
+        }
         showSuccessToast('Project Updated Successfully!');
       } catch (err) {
         showErrorToast('Failed to update project');
@@ -332,6 +398,12 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Custom setSidebarProjectSearchQuery wrapper
+  const handleSetSidebarProjectSearchQuery = (query: string) => {
+    if (query === sidebarProjectSearchQuery) return; // no-op if nothing changed
+    setSidebarProjectSearchQueryState(query);
+  };
+
   const value = useMemo<ProjectsContextValue>(() => ({
     projects,
     conversationsByProject,
@@ -354,8 +426,10 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     sidebarProjects,
     sidebarLoading,
     sidebarHasMore,
+    sidebarProjectSearchQuery,
+    setSidebarProjectSearchQuery: handleSetSidebarProjectSearchQuery,
     loadMoreSidebarProjects,
-  }), [projects, conversationsByProject, projectsLoading, searchQuery, currentPage, pagination, openCreateProject, editProjectId, sidebarProjects, sidebarLoading, sidebarHasMore, loadMoreSidebarProjects]);
+  }), [projects, conversationsByProject, projectsLoading, searchQuery, currentPage, pagination, openCreateProject, editProjectId, sidebarProjects, sidebarLoading, sidebarHasMore, sidebarProjectSearchQuery, loadMoreSidebarProjects]);
 
   return (
     <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>

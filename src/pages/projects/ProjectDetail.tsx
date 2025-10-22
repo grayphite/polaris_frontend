@@ -7,6 +7,7 @@ import Loader from '../../components/common/Loader';
 
 import Button from '../../components/ui/Button';
 import { motion } from 'framer-motion';
+import { formatDate, formatTime } from '../../utils/dateTime';
 
 interface Conversation {
   id: string;
@@ -142,24 +143,6 @@ const ProjectDetail: React.FC = () => {
       // In a real app, you would make an API call here
       navigate('/projects');
     }
-  };
-
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-  
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   return (
