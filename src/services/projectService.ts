@@ -8,6 +8,7 @@ export type ProjectDTO = {
   updated_at?: string;
   created_by: number;
   is_deleted: boolean;
+  chat_count?: number;
   chats?: Array<{ id: string; title: string; details?: string }>; // optional embedded chats
 };
 

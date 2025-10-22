@@ -4,7 +4,7 @@ import { useChats } from './ChatContext';
 import { createProjectApi, deleteProjectApi, fetchProjectById, fetchProjects, updateProjectApi } from '../services/projectService';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 
-export type Project = { id: string; name: string; description?: string; created_at?: string; updated_at?: string };
+export type Project = { id: string; name: string; description?: string; created_at?: string; updated_at?: string; chat_count?: number };
 export type Conversation = { id: string; title: string };
 
 type ProjectsContextValue = {
@@ -78,7 +78,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         name: r.name,
         description: r.description,
         created_at: r.created_at,
-        updated_at: r.updated_at
+        updated_at: r.updated_at,
+        chat_count: r.chat_count
       })));
       setPagination(response.pagination);
       
@@ -111,7 +112,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         name: r.name,
         description: r.description,
         created_at: r.created_at,
-        updated_at: r.updated_at
+        updated_at: r.updated_at,
+        chat_count: r.chat_count
       }));
       
       // Prevent duplicates by filtering out projects that already exist in sidebar
@@ -171,7 +173,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 name: data.name,
                 description: data.description,
                 created_at: data.created_at,
-                updated_at: data.updated_at
+                updated_at: data.updated_at,
+                chat_count: (data as any).chat_count
               }, ...prev];
             });
             

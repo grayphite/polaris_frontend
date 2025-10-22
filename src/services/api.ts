@@ -74,5 +74,103 @@ export async function makeRequest<T>(
   }
 }
 
+/**
+ * Stream API function for Server-Sent Events (SSE) streaming
+ * Uses fetch API for proper SSE support while maintaining consistency with makeRequest
+ */
+export async function makeStreamRequest<T>(
+  endpoint: string,
+  data: any,
+  onStreamChunk?: (chunk: any) => void
+): Promise<T> {
+  try {
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    // Handle 401 errors consistently with axios interceptor
+    if (response.status === 401) {
+      const isOnAuthPage = window.location.pathname === '/login' ||
+                           window.location.pathname === '/register' ||
+                           window.location.pathname === '/forgot-password' ||
+                           window.location.pathname === '/reset-password';
+      
+      if (!isOnAuthPage) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        showErrorToast('Session expired, please login again.');
+      }
+      throw new Error('Unauthorized');
+    }
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    
+    if (!reader) {
+      throw new Error('Response body is not readable');
+    }
+    
+    let buffer = '';
+    let result: T | null = null;
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        // Decode the chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines from buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6); // Remove 'data: ' prefix
+              const data = JSON.parse(jsonStr);
+              
+              // Call the chunk handler if provided
+              if (onStreamChunk) {
+                onStreamChunk(data);
+              }
+              
+              // Store the final result (implementation can customize this)
+              result = data as T;
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e, line);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    
+    if (!result) {
+      throw new Error('Stream completed without receiving data');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Stream API request failed:', error);
+    throw error;
+  }
+}
+
 // Export the axios instance for direct use if needed
 export { apiClient };

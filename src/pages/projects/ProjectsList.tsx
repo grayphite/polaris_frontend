@@ -12,7 +12,7 @@ interface Project {
   description: string;
   createdAt: string;
   updatedAt: string;
-  conversationsCount: number;
+  conversationsCount: number | null;
   members: number;
   tags: string[];
 }
@@ -39,7 +39,7 @@ const ProjectsList: React.FC = () => {
       description: p.description || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      conversationsCount: 0,
+      conversationsCount: p.chat_count ?? null,
       members: 1,
       tags: [],
     } as Project));
@@ -124,9 +124,11 @@ const ProjectsList: React.FC = () => {
                   <div>
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-medium text-gray-900">{project.name}</h3>
-                      {/* <span className="bg-light-300 text-gray-600 text-xs px-2 py-1 rounded-full">
-                        {project.conversationsCount} conversations
-                      </span> */}
+                      <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">
+                        {project.conversationsCount !== null && project.conversationsCount !== undefined 
+                          ? `${project.conversationsCount} conversations` 
+                          : '-'}
+                      </span>
                     </div>
                     <p className="mt-2 text-sm text-gray-500">{project.description}</p>
                   </div>
