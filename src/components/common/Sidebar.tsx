@@ -399,7 +399,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             id={`project-menu-${p.id}`}
                             role="menu"
                             aria-labelledby={`project-menu-trigger-${p.id}`}
-                            className={`absolute right-0 w-40 bg-white text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
+                            className={`absolute right-0 w-40 bg-primary-50 text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
                               menuDirection === 'up' 
                                 ? 'bottom-full mb-1 origin-bottom-right' 
                                 : 'top-full mt-1 origin-top-right'
@@ -415,7 +415,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                               type="button"
                               ref={menuItemRefs[0]}
                               role="menuitem"
-                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:bg-gray-50"
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200 hover:text-gray-900 focus:outline-none focus-visible:bg-primary-200"
                               onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => { e.stopPropagation(); openEdit(p.id); setMenuOpenForProject(null); }}
                             >
@@ -425,7 +425,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                               type="button"
                               ref={menuItemRefs[1]}
                               role="menuitem"
-                              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 hover:text-red-700 focus:outline-none focus-visible:bg-gray-50"
+                              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700 focus:outline-none focus-visible:bg-primary-200"
                               onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => { e.stopPropagation(); setDeleteProjectId(p.id); setMenuOpenForProject(null); }}
                             >
@@ -526,21 +526,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                                       </svg>
                                     </button>
                                     {chatMenuOpenId === c.id && (
-                                      <div className={`absolute right-0 w-40 bg-white text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
+                                      <div className={`absolute right-0 w-40 bg-primary-50 text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
                                         chatMenuDirection === 'up' 
                                           ? 'bottom-full mb-1 origin-bottom-right' 
                                           : 'top-full mt-1 origin-top-right'
                                       }`}>
                                         <button
                                           type="button"
-                                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200"
                                           onClick={() => { openEditChat(c.id); setChatMenuOpenId(null); }}
                                         >
                                           Edit
                                         </button>
                                         <button
                                           type="button"
-                                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 hover:text-red-700"
+                                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700"
                                           onClick={() => { setChatDeleteId(c.id); setChatMenuOpenId(null); }}
                                         >
                                           Delete

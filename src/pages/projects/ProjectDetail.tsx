@@ -149,10 +149,10 @@ const ProjectDetail: React.FC = () => {
     <div className="space-y-6 h-full flex flex-col">
       {/* Project header */}
       <div className="bg-white rounded-lg shadow-card p-6 flex-shrink-0">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+        <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className='w-3/4'>
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            <p className="mt-1 text-gray-600">{project.description}</p>
+            <p title={project.description} className="mt-1 text-gray-600 line-clamp-2">{project.description}</p>
             <p className="mt-2 text-sm text-gray-500">
               Created on {formatDate(project.createdAt)} • Last updated {formatDate(project.updatedAt)}
             </p>

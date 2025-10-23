@@ -27,7 +27,6 @@ const ProjectsList: React.FC = () => {
     setCurrentPage, 
     pagination 
   } = useProjects();
-  const [filter, setFilter] = useState('all');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [didMount, setDidMount] = useState(false);
   
@@ -120,7 +119,7 @@ const ProjectsList: React.FC = () => {
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
               <Link to={`/projects/${project.id}`} className="block h-full">
-                <div className="bg-white rounded-lg shadow-card p-6 hover:shadow-lg transition-shadow h-full flex flex-col">
+                <div className="bg-white rounded-lg shadow-card p-6 hover:shadow-lg transition-shadow max-h-40 flex flex-col">
                   <div>
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-medium text-gray-900">{project.name}</h3>
@@ -130,7 +129,7 @@ const ProjectsList: React.FC = () => {
                           : '-'}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-gray-500">{project.description}</p>
+                    <p title={project.description} className="mt-2 text-sm text-gray-500 line-clamp-2">{project.description}</p>
                   </div>
                   
                   <div className="mt-4 flex flex-wrap gap-2">

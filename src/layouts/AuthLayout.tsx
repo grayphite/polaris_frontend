@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import React from 'react';
 import { motion } from 'framer-motion';
+import logo from '../assets/polaris_logo.png';
 
 const AuthLayout: React.FC = () => {
   return (
@@ -14,7 +15,8 @@ const AuthLayout: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="max-w-md"
           >
-            <h1 className="text-4xl font-bold mb-6">Polaris</h1>
+            {/* <h1 className="text-4xl font-bold mb-6">Polaris</h1> */}
+            <img src={logo} alt="Polaris" className='w-30 h-20'/>
             <p className="text-xl mb-6">
               Your intelligent assistant for seamless conversations and project management.
             </p>
