@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useChats } from '../../context/ChatContext';
 import { fetchChatById, sendMessageApi, getChatMessages } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
@@ -8,6 +8,7 @@ import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
 import MarkdownMessage from '../../components/ui/MarkdownMessage';
+import { formatTime } from '../../utils/dateTime';
 
 interface FileAttachment {
   id: string;
@@ -80,6 +81,7 @@ const ChatInterface: React.FC = () => {
   
   const { chatsByProject, hydrateProjectChats, updateChat } = useChats();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
+  const navigate = useNavigate();
   
   // Resolve title for the current chat
   const isNewChatId = chatId ? /^\d{13,}$/.test(chatId) : false;
@@ -406,13 +408,8 @@ const ChatInterface: React.FC = () => {
     return allowedImageTypes.includes(file.type);
   };
   
-  // Handle file selection and upload
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'document' | 'image') => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    const filesToUpload = Array.from(files);
-    
+  // Reusable function to upload files
+  const uploadFiles = async (filesToUpload: File[], fileType: 'document' | 'image') => {
     // Create placeholder entries with uploading status
     const placeholders: FileAttachment[] = filesToUpload.map((file) => ({
       id: `temp-${Date.now()}-${Math.random()}`,
@@ -472,12 +469,54 @@ const ChatInterface: React.FC = () => {
         ));
       }
     }
+  };
+  
+  // Handle file selection and upload
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'document' | 'image') => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const filesToUpload = Array.from(files);
+    await uploadFiles(filesToUpload, fileType);
     
     // Reset input so the same file can be selected again
     if (fileType === 'document' && fileInputRef.current) {
       fileInputRef.current.value = '';
     } else if (fileType === 'image' && imageInputRef.current) {
       imageInputRef.current.value = '';
+    }
+  };
+  
+  // Handle paste event for screenshots
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    const imageFiles: File[] = [];
+    
+    // Check clipboard for images
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Only process image types
+      if (item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        if (blob) {
+          // Generate filename with timestamp and proper extension
+          const extension = item.type.split('/')[1] || 'png';
+          const filename = `pasted-image-${Date.now()}.${extension}`;
+          
+          // Create a proper File object from the blob
+          const file = new File([blob], filename, { type: item.type });
+          imageFiles.push(file);
+        }
+      }
+    }
+    
+    // Upload pasted images if any were found
+    if (imageFiles.length > 0) {
+      e.preventDefault(); // Prevent default paste behavior
+      await uploadFiles(imageFiles, 'image');
     }
   };
   
@@ -506,7 +545,7 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if ((!input.trim() && attachedFiles.length === 0) || !chatId) return;
+    if (!input.trim() || !chatId) return;
     
     // Check if any files are still uploading
     const hasUploadingFiles = attachedFiles.some(f => f.uploadStatus === 'uploading');
@@ -630,12 +669,6 @@ const ChatInterface: React.FC = () => {
       setDisplayedContent('');
     }
   };
-  
-  
-  const formatTime = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
 
   return (
     <div className="h-full flex overflow-hidden">
@@ -644,6 +677,15 @@ const ChatInterface: React.FC = () => {
         {/* Chat header */}
         <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center">
+            <button
+              onClick={() => navigate(`/projects/${projectId}`)}
+              className="p-2 mr-2 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Back to project"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-semibold text-gray-900">{conversation.title}</h1>
@@ -933,11 +975,12 @@ const ChatInterface: React.FC = () => {
                 </div>
                 <textarea
                   ref={textareaRef}
-                  className="w-full bg-transparent resize-none focus:outline-none py-1"
+                  className="w-full bg-transparent resize-none focus:outline-none py-1 max-h-24 overflow-y-auto scrollbar-thin"
                   placeholder="Type your message..."
                   rows={1}
                   value={input}
                   onChange={handleInputChange}
+                  onPaste={handlePaste}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -947,7 +990,7 @@ const ChatInterface: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  disabled={streamingMessageId !== null || (!input.trim() && attachedFiles.length === 0)}
+                  disabled={streamingMessageId !== null || !input.trim()}
                   className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   title="Send"
                 >

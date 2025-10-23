@@ -1,9 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../context/ProjectsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
+import EditChatModal from '../ui/EditChatModal';
+import ProjectModal from '../ui/ProjectModal';
+import DeleteProjectModal from '../ui/DeleteProjectModal';
+import DeleteChatModal from '../ui/DeleteChatModal';
+import logo from '../../assets/polaris_logo.png';
 
 interface SidebarProps {
   open: boolean;
@@ -22,35 +27,32 @@ const Sidebar: React.FC<SidebarProps> = ({
     const match = location.pathname.match(/^\/projects\/([^\/]+)/);
     return match ? match[1] : null;
   })();
-  const [searchProjectId, setSearchProjectId] = React.useState<string | null>(null);
   const [localSidebarSearch, setLocalSidebarSearch] = React.useState('');
   const [sidebarSearchDidMount, setSidebarSearchDidMount] = React.useState(false);
+  const [localProjectSearch, setLocalProjectSearch] = React.useState('');
+  const [projectSearchDidMount, setProjectSearchDidMount] = React.useState(false);
   const [menuOpenForProject, setMenuOpenForProject] = React.useState<string | null>(null);
   const [menuDirection, setMenuDirection] = React.useState<'down' | 'up'>('down');
   const [deleteProjectId, setDeleteProjectId] = React.useState<string | null>(null);
-  const [showCreateProject, setShowCreateProject] = React.useState(false);
-  const [newProjectName, setNewProjectName] = React.useState('');
-  const [newProjectDetails, setNewProjectDetails] = React.useState('');
-  const [isEditingProject, setIsEditingProject] = React.useState(false);
+  const [showProjectModal, setShowProjectModal] = React.useState(false);
+  const [projectModalMode, setProjectModalMode] = React.useState<'create' | 'edit'>('create');
+  const [editingProjectId, setEditingProjectId] = React.useState<string | null>(null);
   const [isSubmittingChat, setIsSubmittingChat] = React.useState(false);
-  const [isSubmittingProject, setIsSubmittingProject] = React.useState(false);
   const [chatMenuOpenId, setChatMenuOpenId] = React.useState<string | null>(null);
   const [chatMenuDirection, setChatMenuDirection] = React.useState<'down' | 'up'>('down');
   const [chatEditId, setChatEditId] = React.useState<string | null>(null);
-  const [chatEditTitle, setChatEditTitle] = React.useState('');
-  const [chatEditDetails, setChatEditDetails] = React.useState('');
   const [chatDeleteId, setChatDeleteId] = React.useState<string | null>(null);
 
   // Ref for the scrollable container
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
-  // Ref for the search input
-  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const {
     projects,
     sidebarProjects,
     sidebarLoading,
     sidebarHasMore,
+    sidebarProjectSearchQuery,
+    setSidebarProjectSearchQuery,
     loadMoreSidebarProjects,
     conversationsByProject,
     createProject,
@@ -80,8 +82,27 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const conversations = selectedProjectId ? (sidebarChatsByProject[selectedProjectId] || []) : [];
 
+  // Initialize local project search from context once to avoid initial no-op debounce
+  useEffect(() => {
+    if (!projectSearchDidMount) {
+      setLocalProjectSearch(sidebarProjectSearchQuery || '');
+      setProjectSearchDidMount(true);
+    }
+  }, [projectSearchDidMount, sidebarProjectSearchQuery]);
+
+  // Debounced project search effect with guard to avoid redundant updates
+  useEffect(() => {
+    if (!projectSearchDidMount) return; // skip first render
+    const timer = setTimeout(() => {
+      if (localProjectSearch !== sidebarProjectSearchQuery) {
+        setSidebarProjectSearchQuery(localProjectSearch);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localProjectSearch, sidebarProjectSearchQuery, setSidebarProjectSearchQuery, projectSearchDidMount]);
+
   // Initialize local sidebar search from context once to avoid initial no-op debounce
-  React.useEffect(() => {
+  useEffect(() => {
     if (!sidebarSearchDidMount) {
       setLocalSidebarSearch(sidebarSearchQuery || '');
       setSidebarSearchDidMount(true);
@@ -89,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [sidebarSearchDidMount, sidebarSearchQuery]);
 
   // Debounced sidebar search effect with guard to avoid redundant updates
-  React.useEffect(() => {
+  useEffect(() => {
     if (!sidebarSearchDidMount) return; // skip first render
     const timer = setTimeout(() => {
       if (localSidebarSearch !== sidebarSearchQuery) {
@@ -101,21 +122,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [localSidebarSearch, sidebarSearchQuery, setSidebarSearchQuery, sidebarSearchDidMount]);
 
   // Load sidebar chats when search query changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedProjectId) {
       ensureSidebarChatsLoaded(selectedProjectId);
     }
   }, [sidebarSearchQuery, selectedProjectId]);
 
-  // Focus search input when it becomes visible
-  React.useEffect(() => {
-    if (searchProjectId && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [searchProjectId]);
-
   // Scroll to selected project when it changes (e.g., when navigating from projects page)
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedProjectId && scrollContainerRef.current) {
       // Small delay to ensure DOM is updated
       const timeoutId = setTimeout(() => {
@@ -147,18 +161,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [selectedProjectId]);
 
   // Listen to external request to open create modal (from ProjectsList button)
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = () => openCreate();
     window.addEventListener('sidebar:create-project', handler as any);
     return () => window.removeEventListener('sidebar:create-project', handler as any);
   }, []);
 
   // Accessibility: close any open project menu on outside click or Escape
-  const menuContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const menuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const menuContainerRef = useRef<HTMLDivElement | null>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
   
   // Simple approach - no refs needed for basic modal functionality
-  React.useEffect(() => {
+  useEffect(() => {
     if (!menuOpenForProject) return;
     const onDocMouseDown = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -183,7 +197,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [menuOpenForProject]);
 
   // Close chat menu on outside click or Escape key
-  React.useEffect(() => {
+  useEffect(() => {
     if (!chatMenuOpenId) return;
     
     const handleOutsideClick = (e: MouseEvent) => {
@@ -212,8 +226,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [chatMenuOpenId]);
 
   // Keyboard navigation inside menu
-  const [menuFocusIndex, setMenuFocusIndex] = React.useState(0);
-  const menuItemRefs = [React.useRef<HTMLButtonElement | null>(null), React.useRef<HTMLButtonElement | null>(null)];
+  const [menuFocusIndex, setMenuFocusIndex] = useState(0);
+  const menuItemRefs = [useRef<HTMLButtonElement | null>(null), useRef<HTMLButtonElement | null>(null)];
   const focusMenuItem = (idx: number) => {
     const clamped = Math.max(0, Math.min(1, idx));
     setMenuFocusIndex(clamped);
@@ -246,67 +260,37 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const openCreate = () => {
-    setIsEditingProject(false);
-    setNewProjectName('');
-    setNewProjectDetails('');
-    setShowCreateProject(true);
+    setProjectModalMode('create');
+    setEditingProjectId(null);
+    setShowProjectModal(true);
   };
 
   const openEdit = (projectId: string) => {
     beginEditProject(projectId);
-    const project = projects.find(p => p.id === projectId);
-    setIsEditingProject(true);
-    setNewProjectName(project?.name || '');
-    setNewProjectDetails(project?.description || '');
-    setShowCreateProject(true);
+    setProjectModalMode('edit');
+    setEditingProjectId(projectId);
+    setShowProjectModal(true);
   };
 
-  const submitProject = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const name = newProjectName.trim();
-    const description = newProjectDetails.trim();
-    if (!name || !description) return;
-    
-    if (isEditingProject && editProjectId) {
-      updateProject(editProjectId, name, description);
-      setShowCreateProject(false);
-      endEditProject();
-      navigate(`/projects/${editProjectId}`);
-      return;
-    }
-    
-    setIsSubmittingProject(true);
-    try {
-      await createProject(name, description);
-      setShowCreateProject(false);
-      setNewProjectName('');
-      setNewProjectDetails('');
-    } catch (err) {
-      // Error handling is done in the context
-    } finally {
-      setIsSubmittingProject(false);
-    }
-  };
-
-  const handleDelete = async (projectId: string) => {
+  const handleDeleteProject = async (projectId: string) => {
     const success = await deleteProject(projectId);
     if (success && selectedProjectId === projectId) navigate('/projects');
   };
 
-
-  const openEditChat = (chatId: string, title: string, details?: string) => {
-    setChatEditId(chatId);
-    setChatEditTitle(title);
-    setChatEditDetails(details || '');
+  const handleDeleteChat = async (projectId: string, chatId: string) => {
+    const success = await deleteChat(projectId, chatId);
+    if (success) {
+      // Navigate to project page if we deleted the current chat
+      const currentPath = window.location.pathname;
+      if (currentPath.includes(`/chat/${chatId}`)) {
+        navigate(`/projects/${projectId}`);
+      }
+    }
   };
 
-  const submitEditChat = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!selectedProjectId || !chatEditId) return;
-    const name = chatEditTitle.trim();
-    if (!name) return;
-    updateChat(selectedProjectId, chatEditId, name, chatEditDetails.trim());
-    setChatEditId(null);
+
+  const openEditChat = (chatId: string) => {
+    setChatEditId(chatId);
   };
   return (
     <>
@@ -325,7 +309,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/projects')}>Polaris</h1>
+                {/* <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/projects')}>Polaris</h1> */}
+                <img src={logo} alt="Polaris" className='w-30 h-12'/>
                 <button 
                   onClick={onToggle}
                   className="md:hidden text-gray-400 hover:text-white"
@@ -339,17 +324,33 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <Link to="/projects" className="text-sm uppercase tracking-wide text-gray-400">Projects</Link>
-                <button
-                  onClick={openCreate}
-                  className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-                  title="New Project"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                  </svg>
-                </button>
+              <Link to="/projects" className="text-sm uppercase tracking-wide text-gray-400">Projects</Link>
+              <div className="my-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="relative flex-1 mr-2">
+                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                      <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search Projects..."
+                      className="block w-full pl-8 pr-2 py-1.5 text-sm rounded-md bg-dark-200 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      value={localProjectSearch}
+                      onChange={(e) => setLocalProjectSearch(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={openCreate}
+                    className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white flex-shrink-0"
+                    title="New Project"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <div 
@@ -436,27 +437,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
 
                     {selectedProjectId === p.id && (
-                      <>
-                        <div className="mt-2 pl-7 pr-3 flex items-center justify-end gap-2">
+                      <div className='border-l border-primary-600 ml-1'>
+                        <div className="mt-2 px-3 space-y-2">
+                          {/* Search input - always visible */}
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <input
+                              type="text"
+                              className="w-full pl-8 pr-2 py-1.5 text-sm rounded-md bg-dark-200 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                              placeholder="Search Chats..."
+                              value={localSidebarSearch}
+                              onChange={(e) => setLocalSidebarSearch(e.target.value)}
+                            />
+                          </div>
+                          
+                          {/* New Chat button - full width */}
                           <button
-                            className="p-1.5 rounded-md text-gray-300 hover:bg-dark-200 hover:text-white"
-                            title="Search conversations"
-                            onClick={() => {
-                              const isOpening = searchProjectId !== p.id;
-                              setSearchProjectId(prev => (typeof prev === 'function' ? (prev as any)(p.id) : (prev === p.id ? null : p.id)));
-                              // Don't clear the search when opening the search field
-                              if (isOpening) {
-                                setLocalSidebarSearch('');
-                              }
-                            }}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                          <button
-                            className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-70 disabled:cursor-not-allowed"
-                            title="Start new conversation"
+                            className="w-full px-3 py-2 text-sm text-gray-200 font-medium hover:text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             disabled={isSubmittingChat}
                             onClick={async () => { 
                               if (!selectedProjectId) return;
@@ -472,34 +473,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                             }}
                           >
                             {isSubmittingChat ? (
-                              <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
+                              <>
+                                <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Creating...
+                              </>
                             ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                              </svg>
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                                </svg>
+                                New Chat
+                              </>
                             )}
                           </button>
                         </div>
 
-                        {searchProjectId === p.id && (
-                          <div className="mt-2 pl-7 pr-3">
-                            <input
-                              ref={searchInputRef}
-                              type="text"
-                              className="w-full text-sm px-3 py-1.5 rounded-md bg-dark-200/40 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              placeholder="Search conversations..."
-                              value={localSidebarSearch}
-                              onChange={(e) => setLocalSidebarSearch(e.target.value)}
-                            />
-                          </div>
-                        )}
-
-                        <ul className="mt-2 space-y-1 pl-7">
+                        <ul className="mt-2 space-y-1 pl-3">
                           {loadingSidebarProjects.has(p.id) ? (
-                            <li className="px-3 py-2 text-sm text-gray-400 flex items-center gap-2">
+                            <li className="py-2 text-sm text-gray-400 flex items-center gap-2">
                               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                               Loading conversations...
                             </li>
@@ -540,7 +534,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         <button
                                           type="button"
                                           className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                          onClick={() => { openEditChat(c.id, c.title, c.details); setChatMenuOpenId(null); }}
+                                          onClick={() => { openEditChat(c.id); setChatMenuOpenId(null); }}
                                         >
                                           Edit
                                         </button>
@@ -561,7 +555,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         
                         {/* Load More Chats Button */}
                         {sidebarChatsHasMore && !sidebarSearchQuery && selectedProjectId === p.id && (
-                          <div className="mt-2 pl-7">
+                          <div className="mt-2 pl-3">
                             <button
                               onClick={() => loadMoreSidebarChats(p.id)}
                               disabled={loadingSidebarProjects.has(p.id)}
@@ -578,7 +572,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             </button>
                           </div>
                         )}
-                      </>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -621,195 +615,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {showCreateProject && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreateProject(false)} />
-                <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4">
-                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">{isEditingProject ? 'Edit Project' : 'Create Project'}</h3>
-                    <button
-                      onClick={() => setShowCreateProject(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                      aria-label="Close"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <form onSubmit={submitProject} className="p-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Project name</label>
-                    <input
-                      type="text"
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="e.g. Marketing Website Redesign"
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      autoFocus
-                    />
-                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description</label>
-                    <textarea
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Brief description, scope, goals..."
-                      rows={4}
-                      value={newProjectDetails}
-                      onChange={(e) => setNewProjectDetails(e.target.value)}
-                      required
-                    />
-                    <div className="mt-6 flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateProject(false)}
-                        className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-                        disabled={!newProjectName.trim() || !newProjectDetails.trim() || isSubmittingProject}
-                      >
-                        {isSubmittingProject ? 'Creating…' : (isEditingProject ? 'Save' : 'Create')}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* Edit Chat Modal */}
-            {chatEditId && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/50" onClick={() => setChatEditId(null)} />
-                <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-md mx-4">
-                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Edit Chat</h3>
-                    <button
-                      onClick={() => setChatEditId(null)}
-                      className="text-gray-400 hover:text-gray-600"
-                      aria-label="Close"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <form onSubmit={submitEditChat} className="p-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Chat name</label>
-                    <input
-                      type="text"
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      value={chatEditTitle}
-                      onChange={(e) => setChatEditTitle(e.target.value)}
-                      autoFocus
-                    />
-                    <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description (optional)</label>
-                    <textarea
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      placeholder="Brief context for this chat..."
-                      rows={4}
-                      value={chatEditDetails}
-                      onChange={(e) => setChatEditDetails(e.target.value)}
-                    />
-                    <div className="mt-6 flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setChatEditId(null)}
-                        className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-                        disabled={!chatEditTitle.trim()}
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* Delete Chat confirmation */}
-            {chatDeleteId && selectedProjectId && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/50" onClick={() => setChatDeleteId(null)} />
-                <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-sm mx-4">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">Delete Chat</h3>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <p className="text-sm text-gray-700">Are you sure you want to delete this chat? This action cannot be undone.</p>
-                    <div className="flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setChatDeleteId(null)}
-                        className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => { 
-                          const success = await deleteChat(selectedProjectId, chatDeleteId); 
-                          setChatDeleteId(null);
-                          if (success) {
-                            // Navigate to project page if we deleted the current chat
-                            const currentPath = window.location.pathname;
-                            if (currentPath.includes(`/chat/${chatDeleteId}`)) {
-                              navigate(`/projects/${selectedProjectId}`);
-                            }
-                          }
-                        }}
-                        className="px-4 py-2 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            {/* Delete confirmation */}
-            {deleteProjectId && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteProjectId(null)} />
-                <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-sm mx-4">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">Delete Project</h3>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <p className="text-sm text-gray-700">Are you sure you want to delete this project? This action cannot be undone.</p>
-                    <div className="flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setDeleteProjectId(null)}
-                        className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => { 
-                          if (deleteProjectId) {
-                            await handleDelete(deleteProjectId);
-                          }
-                          setDeleteProjectId(null); 
-                        }}
-                        className="px-4 py-2 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
           </motion.aside>
         )}
       </AnimatePresence>
@@ -821,6 +626,58 @@ const Sidebar: React.FC<SidebarProps> = ({
           aria-hidden="true"
         />
       )}
+
+      {/* Project Modal (Create/Edit) */}
+      {showProjectModal && (() => {
+        const project = editingProjectId ? projects.find(p => p.id === editingProjectId) : null;
+        return (
+          <ProjectModal
+            isOpen={showProjectModal}
+            onClose={() => setShowProjectModal(false)}
+            mode={projectModalMode}
+            projectId={editingProjectId || undefined}
+            initialName={project?.name || ''}
+            initialDescription={project?.description || ''}
+          />
+        );
+      })()}
+
+      {/* Delete Project Modal */}
+      {deleteProjectId && (
+        <DeleteProjectModal
+          isOpen={true}
+          onClose={() => setDeleteProjectId(null)}
+          projectId={deleteProjectId}
+          onConfirm={handleDeleteProject}
+        />
+      )}
+
+      {/* Delete Chat Modal */}
+      {chatDeleteId && selectedProjectId && (
+        <DeleteChatModal
+          isOpen={true}
+          onClose={() => setChatDeleteId(null)}
+          projectId={selectedProjectId}
+          chatId={chatDeleteId}
+          onConfirm={handleDeleteChat}
+        />
+      )}
+
+      {/* Edit Chat Modal */}
+      {chatEditId && selectedProjectId && (() => {
+        const chat = conversations.find(c => c.id === chatEditId);
+        if (!chat) return null;
+        return (
+          <EditChatModal
+            isOpen={true}
+            onClose={() => setChatEditId(null)}
+            projectId={selectedProjectId}
+            chatId={chatEditId}
+            initialTitle={chat.title}
+            initialDetails={chat.details}
+          />
+        );
+      })()}
     </>
   );
 };
