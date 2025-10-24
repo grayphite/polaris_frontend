@@ -696,6 +696,10 @@ const ChatInterface: React.FC = () => {
       );
       
       if (response.success && response.ai_chat) {
+        // Auto-rename chat IMMEDIATELY based on first message response
+        if (response.ai_chat.chat_name && projectId && isFirstMessage) {
+          updateChat(projectId, chatId, response.ai_chat.chat_name, '');
+        }
         // Calculate time needed for typing animation to complete
         // This ensures smooth animation without sudden "chunk dump" at the end
         const textLength = response.ai_chat.ai_answer.length;
@@ -720,7 +724,7 @@ const ChatInterface: React.FC = () => {
                 ...m,
                 id: `assistant-${response.ai_chat.id}`,
                 content: response.ai_chat.ai_answer,
-                timestamp: response.ai_chat.created_at,
+                // timestamp: response.ai_chat.created_at,
               };
             }
             // Update user message with backend ID and metadata
@@ -728,18 +732,13 @@ const ChatInterface: React.FC = () => {
               return {
                 ...m,
                 id: `user-${response.ai_chat.id}`,
-                timestamp: response.ai_chat.created_at,
+                // timestamp: response.ai_chat.created_at,
                 file_references: response.ai_chat.file_references,
               };
             }
             return m;
           });
         });
-        
-        // Auto-rename chat based on first message response only
-        if (response.ai_chat.chat_name && projectId && isFirstMessage) {
-          updateChat(projectId, chatId, response.ai_chat.chat_name, '');
-        }
       }
     } catch (error) {
       console.error('Failed to send message:', error);

@@ -24,8 +24,8 @@ type ProjectsContextValue = {
     total: number;
   } | null;
   loadProjects: () => Promise<void>;
-  createProject: (name: string, description: string) => Promise<string>; // returns id
-  updateProject: (projectId: string, name: string, description: string) => void;
+  createProject: (name: string, description?: string) => Promise<string>; // returns id
+  updateProject: (projectId: string, name: string, description?: string) => void;
   deleteProject: (projectId: string) => Promise<boolean>;
   startConversation: (projectId: string, title: string) => string; // returns conversation id
   // UI flags for create/edit modal hosted in Sidebar
@@ -296,7 +296,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [openCreateProject, setOpenCreateProject] = useState(false);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
-  const createProject = async (name: string, description: string) => {
+  const createProject = async (name: string, description?: string) => {
     try {
       const created = await createProjectApi(name, description);
       if (created?.id) {
@@ -324,7 +324,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const updateProject = (projectId: string, name: string, description: string) => {
+  const updateProject = (projectId: string, name: string, description?: string) => {
     // Preserve the created_at from existing project
     const existingProject = projects.find(p => p.id === projectId);
     const updatedProject = { 
