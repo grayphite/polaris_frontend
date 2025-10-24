@@ -92,6 +92,13 @@ export type AIChatMessageDTO = {
     file_count?: number;
     file_references?: string[]; // File IDs in message history
   };
+  rag_metadata?: {
+    rag_enabled: boolean;
+    processing_mode: string;
+    docs_found: number;
+    sources: string[];
+    max_relevance_score: number;
+  };
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -103,6 +110,13 @@ export interface SendMessageResponse {
   success: boolean;
   message: string;
   ai_chat: AIChatMessageDTO;
+  rag_metadata?: {
+    rag_enabled: boolean;
+    processing_mode: string;
+    docs_found: number;
+    sources: string[];
+    max_relevance_score: number;
+  };
 }
 
 export interface GetMessagesResponse {
@@ -124,15 +138,13 @@ export async function sendMessageApi(
   userQuestion: string,
   fileReferences?: string[],
   fileReferenceDetails?: FileMetadata[],
-  onStreamChunk?: (text: string) => void
+  onStreamChunk?: (text: string) => void,
+  onStreamComplete?: (data: any) => void
 ): Promise<SendMessageResponse> {
   const payload: any = {
     chat_id: parseInt(chatId),
     user_question: userQuestion,
-    use_rag: true,
-    rag_mode: "auto",
-    rag_similarity_threshold: 0.02,
-    rag_max_chunks: 5
+    use_rag: true
   };
   
   // Add file references to payload if provided
@@ -164,6 +176,10 @@ export async function sendMessageApi(
       // Handle stream_complete event for final data
       if (chunk.type === 'stream_complete' && chunk.ai_chat) {
         completeData = chunk;
+        // Call the stream complete callback immediately with sources
+        if (onStreamComplete) {
+          onStreamComplete(chunk);
+        }
       }
     }
   );
@@ -174,6 +190,7 @@ export async function sendMessageApi(
       success: true,
       message: completeData.message || 'AI chat created successfully',
       ai_chat: completeData.ai_chat,
+      rag_metadata: completeData.rag_metadata,
     };
   }
   

@@ -30,6 +30,7 @@ interface Message {
   timestamp: string;
   attachments?: FileAttachment[];
   file_references?: string[];
+  sources?: string[];
 }
 
 const sortMessagesByTimestamp = (messages: Message[]) => {
@@ -60,6 +61,7 @@ const ChatInterface: React.FC = () => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState<string>(''); // Buffer (server data)
   const [displayedContent, setDisplayedContent] = useState<string>(''); // Animated display
+  const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,6 +193,7 @@ const ChatInterface: React.FC = () => {
               content: aiChat.ai_answer,
               role: 'assistant',
               timestamp: aiChat.created_at,
+              sources: aiChat.rag_metadata?.sources || undefined,
             });
           }
           
@@ -410,6 +413,7 @@ const ChatInterface: React.FC = () => {
             content: aiChat.ai_answer,
             role: 'assistant',
             timestamp: aiChat.created_at,
+            sources: aiChat.rag_metadata?.sources || undefined,
           });
         }
         
@@ -677,6 +681,7 @@ const ChatInterface: React.FC = () => {
     setStreamingMessageId(assistantMessageId);
     setStreamingContent('');
     setDisplayedContent('');
+    setStreamingSources([]);
     
     try {
       // Prepare file reference details (remove uploadStatus as it's not part of FileMetadata)
@@ -692,10 +697,17 @@ const ChatInterface: React.FC = () => {
         (streamedText) => {
           // Update streaming content as chunks arrive
           setStreamingContent(streamedText);
+        },
+        (streamCompleteData) => {
+          // Update sources immediately when stream completes
+          if (streamCompleteData.rag_metadata?.sources) {
+            setStreamingSources(streamCompleteData.rag_metadata.sources);
+          }
         }
       );
       
       if (response.success && response.ai_chat) {
+           
         // Calculate time needed for typing animation to complete
         // This ensures smooth animation without sudden "chunk dump" at the end
         const textLength = response.ai_chat.ai_answer.length;
@@ -721,6 +733,7 @@ const ChatInterface: React.FC = () => {
                 id: `assistant-${response.ai_chat.id}`,
                 content: response.ai_chat.ai_answer,
                 timestamp: response.ai_chat.created_at,
+                sources: response.rag_metadata?.sources || undefined,
               };
             }
             // Update user message with backend ID and metadata
@@ -898,9 +911,28 @@ const ChatInterface: React.FC = () => {
                             <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                           </div>
                         ) : (
-                          <MarkdownMessage 
-                            content={streamingMessageId === message.id ? displayedContent : message.content} 
-                          />
+                          <>
+                            <MarkdownMessage 
+                              content={streamingMessageId === message.id ? displayedContent : message.content} 
+                            />
+                            {/* Sources chips - display if available */}
+                            {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
+                              <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                                {(streamingMessageId === message.id ? streamingSources : message.sources || []).map((source, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[10px] font-normal hover:bg-gray-100 transition-colors"
+                                    title={source}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="truncate max-w-[80px]">{source}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     ) : (
