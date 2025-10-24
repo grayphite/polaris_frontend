@@ -1,6 +1,6 @@
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useChats } from '../../context/ChatContext';
-import { fetchChatById, sendMessageApi, getChatMessages } from '../../services/chatService';
+import { fetchChatById, sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
 
 import Button from '../../components/ui/Button';
@@ -79,7 +79,7 @@ const ChatInterface: React.FC = () => {
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, hydrateProjectChats, updateChat } = useChats();
+  const { chatsByProject, hydrateProjectChats, updateChat, deleteChat } = useChats();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -213,6 +213,80 @@ const ChatInterface: React.FC = () => {
     };
     
     loadMessages();
+  }, [chatId, projectId]);
+  
+  // Track empty "New Chat" for auto-deletion on unmount
+  useEffect(() => {
+    if (!chatId || !projectId) return;
+    
+    // Check if this is a "New Chat" with no messages after loading completes
+    if (!isLoadingHistory && conversation.title === 'New Chat' && messages.length === 0) {
+      try {
+        const emptyChats = JSON.parse(localStorage.getItem(`emptyChats:${projectId}`) || '[]');
+        if (!emptyChats.includes(chatId)) {
+          emptyChats.push(chatId);
+          localStorage.setItem(`emptyChats:${projectId}`, JSON.stringify(emptyChats));
+        }
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    }
+  }, [chatId, projectId, conversation.title, messages.length, isLoadingHistory]);
+  
+  // Delete previous empty chat when navigating to different chat
+  const prevChatIdRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    if (prevChatIdRef.current && prevChatIdRef.current !== chatId && projectId) {
+      const prevChatId = prevChatIdRef.current;
+      
+      try {
+        const emptyChats = JSON.parse(localStorage.getItem(`emptyChats:${projectId}`) || '[]');
+        
+        if (emptyChats.includes(prevChatId)) {
+          // Remove from array
+          const filtered = emptyChats.filter((id: string) => id !== prevChatId);
+          localStorage.setItem(`emptyChats:${projectId}`, JSON.stringify(filtered));
+          
+          // Delete if still "New Chat"
+          const prevChat = chatsByProject[projectId]?.find(c => c.id === prevChatId);
+          if (prevChat?.title === 'New Chat') {
+            deleteChat(projectId, prevChatId);
+          }
+        }
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    }
+    
+    prevChatIdRef.current = chatId || null;
+  }, [chatId, projectId, chatsByProject, deleteChat]);
+  
+  // Delete empty chat when leaving chat interface (but not on refresh)
+  useEffect(() => {
+    return () => {
+      if (!chatId || !projectId) return;
+      
+      try {
+        // Check if we're still on a chat route (refresh) or navigating away
+        const isStillOnChatRoute = window.location.pathname.includes('/chat/');
+        
+        if (!isStillOnChatRoute) {
+          const emptyChats = JSON.parse(localStorage.getItem(`emptyChats:${projectId}`) || '[]');
+          
+          if (emptyChats.includes(chatId)) {
+            // Remove from array
+            const filtered = emptyChats.filter((id: string) => id !== chatId);
+            localStorage.setItem(`emptyChats:${projectId}`, JSON.stringify(filtered));
+            
+            // Delete chat silently in background
+            deleteChatApi(chatId).catch(() => {});
+          }
+        }
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    };
   }, [chatId, projectId]);
   
   // Scroll to bottom when messages change (but not when loading more)
@@ -559,6 +633,17 @@ const ChatInterface: React.FC = () => {
     
     // Capture if this is the first message before state updates
     const isFirstMessage = messages.length === 0;
+    
+    // Clear empty chat tracking since user is sending a message
+    if (isFirstMessage && projectId) {
+      try {
+        const emptyChats = JSON.parse(localStorage.getItem(`emptyChats:${projectId}`) || '[]');
+        const filtered = emptyChats.filter((id: string) => id !== chatId);
+        localStorage.setItem(`emptyChats:${projectId}`, JSON.stringify(filtered));
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    }
     
     // Extract file IDs for API call
     const fileIds = successfulFiles.map(f => f.id);

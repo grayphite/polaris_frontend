@@ -128,7 +128,11 @@ export async function sendMessageApi(
 ): Promise<SendMessageResponse> {
   const payload: any = {
     chat_id: parseInt(chatId),
-    user_question: userQuestion
+    user_question: userQuestion,
+    use_rag: true,
+    rag_mode: "auto",
+    rag_similarity_threshold: 0.02,
+    rag_max_chunks: 5
   };
   
   // Add file references to payload if provided

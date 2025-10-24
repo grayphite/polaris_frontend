@@ -75,7 +75,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const loadProjects = async () => {
     try {
       setProjectsLoading(true);
-      const response = await fetchProjects(currentPage, 10, searchQuery, false);
+      const response = await fetchProjects(currentPage, 12, searchQuery, false);
       setProjects(response.projects.map(r => ({ 
         id: r.id.toString(), 
         name: r.name,
