@@ -124,8 +124,8 @@ const ProjectsList: React.FC = () => {
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-medium text-gray-900">{project.name}</h3>
                       <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">
-                        {project.conversationsCount !== null && project.conversationsCount !== undefined 
-                          ? `${project.conversationsCount} conversations` 
+                        {project.conversationsCount !== null && project.conversationsCount !== undefined ?
+                          project.conversationsCount === 0 ? 'No chats' : project.conversationsCount === 1 ? '1 chat' : `${project.conversationsCount} chats` 
                           : '-'}
                       </span>
                     </div>

@@ -24,8 +24,8 @@ type ProjectsContextValue = {
     total: number;
   } | null;
   loadProjects: () => Promise<void>;
-  createProject: (name: string, description: string) => Promise<string>; // returns id
-  updateProject: (projectId: string, name: string, description: string) => void;
+  createProject: (name: string, description?: string) => Promise<string>; // returns id
+  updateProject: (projectId: string, name: string, description?: string) => void;
   deleteProject: (projectId: string) => Promise<boolean>;
   startConversation: (projectId: string, title: string) => string; // returns conversation id
   // UI flags for create/edit modal hosted in Sidebar
@@ -265,13 +265,15 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               name: data.name || p.name,
               description: data.description || p.description,
               created_at: data.created_at,
-              updated_at: data.updated_at
+              updated_at: data.updated_at,
+              chat_count: (data as any).chat_count ?? p.chat_count
             } : p)) : [{ 
               id: data.id.toString(), 
               name: data.name || 'Project',
               description: data.description,
               created_at: data.created_at,
-              updated_at: data.updated_at
+              updated_at: data.updated_at,
+              chat_count: (data as any).chat_count
             }, ...prev];
             return next;
           });
@@ -296,7 +298,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [openCreateProject, setOpenCreateProject] = useState(false);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
-  const createProject = async (name: string, description: string) => {
+  const createProject = async (name: string, description?: string) => {
     try {
       const created = await createProjectApi(name, description);
       if (created?.id) {
@@ -305,7 +307,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           name: created.name || name,
           description: created.description || description,
           created_at: created.created_at,
-          updated_at: created.updated_at
+          updated_at: created.updated_at,
+          chat_count: created.chat_count ?? 0
         };
         // Add the real project to state
         setProjects(prev => [realProject, ...prev]);
@@ -324,7 +327,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const updateProject = (projectId: string, name: string, description: string) => {
+  const updateProject = (projectId: string, name: string, description?: string) => {
     // Preserve the created_at from existing project
     const existingProject = projects.find(p => p.id === projectId);
     const updatedProject = { 
@@ -332,7 +335,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       name, 
       description, 
       created_at: existingProject?.created_at, 
-      updated_at: existingProject?.updated_at 
+      updated_at: existingProject?.updated_at,
+      chat_count: existingProject?.chat_count
     };
     setProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p)));
     setSidebarProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p))); // Also update sidebar
@@ -341,7 +345,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const response = await updateProjectApi(projectId, name, description);
         // Update with the new updated_at from backend response
         if (response?.updated_at) {
-          const finalProject = { ...updatedProject, updated_at: response.updated_at };
+          const finalProject = { ...updatedProject, updated_at: response.updated_at, chat_count: existingProject?.chat_count };
           setProjects(prev => prev.map(p => (p.id === projectId ? finalProject : p)));
           setSidebarProjects(prev => prev.map(p => (p.id === projectId ? finalProject : p)));
         }

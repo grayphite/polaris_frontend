@@ -45,11 +45,11 @@ export async function fetchProjectById(id: string): Promise<ProjectDTO> {
   return makeRequest<ProjectDTO>(`/projects/${id}`, { method: 'GET' });
 }
 
-export async function createProjectApi(name: string, description: string): Promise<ProjectDTO> {
+export async function createProjectApi(name: string, description?: string): Promise<ProjectDTO> {
   return makeRequest<ProjectDTO>('/projects', { method: 'POST', data: { name, description } });
 }
 
-export async function updateProjectApi(id: string, name: string, description: string): Promise<ProjectDTO> {
+export async function updateProjectApi(id: string, name: string, description?: string): Promise<ProjectDTO> {
   return makeRequest<ProjectDTO>(`/projects/${id}`, { method: 'PUT', data: { name, description } });
 }
 
