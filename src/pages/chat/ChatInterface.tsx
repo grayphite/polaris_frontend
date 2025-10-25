@@ -81,7 +81,7 @@ const ChatInterface: React.FC = () => {
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, hydrateProjectChats, updateChat, deleteChat } = useChats();
+  const { chatsByProject, hydrateProjectChats, updateChat, deleteChat, showSources } = useChats();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -902,13 +902,13 @@ const ChatInterface: React.FC = () => {
                             <MarkdownMessage 
                               content={streamingMessageId === message.id ? displayedContent : message.content} 
                             />
-                            {/* Sources chips - display if available */}
-                            {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
+                            {/* Sources chips - display if available and toggle is on */}
+                            {showSources && ((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
                               <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
                                 {(streamingMessageId === message.id ? streamingSources : message.sources || []).map((source, idx) => (
                                   <div
                                     key={idx}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[10px] font-normal hover:bg-gray-100 transition-colors"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-gray-100 transition-colors"
                                     title={source}
                                   >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">

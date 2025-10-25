@@ -4,11 +4,13 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { useChats } from '../../context/ChatContext';
 import { changePassword, updateProfile } from '../../services/authService';
 import { showSuccessToast, showErrorToast } from '../../utils/toast';
 
 const Profile: React.FC = () => {
   const { user, updateUser, isLoading } = useAuth();
+  const { showSources, setShowSources } = useChats();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -238,6 +240,21 @@ const Profile: React.FC = () => {
                   <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                 </svg>
                 <span>{formData.email}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Show Sources in Chat</h4>
+                  <p className="text-sm text-gray-500">Display source references in AI responses</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={showSources}
+                    onChange={(e) => setShowSources(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
               </div>
               {/* <div className="mt-1 flex items-center text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
