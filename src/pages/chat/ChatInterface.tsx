@@ -292,22 +292,16 @@ const ChatInterface: React.FC = () => {
     };
   }, [chatId, projectId]);
   
-  // Scroll to bottom when messages change (but not when loading more)
+  // Scroll to bottom when messages change (but not when loading more or streaming)
   useEffect(() => {
     // Don't auto-scroll when loading older messages via pagination
-    if (!isPaginationLoadRef.current) {
+    // Don't auto-scroll when streaming (user has manual control)
+    if (!isPaginationLoadRef.current && !streamingMessageId) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
     // Reset pagination flag after scroll effect
     isPaginationLoadRef.current = false;
-  }, [messages]);
-  
-  // Auto-scroll when streaming content updates
-  useEffect(() => {
-    if (streamingMessageId && displayedContent) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [displayedContent, streamingMessageId]);
+  }, [messages, streamingMessageId]);
   
   // Character-by-character typing animation with adaptive speed
   useEffect(() => {
@@ -322,27 +316,9 @@ const ChatInterface: React.FC = () => {
       return;
     }
     
-    // Calculate how far behind we are
-    const remaining = streamingContent.length - displayedContent.length;
-    
-    // Adaptive speed: type faster when buffer is large, slower when caught up
-    let delay = 20; // Base speed (20ms per character)
-    let charsToAdd = 1; // How many characters to add at once
-    
-    if (remaining > 500) {
-      // Very far behind: type 5 characters at once, very fast
-      charsToAdd = 5;
-      delay = 10;
-    } else if (remaining > 200) {
-      // Far behind: type 3 characters at once, fast
-      charsToAdd = 3;
-      delay = 15;
-    } else if (remaining > 50) {
-      // Somewhat behind: type 2 characters at once
-      charsToAdd = 2;
-      delay = 20;
-    }
-    // else: normal speed (1 char at 20ms)
+    // Maximum speed animation - always fastest
+    const delay = 10; // Fast typing speed (5ms per tick)
+    const charsToAdd = 5; // Characters per tick for visible typing effect
     
     // Animate characters
     const timer = setTimeout(() => {
@@ -677,6 +653,16 @@ const ChatInterface: React.FC = () => {
     setInput('');
     setAttachedFiles([]);
     
+    // Scroll to bottom - padding makes latest message appear at top (ChatGPT-style)
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+    
     // Set up streaming state
     setStreamingMessageId(assistantMessageId);
     setStreamingContent('');
@@ -707,7 +693,10 @@ const ChatInterface: React.FC = () => {
       );
       
       if (response.success && response.ai_chat) {
-           
+        // Auto-rename chat IMMEDIATELY based on first message response
+        if (response.ai_chat.chat_name && response.ai_chat.chat_name !== "" && projectId) {
+          updateChat(projectId, chatId, response.ai_chat.chat_name, '');
+        }
         // Calculate time needed for typing animation to complete
         // This ensures smooth animation without sudden "chunk dump" at the end
         const textLength = response.ai_chat.ai_answer.length;
@@ -732,7 +721,7 @@ const ChatInterface: React.FC = () => {
                 ...m,
                 id: `assistant-${response.ai_chat.id}`,
                 content: response.ai_chat.ai_answer,
-                timestamp: response.ai_chat.created_at,
+                // timestamp: response.ai_chat.created_at,
                 sources: response.rag_metadata?.sources || undefined,
               };
             }
@@ -741,18 +730,13 @@ const ChatInterface: React.FC = () => {
               return {
                 ...m,
                 id: `user-${response.ai_chat.id}`,
-                timestamp: response.ai_chat.created_at,
+                // timestamp: response.ai_chat.created_at,
                 file_references: response.ai_chat.file_references,
               };
             }
             return m;
           });
         });
-        
-        // Auto-rename chat based on first message response only
-        if (response.ai_chat.chat_name && projectId && isFirstMessage) {
-          updateChat(projectId, chatId, response.ai_chat.chat_name, '');
-        }
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -841,7 +825,10 @@ const ChatInterface: React.FC = () => {
           <div 
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-4" 
-            style={{scrollbarWidth: 'none'}}
+            style={{
+              scrollbarWidth: 'none', 
+              paddingBottom: streamingMessageId ? 'calc(100vh - 430px)' : '0'
+            }}
             onScroll={handleScroll}
           >
             <div className="mx-auto max-w-3xl space-y-6 px-2 md:px-0">

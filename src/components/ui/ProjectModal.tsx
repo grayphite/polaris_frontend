@@ -40,7 +40,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     if (e) e.preventDefault();
     const name = projectName.trim();
     const description = projectDescription.trim();
-    if (!name || !description) return;
+    if (!name) return;
     
     if (mode === 'edit' && projectId) {
       updateProject(projectId, name, description);
@@ -97,7 +97,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             onChange={(e) => setProjectName(e.target.value)}
             autoFocus
           />
-          <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description</label>
+          <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description (optional)</label>
           <textarea
             className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm resize-none max-h-40 overflow-y-auto scrollbar-thin"
             placeholder="Brief description, scope, goals..."
@@ -105,7 +105,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             value={projectDescription}
             onChange={(e) => setProjectDescription(e.target.value)}
             maxLength={500}
-            required
           />
           <div className="mt-6 flex justify-end gap-3">
             <button
@@ -118,7 +117,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             <button
               type="submit"
               className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
-              disabled={!projectName.trim() || !projectDescription.trim() || isSubmitting}
+              disabled={!projectName.trim() || isSubmitting}
             >
               {isSubmitting ? 'Creating…' : (mode === 'edit' ? 'Save' : 'Create')}
             </button>

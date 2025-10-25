@@ -263,7 +263,7 @@ const ProjectDetail: React.FC = () => {
                               <p className="mt-1 text-sm text-gray-500 line-clamp-2">{conversation.lastMessage}</p>
                             </div>
                             <span className="bg-light-300 text-xs px-2 py-1 rounded-full">
-                              {conversation.messageCount === 0 ? '-' : `${conversation.messageCount} messages`}
+                              {conversation.messageCount === 0 ? '-' : conversation.messageCount === 1 ? '1 message' : `${conversation.messageCount} messages`}
                             </span>
                           </div>
                           <div className="mt-3 text-xs text-gray-500">
