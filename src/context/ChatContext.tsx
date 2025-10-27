@@ -49,9 +49,6 @@ type ChatContextValue = {
   sidebarChatsHasMore: boolean;
   setSidebarChatsHasMore: (hasMore: boolean) => void;
   loadMoreSidebarChats: (projectId: string) => Promise<void>;
-  // Sources display toggle
-  showSources: boolean;
-  setShowSources: (show: boolean) => void;
 };
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -75,7 +72,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   } | null>(null);
   const [sidebarCurrentPage, setSidebarCurrentPage] = useState(1);
   const [sidebarChatsHasMore, setSidebarChatsHasMore] = useState(false);
-  const [showSources, setShowSources] = useState(false);
   
   // Use ref to access current sidebarSearchQuery without causing dependency issues
   const sidebarSearchQueryRef = useRef(sidebarSearchQuery);
@@ -472,9 +468,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sidebarChatsHasMore,
     setSidebarChatsHasMore,
     loadMoreSidebarChats,
-    showSources,
-    setShowSources,
-  }), [chatsByProject, sidebarChatsByProject, loadingProjects, loadingSidebarProjects, sidebarSearchQuery, conversationsSearchQuery, currentPage, pagination, sidebarCurrentPage, sidebarChatsHasMore, showSources]);
+  }), [chatsByProject, sidebarChatsByProject, loadingProjects, loadingSidebarProjects, sidebarSearchQuery, conversationsSearchQuery, currentPage, pagination, sidebarCurrentPage, sidebarChatsHasMore]);
 
   return (
     <ChatContext.Provider value={value}>{children}</ChatContext.Provider>

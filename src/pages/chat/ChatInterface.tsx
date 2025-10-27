@@ -9,6 +9,7 @@ import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
 import MarkdownMessage from '../../components/ui/MarkdownMessage';
 import { formatTime } from '../../utils/dateTime';
+import { downloadRagFile } from '../../utils/fileDownload';
 
 interface FileAttachment {
   id: string;
@@ -82,7 +83,7 @@ const ChatInterface: React.FC = () => {
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, hydrateProjectChats, updateChat, deleteChat, showSources } = useChats();
+  const { chatsByProject, hydrateProjectChats, updateChat, deleteChat } = useChats();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -909,20 +910,26 @@ const ChatInterface: React.FC = () => {
                             <MarkdownMessage 
                               content={streamingMessageId === message.id ? displayedContent : message.content} 
                             />
-                            {/* Sources chips - display if available and toggle is on */}
-                            {showSources && ((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
+                            {/* Sources chips - always display if available */}
+                            {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
                               <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
-                                {(streamingMessageId === message.id ? streamingSources : message.sources || []).map((source, idx) => (
-                                  <div
+                                {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
+                                  <button
                                     key={idx}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-gray-100 transition-colors"
-                                    title={source}
+                                    onClick={() => {
+                                      const success = downloadRagFile(source);
+                                      if (!success) {
+                                        showErrorToast(`Could not download file: ${source}`);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
+                                    title={`Click to download: ${source}`}
                                   >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
                                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                     </svg>
                                     <span className="truncate max-w-[80px]">{source}</span>
-                                  </div>
+                                  </button>
                                 ))}
                               </div>
                             )}
