@@ -487,13 +487,13 @@ const ChatInterface: React.FC = () => {
       try {
         // Validate file type based on selection
         if (fileType === 'document' && !isValidDocumentType(file)) {
-          showErrorToast(`${file.name} is not a supported document type.`);
+          showErrorToast(`Unsupported document type. Please upload a .pdf, or .txt file`);
           setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
           continue;
         }
         
         if (fileType === 'image' && !isValidImageType(file)) {
-          showErrorToast(`${file.name} is not a supported image type.`);
+          showErrorToast(`Unsupported image type. Please upload a .gif, .jpg,.jpeg, .png, or .webp file.`);
           setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
           continue;
         }
@@ -599,7 +599,7 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim() || !chatId) return;
+    if (!input.trim() || !chatId || streamingMessageId !== null) return;
     
     // Check if any files are still uploading
     const hasUploadingFiles = attachedFiles.some(f => f.uploadStatus === 'uploading');
