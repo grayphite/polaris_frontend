@@ -62,6 +62,7 @@ const ChatInterface: React.FC = () => {
   const [streamingContent, setStreamingContent] = useState<string>(''); // Buffer (server data)
   const [displayedContent, setDisplayedContent] = useState<string>(''); // Animated display
   const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
+  const [isStreamingComplete, setIsStreamingComplete] = useState(false); // Track if streaming is complete
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -599,7 +600,7 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim() || !chatId || streamingMessageId !== null) return;
+    if (!input.trim() || !chatId || (!isStreamingComplete && streamingMessageId !== null)) return;
     
     // Check if any files are still uploading
     const hasUploadingFiles = attachedFiles.some(f => f.uploadStatus === 'uploading');
@@ -668,6 +669,7 @@ const ChatInterface: React.FC = () => {
     setStreamingContent('');
     setDisplayedContent('');
     setStreamingSources([]);
+    setIsStreamingComplete(false);
     
     try {
       // Prepare file reference details (remove uploadStatus as it's not part of FileMetadata)
@@ -689,6 +691,8 @@ const ChatInterface: React.FC = () => {
           if (streamCompleteData.rag_metadata?.sources) {
             setStreamingSources(streamCompleteData.rag_metadata.sources);
           }
+          // Enable send button immediately when stream completes
+          setIsStreamingComplete(true);
         }
       );
       
@@ -709,8 +713,10 @@ const ChatInterface: React.FC = () => {
         // Average ~10ms per character is a safe estimate
         const estimatedAnimationTime = Math.min(textLength * 10, 20000); // Max 20 seconds
         
-        // Wait for animation to finish
-        await new Promise(resolve => setTimeout(resolve, estimatedAnimationTime));
+        // Start animation timer but don't wait for it - let it run in background
+        setTimeout(() => {
+          // Animation completed, but streaming state is already cleared
+        }, estimatedAnimationTime);
         
         // Update message IDs and metadata in place (no visual change since content is already displayed)
         setMessages((prev) => {
@@ -745,10 +751,11 @@ const ChatInterface: React.FC = () => {
       // Remove the placeholder assistant message on error
       setMessages((prev) => prev.filter(m => m.id !== assistantMessageId));
     } finally {
-      // Clear streaming state
+      // Clear streaming state immediately after resolve
       setStreamingMessageId(null);
       setStreamingContent('');
       setDisplayedContent('');
+      setIsStreamingComplete(false);
     }
   };
 
@@ -1094,7 +1101,7 @@ const ChatInterface: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  disabled={streamingMessageId !== null || !input.trim()}
+                  disabled={(!isStreamingComplete && streamingMessageId !== null) || !input.trim()}
                   className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   title="Send"
                 >
