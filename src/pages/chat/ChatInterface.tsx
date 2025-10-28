@@ -9,6 +9,7 @@ import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
 import MarkdownMessage from '../../components/ui/MarkdownMessage';
 import { formatTime } from '../../utils/dateTime';
+import { downloadRagFile } from '../../utils/fileDownload';
 
 interface FileAttachment {
   id: string;
@@ -30,6 +31,7 @@ interface Message {
   timestamp: string;
   attachments?: FileAttachment[];
   file_references?: string[];
+  sources?: string[];
 }
 
 const sortMessagesByTimestamp = (messages: Message[]) => {
@@ -60,6 +62,8 @@ const ChatInterface: React.FC = () => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState<string>(''); // Buffer (server data)
   const [displayedContent, setDisplayedContent] = useState<string>(''); // Animated display
+  const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
+  const [isStreamingComplete, setIsStreamingComplete] = useState(false); // Track if streaming is complete
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,6 +195,7 @@ const ChatInterface: React.FC = () => {
               content: aiChat.ai_answer,
               role: 'assistant',
               timestamp: aiChat.created_at,
+              sources: aiChat.rag_metadata?.sources || undefined,
             });
           }
           
@@ -386,6 +391,7 @@ const ChatInterface: React.FC = () => {
             content: aiChat.ai_answer,
             role: 'assistant',
             timestamp: aiChat.created_at,
+            sources: aiChat.rag_metadata?.sources || undefined,
           });
         }
         
@@ -483,13 +489,13 @@ const ChatInterface: React.FC = () => {
       try {
         // Validate file type based on selection
         if (fileType === 'document' && !isValidDocumentType(file)) {
-          showErrorToast(`${file.name} is not a supported document type.`);
+          showErrorToast(`Unsupported document type. Please upload a .pdf, or .txt file`);
           setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
           continue;
         }
         
         if (fileType === 'image' && !isValidImageType(file)) {
-          showErrorToast(`${file.name} is not a supported image type.`);
+          showErrorToast(`Unsupported image type. Please upload a .gif, .jpg,.jpeg, .png, or .webp file.`);
           setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
           continue;
         }
@@ -595,7 +601,7 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim() || !chatId) return;
+    if (!input.trim() || !chatId || (!isStreamingComplete && streamingMessageId !== null)) return;
     
     // Check if any files are still uploading
     const hasUploadingFiles = attachedFiles.some(f => f.uploadStatus === 'uploading');
@@ -663,6 +669,8 @@ const ChatInterface: React.FC = () => {
     setStreamingMessageId(assistantMessageId);
     setStreamingContent('');
     setDisplayedContent('');
+    setStreamingSources([]);
+    setIsStreamingComplete(false);
     
     try {
       // Prepare file reference details (remove uploadStatus as it's not part of FileMetadata)
@@ -678,6 +686,14 @@ const ChatInterface: React.FC = () => {
         (streamedText) => {
           // Update streaming content as chunks arrive
           setStreamingContent(streamedText);
+        },
+        (streamCompleteData) => {
+          // Update sources immediately when stream completes
+          if (streamCompleteData.rag_metadata?.sources) {
+            setStreamingSources(streamCompleteData.rag_metadata.sources);
+          }
+          // Enable send button immediately when stream completes
+          setIsStreamingComplete(true);
         }
       );
       
@@ -698,8 +714,10 @@ const ChatInterface: React.FC = () => {
         // Average ~10ms per character is a safe estimate
         const estimatedAnimationTime = Math.min(textLength * 10, 20000); // Max 20 seconds
         
-        // Wait for animation to finish
-        await new Promise(resolve => setTimeout(resolve, estimatedAnimationTime));
+        // Start animation timer but don't wait for it - let it run in background
+        setTimeout(() => {
+          // Animation completed, but streaming state is already cleared
+        }, estimatedAnimationTime);
         
         // Update message IDs and metadata in place (no visual change since content is already displayed)
         setMessages((prev) => {
@@ -711,6 +729,7 @@ const ChatInterface: React.FC = () => {
                 id: `assistant-${response.ai_chat.id}`,
                 content: response.ai_chat.ai_answer,
                 // timestamp: response.ai_chat.created_at,
+                sources: response.rag_metadata?.sources || undefined,
               };
             }
             // Update user message with backend ID and metadata
@@ -733,10 +752,11 @@ const ChatInterface: React.FC = () => {
       // Remove the placeholder assistant message on error
       setMessages((prev) => prev.filter(m => m.id !== assistantMessageId));
     } finally {
-      // Clear streaming state
+      // Clear streaming state immediately after resolve
       setStreamingMessageId(null);
       setStreamingContent('');
       setDisplayedContent('');
+      setIsStreamingComplete(false);
     }
   };
 
@@ -886,9 +906,34 @@ const ChatInterface: React.FC = () => {
                             <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                           </div>
                         ) : (
-                          <MarkdownMessage 
-                            content={streamingMessageId === message.id ? displayedContent : message.content} 
-                          />
+                          <>
+                            <MarkdownMessage 
+                              content={streamingMessageId === message.id ? displayedContent : message.content} 
+                            />
+                            {/* Sources chips - always display if available */}
+                            {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
+                              <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                                {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => {
+                                      const success = downloadRagFile(source);
+                                      if (!success) {
+                                        showErrorToast(`Could not download file: ${source}`);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
+                                    title={`Click to download: ${source}`}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="truncate max-w-[80px]">{source}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     ) : (
@@ -1063,7 +1108,7 @@ const ChatInterface: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  disabled={streamingMessageId !== null || !input.trim()}
+                  disabled={(!isStreamingComplete && streamingMessageId !== null) || !input.trim()}
                   className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                   title="Send"
                 >
