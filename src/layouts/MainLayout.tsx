@@ -7,6 +7,8 @@ import Header from '../components/common/Header';
 import { ProjectsProvider, useProjects } from '../context/ProjectsContext';
 import { ChatProvider, useChats } from '../context/ChatContext';
 import InviteModal from '../components/ui/InviteModal';
+import { createTeam, createTeamInvitation } from '../services/teamService';
+import { showErrorToast, showSuccessToast } from '../utils/toast';
 
 
 // Component to load chats for first project
@@ -104,13 +106,44 @@ const MainLayout: React.FC = () => {
 
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteTimestamp, setInviteTimestamp] = useState(0);
 
   // Project create/edit/delete and chat flows are now in Sidebar via context
 
-  const handleInviteSubmit = (email: string, role: string) => {
-    // In a real app, you would make an API call to send the invitation
-    console.log('Inviting:', email, 'with role:', role);
-    setShowInviteModal(false);
+  const handleInviteSubmit = async (email: string) => {
+    try {
+      setIsInviting(true);
+      let teamId = localStorage.getItem('teamId');
+
+      // If no teamId cached, create a new team
+      if (!teamId) {
+        const firstName = user?.firstName;
+        if (!firstName) {
+          showErrorToast('Your profile is missing first name. Please update your profile.');
+          return;
+        }
+        
+        const team = await createTeam({ 
+          name: `${firstName} Team`, 
+          description: 'Default team description' 
+        });
+        teamId = String(team.id);
+        localStorage.setItem('teamId', teamId);
+      }
+
+      await createTeamInvitation(Number(teamId), { invited_email: email });
+      showSuccessToast('Invitation sent successfully');
+      setShowInviteModal(false);
+      
+      // Trigger refresh in MembersList
+      setInviteTimestamp(Date.now());
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.response?.data?.error || 'Failed to send invitation';
+      showErrorToast(message);
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   return (
@@ -136,7 +169,8 @@ const MainLayout: React.FC = () => {
           {/* Page content */}
           <main className="flex-1 overflow-y-auto bg-light-200 p-4">
             <Outlet context={{ 
-              openInviteModal: () => setShowInviteModal(true)
+              openInviteModal: () => setShowInviteModal(true),
+              inviteTimestamp
             }} />
           </main>
         </div>
@@ -146,6 +180,7 @@ const MainLayout: React.FC = () => {
           isOpen={showInviteModal}
           onClose={() => setShowInviteModal(false)}
           onSubmit={handleInviteSubmit}
+          isSubmitting={isInviting}
         />
         </div>
       </ChatProvider>

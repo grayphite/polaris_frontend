@@ -601,7 +601,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* User Profile Section */}
-            <div className="p-4 border-t border-gray-700 mt-auto">
+            {/* <div className="p-4 border-t border-gray-700 mt-auto">
               <div className="flex items-center min-w-0 gap-3">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold">
@@ -613,7 +613,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <p className="text-xs text-gray-400 truncate">{user?.email || 'user@example.com'}</p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
           </motion.aside>
         )}

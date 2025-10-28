@@ -1,119 +1,128 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/dateTime';
+import { fetchInvitations, InvitationDTO } from '../../services/invitationService';
+import { listTeams } from '../../services/teamService';
+import { showErrorToast } from '../../utils/toast';
 
-interface Member {
+type TableRow = {
   id: string;
-  name: string;
   email: string;
-  role: 'admin' | 'member';
-  status: 'active' | 'invited' | 'inactive';
-  avatarUrl?: string;
-  joinedAt: string;
-  projects: number;
-}
+  status: 'active' | 'invited' | 'inactive' | 'expired' | 'cancelled';
+  invitedAt: string;
+};
 
 const MembersList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [rows, setRows] = useState<TableRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [teamId, setTeamId] = useState<string | null>(null);
   
-  // Get the openInviteModal function from MainLayout context
-  const { openInviteModal } = useOutletContext<{ openInviteModal: () => void }>();
+  // Get the openInviteModal function and inviteTimestamp from MainLayout context
+  const { openInviteModal, inviteTimestamp } = useOutletContext<{ 
+    openInviteModal: () => void;
+    inviteTimestamp?: number;
+  }>();
   
-  // Mock data for members
-  const members: Member[] = [
-    {
-      id: '1',
-      name: 'Alex Johnson',
-      email: 'alex@example.com',
-      role: 'admin',
-      status: 'active',
-      joinedAt: '2023-01-15',
-      projects: 12,
-    },
-    {
-      id: '2',
-      name: 'Sarah Williams',
-      email: 'sarah@example.com',
-      role: 'admin',
-      status: 'active',
-      joinedAt: '2023-03-22',
-      projects: 8,
-    },
-    {
-      id: '3',
-      name: 'Michael Brown',
-      email: 'michael@example.com',
-      role: 'member',
-      status: 'active',
-      joinedAt: '2023-05-10',
-      projects: 5,
-    },
-    {
-      id: '4',
-      name: 'Emily Davis',
-      email: 'emily@example.com',
-      role: 'member',
-      status: 'active',
-      joinedAt: '2023-06-18',
-      projects: 3,
-    },
-    {
-      id: '5',
-      name: 'David Wilson',
-      email: 'david@example.com',
-      role: 'admin',
-      status: 'active',
-      joinedAt: '2023-02-28',
-      projects: 7,
-    },
-    {
-      id: '6',
-      name: 'Jessica Taylor',
-      email: 'jessica@example.com',
-      role: 'member',
-      status: 'invited',
-      joinedAt: '2023-10-01',
-      projects: 0,
-    },
-    {
-      id: '7',
-      name: 'Robert Martinez',
-      email: 'robert@example.com',
-      role: 'member',
-      status: 'inactive',
-      joinedAt: '2023-04-05',
-      projects: 2,
-    },
-  ];
-  
-  // Filter members based on search query, role, and status
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = 
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesRole = filterRole === 'all' || member.role === filterRole;
-    const matchesStatus = filterStatus === 'all' || member.status === filterStatus;
-    
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-  
-  
-  const getRoleBadgeClass = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-blue-100 text-blue-800';
-      case 'member':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const mapStatus = (status: InvitationDTO['status']): TableRow['status'] => {
+    if (status === 'pending') return 'invited';
+    if (status === 'accepted') return 'active';
+    if (status === 'declined') return 'inactive';
+    if (status === 'expired') return 'expired';
+    if (status === 'cancelled') return 'cancelled';
+    return 'inactive';
   };
+
+  const mapFilterStatusToApi = (frontendStatus: string): InvitationDTO['status'] | undefined => {
+    if (frontendStatus === 'all') return undefined;
+    if (frontendStatus === 'invited') return 'pending';
+    if (frontendStatus === 'active') return 'accepted';
+    if (frontendStatus === 'inactive') return 'declined';
+    return undefined;
+  };
+
+  // Validate team on mount and when invite timestamp changes
+  useEffect(() => {
+    const validateTeam = async () => {
+      try {
+        const { teams } = await listTeams({ page: 1, per_page: 1 });
+        
+        if (teams && teams.length > 0) {
+          const freshTeamId = String(teams[0].id);
+          const cachedTeamId = localStorage.getItem('teamId');
+          
+          // Update cache if different or missing
+          if (cachedTeamId !== freshTeamId) {
+            localStorage.setItem('teamId', freshTeamId);
+          }
+          
+          setTeamId(freshTeamId);
+        } else {
+          // No teams - clear cache
+          localStorage.removeItem('teamId');
+          setTeamId(null);
+        }
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || 'Failed to load team';
+        showErrorToast(msg);
+        setTeamId(null);
+      }
+    };
+    
+    validateTeam();
+  }, [inviteTimestamp]); // Run on mount and when invite timestamp changes
+
+  // Load invitations when teamId or filters change
+  useEffect(() => {
+    const load = async () => {
+      if (!teamId) {
+        setRows([]);
+        setTotal(0);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        const apiStatus = mapFilterStatusToApi(filterStatus);
+        const res = await fetchInvitations({ 
+          page, 
+          per_page: perPage, 
+          team_id: Number(teamId),
+          status: apiStatus
+        });
+        const mapped: TableRow[] = res.invitations.map((inv) => ({
+          id: String(inv.id),
+          email: inv.invited_email,
+          status: mapStatus(inv.status),
+          invitedAt: inv.invited_at,
+        }));
+        setRows(mapped);
+        setTotal(res.pagination.total);
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to load invitations';
+        showErrorToast(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    load();
+  }, [teamId, page, perPage, filterStatus]);
+  
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      const matchesSearch = row.email.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    });
+  }, [rows, searchQuery]);
+  
   
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -123,6 +132,10 @@ const MembersList: React.FC = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'inactive':
         return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-orange-100 text-orange-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -147,7 +160,7 @@ const MembersList: React.FC = () => {
       
       {/* Search and filters */}
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -161,18 +174,6 @@ const MembersList: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
-          
-          <div>
-            <select
-              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-            >
-              <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="member">Member</option>
-            </select>
           </div>
           
           <div>
@@ -197,19 +198,13 @@ const MembersList: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Member
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
+                  Email
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Joined
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Projects
+                  Invited At
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -217,52 +212,30 @@ const MembersList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMembers.map((member) => (
+              {filteredRows.map((row) => (
                 <motion.tr
-                  key={member.id}
+                  key={row.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        {member.avatarUrl ? (
-                          <img className="h-10 w-10 rounded-full" src={member.avatarUrl} alt={member.name} />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
-                            {member.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                        <div className="text-sm text-gray-500">{member.email}</div>
-                      </div>
-                    </div>
+                    <div className="text-sm text-gray-900">{row.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(member.role)}`}>
-                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(member.status)}`}>
-                      {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(row.status)}`}>
+                      {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(member.joinedAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {member.projects}
+                    {formatDate(row.invitedAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button>
-                    {member.status !== 'inactive' && (
+                    {row.status !== 'inactive' && (
                       <button className="text-red-600 hover:text-red-900">Deactivate</button>
                     )}
-                    {member.status === 'inactive' && (
+                    {row.status === 'inactive' && (
                       <button className="text-green-600 hover:text-green-900">Activate</button>
                     )}
                   </td>
@@ -272,7 +245,7 @@ const MembersList: React.FC = () => {
           </table>
         </div>
         
-        {filteredMembers.length === 0 && (
+        {filteredRows.length === 0 && (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -289,7 +262,7 @@ const MembersList: React.FC = () => {
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No members found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {searchQuery || filterRole !== 'all' || filterStatus !== 'all'
+              {searchQuery || filterStatus !== 'all'
                 ? "No members match your search criteria"
                 : "You haven't added any team members yet."}
             </p>
