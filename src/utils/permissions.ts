@@ -2,7 +2,7 @@
  * Permission utilities - all users have access to everything
  */
 
-export type UserRole = 'admin' | 'member';
+export type UserRole = 'owner' | 'member';
 
 export interface User {
   id: string;
@@ -13,10 +13,10 @@ export interface User {
 }
 
 /**
- * Check if user is an admin
+ * Check if user is an owner
  */
 export const isAdmin = (user: User | null): boolean => {
-  return user?.role === 'admin';
+  return user?.role === 'owner';
 };
 
 /**

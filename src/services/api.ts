@@ -44,6 +44,7 @@ apiClient.interceptors.response.use(
         // Clear auth state and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('team_subscriptions');
         window.location.href = '/login';
         showErrorToast('Session expired, please login again.');
         return;
@@ -107,6 +108,7 @@ export async function makeStreamRequest<T>(
       if (!isOnAuthPage) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('team_subscriptions');
         window.location.href = '/login';
         showErrorToast('Session expired, please login again.');
       }

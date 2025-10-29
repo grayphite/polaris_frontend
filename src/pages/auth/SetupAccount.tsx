@@ -104,11 +104,9 @@ const SetupAccount: React.FC = () => {
     if (!token) return;
     
     try {
-      // Step 1: Sign up the user
-      await register(firstName, lastName, email, password);
+      // Step 1: Sign up the user with invitation token
+      await register(firstName, lastName, email, password, token);
       
-      // Step 2: Accept the invitation (uses the token from signup)
-      await acceptInvitation(token);
       
       // Step 3: Redirect to projects
       navigate('/projects');

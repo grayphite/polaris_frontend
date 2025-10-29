@@ -3,7 +3,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import AuthLayout from './layouts/AuthLayout';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import ChatInterface from './pages/chat/ChatInterface';
 import CompanyProfile from './pages/profile/CompanyProfile';
 // import Dashboard from './pages/Dashboard';
@@ -22,6 +22,9 @@ import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import SetupAccount from './pages/auth/SetupAccount';
 import Subscription from './pages/subscription/Subscription';
+import SubscriptionSuccess from './pages/subscription/Success';
+import SubscriptionFailure from './pages/subscription/Failure';
+import SubscriptionGuard from './components/common/SubscriptionGuard';
 import { ChatProvider } from './context/ChatContext';
 
 // Protected route component
@@ -51,12 +54,31 @@ function App() {
             <Route path="/invitation/setup-account/:token" element={<SetupAccount />} />
           </Route>
           
-          {/* Protected routes */}
+          {/* Subscription routes - Protected but WITHOUT MainLayout for owners without subscription */}
+          <Route path="/subscription" element={
+            <ProtectedRoute>
+              <Subscription />
+            </ProtectedRoute>
+          } />
+          <Route path="/subscription/success" element={
+            <ProtectedRoute>
+              <SubscriptionSuccess />
+            </ProtectedRoute>
+          } />
+          <Route path="/subscription/failure" element={
+            <ProtectedRoute>
+              <SubscriptionFailure />
+            </ProtectedRoute>
+          } />
+
+          {/* Protected routes WITH MainLayout - Only accessible with valid subscription for owners */}
           <Route element={
             <ProtectedRoute>
-              <ChatProvider>
-                <MainLayout />
-              </ChatProvider>
+              <SubscriptionGuard>
+                <ChatProvider>
+                  <MainLayout />
+                </ChatProvider>
+              </SubscriptionGuard>
             </ProtectedRoute>
           }>
             {/* <Route path="/" element={<Dashboard />} /> */}
@@ -73,7 +95,6 @@ function App() {
             {/* All routes accessible to all users */}
             <Route path="/members" element={<MembersList />} />
             <Route path="/company-profile" element={<CompanyProfile />} />
-            <Route path="/subscription" element={<Subscription />} />
           </Route>
           
           {/* Not found route */}

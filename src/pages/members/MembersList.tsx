@@ -7,6 +7,7 @@ import { formatDate } from '../../utils/dateTime';
 import { fetchInvitations, InvitationDTO } from '../../services/invitationService';
 import { listTeams } from '../../services/teamService';
 import { showErrorToast } from '../../utils/toast';
+import { useAuth } from '../../context/AuthContext';
 
 type TableRow = {
   id: string;
@@ -30,6 +31,10 @@ const MembersList: React.FC = () => {
     openInviteModal: () => void;
     inviteTimestamp?: number;
   }>();
+  
+  // Get user role for permission checks
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
   
   const mapStatus = (status: InvitationDTO['status']): TableRow['status'] => {
     if (status === 'pending') return 'invited';
@@ -145,17 +150,19 @@ const MembersList: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Team Members</h1>
-        <Button
-          variant="primary"
-          leftIcon={
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-            </svg>
-          }
-          onClick={openInviteModal}
-        >
-          Invite Member
-        </Button>
+        {isOwner && (
+          <Button
+            variant="primary"
+            leftIcon={
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+              </svg>
+            }
+            onClick={openInviteModal}
+          >
+            Invite Member
+          </Button>
+        )}
       </div>
       
       {/* Search and filters */}
@@ -206,9 +213,11 @@ const MembersList: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Invited At
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                {isOwner && (
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -230,15 +239,17 @@ const MembersList: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(row.invitedAt)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button>
-                    {row.status !== 'inactive' && (
-                      <button className="text-red-600 hover:text-red-900">Deactivate</button>
-                    )}
-                    {row.status === 'inactive' && (
-                      <button className="text-green-600 hover:text-green-900">Activate</button>
-                    )}
-                  </td>
+                  {isOwner && (
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {/* <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button> */}
+                      {row.status !== 'inactive' && (
+                        <button className="text-red-600 hover:text-red-900">Deactivate</button>
+                      )}
+                      {row.status === 'inactive' && (
+                        <button className="text-green-600 hover:text-green-900">Activate</button>
+                      )}
+                    </td>
+                  )}
                 </motion.tr>
               ))}
             </tbody>
@@ -266,19 +277,21 @@ const MembersList: React.FC = () => {
                 ? "No members match your search criteria"
                 : "You haven't added any team members yet."}
             </p>
-            <div className="mt-6">
-              <Button
-                variant="primary"
-                leftIcon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                  </svg>
-                }
-                onClick={openInviteModal}
-              >
-                Invite Member
-              </Button>
-            </div>
+            {isOwner && (
+              <div className="mt-6">
+                <Button
+                  variant="primary"
+                  leftIcon={
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                    </svg>
+                  }
+                  onClick={openInviteModal}
+                >
+                  Invite Member
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
