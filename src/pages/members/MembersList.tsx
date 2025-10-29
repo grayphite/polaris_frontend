@@ -84,7 +84,7 @@ const MembersList: React.FC = () => {
     validateTeam();
   }, [inviteTimestamp]); // Run on mount and when invite timestamp changes
 
-  // Load invitations when teamId or filters change
+  // Load invitations when teamId, filters, or inviteTimestamp changes
   useEffect(() => {
     const load = async () => {
       if (!teamId) {
@@ -119,7 +119,7 @@ const MembersList: React.FC = () => {
     };
     
     load();
-  }, [teamId, page, perPage, filterStatus]);
+  }, [teamId, page, perPage, filterStatus, inviteTimestamp]);
   
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {

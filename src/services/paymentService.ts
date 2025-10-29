@@ -65,6 +65,16 @@ export interface SubscriptionResponse {
   };
 }
 
+export interface MemberAdditionPreviewResponse {
+  allowed: boolean;
+  will_be_overage: boolean;
+  additional_member_cost_cents: number;
+  currency: string;
+  current_active_members: number;
+  included_members_in_plan: number;
+  additional_members: number;
+}
+
 // API Functions
 export async function getPlans(): Promise<PlansResponse> {
   return makeRequest<PlansResponse>('/plans', {
@@ -85,6 +95,12 @@ export async function createCheckoutSession(
 export async function getSubscriptionStatus(teamId: string): Promise<SubscriptionResponse> {
   return makeRequest<SubscriptionResponse>(`/subscriptions/${teamId}`, {
     method: 'GET',
+  });
+}
+
+export async function previewMemberAddition(teamId: string): Promise<MemberAdditionPreviewResponse> {
+  return makeRequest<MemberAdditionPreviewResponse>(`/subscriptions/${teamId}/members/preview`, {
+    method: 'POST',
   });
 }
 
