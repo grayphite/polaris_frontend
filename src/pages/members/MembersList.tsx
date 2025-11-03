@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/dateTime';
-import { fetchInvitations, InvitationDTO } from '../../services/invitationService';
+import { fetchInvitations, InvitationDTO, deleteInvitation } from '../../services/invitationService';
 import { listTeams } from '../../services/teamService';
-import { showErrorToast } from '../../utils/toast';
+import { showErrorToast, showSuccessToast } from '../../utils/toast';
+import Loader from '../../components/common/Loader';
+import DeleteInvitationModal from '../../components/ui/DeleteInvitationModal';
 import { useAuth } from '../../context/AuthContext';
 
 type TableRow = {
@@ -25,6 +27,9 @@ const MembersList: React.FC = () => {
   const [perPage, setPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [invitationToDelete, setInvitationToDelete] = useState<{ id: number; email?: string } | null>(null);
+  const [owner, setOwner] = useState<{ first_name: string; last_name: string; email: string } | null>(null);
   
   // Get the openInviteModal function and inviteTimestamp from MainLayout context
   const { openInviteModal, inviteTimestamp } = useOutletContext<{ 
@@ -53,15 +58,21 @@ const MembersList: React.FC = () => {
     return undefined;
   };
 
-  // Validate team on mount and when invite timestamp changes
+  // Validate team on mount and when invite timestamp/filters change
   useEffect(() => {
     const validateTeam = async () => {
+      setIsLoading(true);
       try {
-        const { teams } = await listTeams({ page: 1, per_page: 1 });
+        const { teams } = await listTeams({ 
+          page: 1, 
+          per_page: 10,
+          teamsFilter: isOwner ? 'own-teams' : 'enrolled-teams'
+        });
         
         if (teams && teams.length > 0) {
           const freshTeamId = String(teams[0].id);
           const cachedTeamId = localStorage.getItem('teamId');
+          const teamOwner = (teams as any)[0]?.owner as { first_name: string; last_name: string; email: string } | undefined;
           
           // Update cache if different or missing
           if (cachedTeamId !== freshTeamId) {
@@ -69,57 +80,103 @@ const MembersList: React.FC = () => {
           }
           
           setTeamId(freshTeamId);
+          setOwner(teamOwner ? { first_name: teamOwner.first_name, last_name: teamOwner.last_name, email: teamOwner.email } : null);
+
+          // After determining team, load invitations (no isLoading toggles here)
+          try {
+            const apiStatus = mapFilterStatusToApi(filterStatus);
+            const res = await fetchInvitations({
+              page,
+              per_page: perPage,
+              team_id: Number(freshTeamId),
+              status: apiStatus,
+            });
+            const mapped: TableRow[] = res.invitations.map((inv) => ({
+              id: String(inv.id),
+              email: inv.invited_email,
+              status: mapStatus(inv.status),
+              invitedAt: inv.invited_at,
+            }));
+            setRows(mapped);
+            setTotal(res.pagination.total);
+          } catch (e: any) {
+            const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to load invitations';
+            showErrorToast(msg);
+          }
         } else {
-          // No teams - clear cache
+          // No teams - clear cache and invitations
           localStorage.removeItem('teamId');
           setTeamId(null);
+          setRows([]);
+          setTotal(0);
+          setOwner(null);
         }
       } catch (e: any) {
         const msg = e?.response?.data?.message || 'Failed to load team';
         showErrorToast(msg);
         setTeamId(null);
-      }
-    };
-    
-    validateTeam();
-  }, [inviteTimestamp]); // Run on mount and when invite timestamp changes
-
-  // Load invitations when teamId, filters, or inviteTimestamp changes
-  useEffect(() => {
-    const load = async () => {
-      if (!teamId) {
         setRows([]);
         setTotal(0);
-        return;
-      }
-      
-      try {
-        setIsLoading(true);
-        const apiStatus = mapFilterStatusToApi(filterStatus);
-        const res = await fetchInvitations({ 
-          page, 
-          per_page: perPage, 
-          team_id: Number(teamId),
-          status: apiStatus
-        });
-        const mapped: TableRow[] = res.invitations.map((inv) => ({
-          id: String(inv.id),
-          email: inv.invited_email,
-          status: mapStatus(inv.status),
-          invitedAt: inv.invited_at,
-        }));
-        setRows(mapped);
-        setTotal(res.pagination.total);
-      } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to load invitations';
-        showErrorToast(msg);
+        setOwner(null);
       } finally {
         setIsLoading(false);
       }
     };
     
-    load();
-  }, [teamId, page, perPage, filterStatus, inviteTimestamp]);
+    validateTeam();
+  }, [inviteTimestamp, filterStatus, page, perPage]);
+
+  const loadInvitations = useCallback(async () => {
+    if (!teamId) {
+      setRows([]);
+      setTotal(0);
+      return;
+    }
+    try {
+      const apiStatus = mapFilterStatusToApi(filterStatus);
+      const res = await fetchInvitations({
+        page,
+        per_page: perPage,
+        team_id: Number(teamId),
+        status: apiStatus,
+      });
+      const mapped: TableRow[] = res.invitations.map((inv) => ({
+        id: String(inv.id),
+        email: inv.invited_email,
+        status: mapStatus(inv.status),
+        invitedAt: inv.invited_at,
+      }));
+      setRows(mapped);
+      setTotal(res.pagination.total);
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to load invitations';
+      showErrorToast(msg);
+    }
+  }, [teamId, page, perPage, filterStatus]);
+
+  // Load invitations when dependencies change
+  useEffect(() => {
+    loadInvitations();
+  }, [loadInvitations, inviteTimestamp]);
+
+  const openDeleteModal = (id: number, email?: string) => {
+    setInvitationToDelete({ id, email });
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteInvitation = async (invitationId: number) => {
+    try {
+      await deleteInvitation(invitationId);
+      showSuccessToast('Invitation deleted');
+      setIsDeleteOpen(false);
+      setInvitationToDelete(null);
+      await loadInvitations();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to delete invitation';
+      showErrorToast(msg);
+      throw e;
+    }
+  };
   
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -164,6 +221,17 @@ const MembersList: React.FC = () => {
           </Button>
         )}
       </div>
+      {owner && (
+        <div className="w-full md:w-[40%] bg-white rounded-lg shadow-sm p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Team Owner</p>
+              <p className="text-base font-medium text-gray-900">{owner.first_name} {owner.last_name}</p>
+              <a href={`mailto:${owner.email}`} className="text-sm text-primary-600 hover:text-primary-700">{owner.email}</a>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Search and filters */}
       <div className="bg-white rounded-lg shadow-sm p-4">
@@ -200,101 +268,125 @@ const MembersList: React.FC = () => {
       
       {/* Members table */}
       <div className="bg-white rounded-lg shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Invited At
-                </th>
+        {isLoading ? (
+          <div className="py-24 flex items-center justify-center">
+            <Loader size="lg" color="primary" />
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Invited At
+                    </th>
+                    {isOwner && (
+                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredRows.map((row) => (
+                    <motion.tr
+                      key={row.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{row.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(row.status)}`}>
+                          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(row.invitedAt)}
+                      </td>
+                      {isOwner && (
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {/* <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button> */}
+                          {row.status !== 'inactive' && (
+                            <button
+                              className="text-red-600 hover:text-red-900"
+                              onClick={() => openDeleteModal(Number(row.id), row.email)}
+                            >
+                              Delete
+                            </button>
+                          )}
+                          {row.status === 'inactive' && (
+                            <button className="text-green-600 hover:text-green-900">Activate</button>
+                          )}
+                        </td>
+                      )}
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredRows.length === 0 && (
+              <div className="text-center py-12">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No members found</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {searchQuery || filterStatus !== 'all'
+                    ? "No members match your search criteria"
+                    : "You haven't added any team members yet."}
+                </p>
                 {isOwner && (
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <div className="mt-6">
+                    <Button
+                      variant="primary"
+                      leftIcon={
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                        </svg>
+                      }
+                      onClick={openInviteModal}
+                    >
+                      Invite Member
+                    </Button>
+                  </div>
                 )}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRows.map((row) => (
-                <motion.tr
-                  key={row.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{row.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(row.status)}`}>
-                      {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(row.invitedAt)}
-                  </td>
-                  {isOwner && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {/* <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button> */}
-                      {row.status !== 'inactive' && (
-                        <button className="text-red-600 hover:text-red-900">Deactivate</button>
-                      )}
-                      {row.status === 'inactive' && (
-                        <button className="text-green-600 hover:text-green-900">Activate</button>
-                      )}
-                    </td>
-                  )}
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {filteredRows.length === 0 && (
-          <div className="text-center py-12">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No members found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchQuery || filterStatus !== 'all'
-                ? "No members match your search criteria"
-                : "You haven't added any team members yet."}
-            </p>
-            {isOwner && (
-              <div className="mt-6">
-                <Button
-                  variant="primary"
-                  leftIcon={
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                    </svg>
-                  }
-                  onClick={openInviteModal}
-                >
-                  Invite Member
-                </Button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
+
+      <DeleteInvitationModal
+        isOpen={isDeleteOpen}
+        onClose={() => {
+          setIsDeleteOpen(false);
+          setInvitationToDelete(null);
+        }}
+        invitationId={invitationToDelete?.id || 0}
+        invitationEmail={invitationToDelete?.email}
+        onConfirm={handleDeleteInvitation}
+      />
       
     </div>
   );

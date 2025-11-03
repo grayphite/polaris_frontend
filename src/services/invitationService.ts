@@ -74,4 +74,11 @@ export async function acceptInvitation(token: string): Promise<InvitationDetailD
   return makeRequest<InvitationDetailDTO>(`/invitations/${token}/accept`, { method: 'POST' });
 }
 
+export async function deleteInvitation(invitationId: number): Promise<{ success: boolean }> {
+  return makeRequest<{ success: boolean }>(`/invitations`, {
+    method: 'DELETE',
+    data: { invitation_id: invitationId },
+  });
+}
+
 

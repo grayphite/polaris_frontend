@@ -36,11 +36,19 @@ export async function createTeam(payload: {
   });
 }
 
-export async function listTeams(params: { page?: number; per_page?: number; search?: string } = {}): Promise<TeamsResponse> {
+export async function listTeams(
+  params: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    teamsFilter?: 'own-teams' | 'enrolled-teams';
+  } = {}
+): Promise<TeamsResponse> {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set('page', String(params.page));
   if (params.per_page) searchParams.set('per_page', String(params.per_page));
   if (params.search) searchParams.set('search', params.search);
+  if (params.teamsFilter) searchParams.set('teams-filter', params.teamsFilter);
   const query = searchParams.toString();
   return makeRequest<TeamsResponse>(`/teams${query ? `?${query}` : ''}`, { method: 'GET' });
 }

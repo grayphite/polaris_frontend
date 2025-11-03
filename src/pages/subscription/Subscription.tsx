@@ -41,7 +41,11 @@ const Subscription: React.FC = () => {
 
     // If not in localStorage, try to fetch from API
     try {
-      const { teams } = await listTeams({ page: 1, per_page: 1 });
+      const { teams } = await listTeams({ 
+        page: 1, 
+        per_page: 1,
+        teamsFilter: user?.role === 'owner' ? 'own-teams' : 'enrolled-teams'
+      });
       
       if (teams && teams.length > 0) {
         teamId = String(teams[0].id);
