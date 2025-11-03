@@ -434,19 +434,8 @@ const ChatInterface: React.FC = () => {
   // Validate document file type (must match backend allowed types exactly)
   const isValidDocumentType = (file: File): boolean => {
     const allowedTypes = [
-      'application/javascript',
-      'application/json',
       'application/pdf',
-      'application/xml',
-      'text/csv',
-      'text/markdown',
       'text/plain',
-      'text/typescript',
-      'text/x-c++src',
-      'text/x-go',
-      'text/x-java-source',
-      'text/x-python',
-      'text/xml',
     ];
     
     return allowedTypes.includes(file.type);

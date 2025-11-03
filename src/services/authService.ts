@@ -5,6 +5,35 @@ export interface RegisterUserData {
   senha: string;
   first_name: string;
   last_name: string;
+  invitation_token?: string;
+}
+
+export interface TeamSubscriptionPlan {
+  id: number;
+  code: string;
+  display_name: string;
+  max_team_members_per_team: number;
+}
+
+export interface TeamSubscriptionPrice {
+  id: number;
+  nickname: string;
+  amount_cents: number;
+  currency: string;
+  trial_days: number;
+  per_seat_amount_cents: number;
+}
+
+export interface TeamSubscription {
+  id: number;
+  status: 'trialing' | 'active' | 'past_due' | 'incomplete' | 'incomplete_expired' | 'canceled' | 'unpaid';
+  trial_end: string | null;
+  current_period_start: string;
+  current_period_end: string;
+  quantity: number;
+  plan: TeamSubscriptionPlan;
+  price: TeamSubscriptionPrice;
+  billing_user_id: number;
 }
 
 export interface RegisterResponse {
@@ -13,6 +42,7 @@ export interface RegisterResponse {
   user?: any;
   token?: string;
   error?: string;
+  team_subscriptions?: TeamSubscription[];
 }
 
 export interface LoginResponse {
@@ -21,12 +51,16 @@ export interface LoginResponse {
   user?: any;
   token?: string;
   error?: string;
+  team_subscriptions?: TeamSubscription[];
 }
 
 export async function registerUser(userData: RegisterUserData): Promise<RegisterResponse> {
   return makeRequest<RegisterResponse>('/users/register', {
     method: 'POST',
-    data: userData,
+    data: {
+      ...userData,
+      invitation_token: userData.invitation_token || '',
+    },
   });
 }
 

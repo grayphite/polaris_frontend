@@ -45,6 +45,40 @@ const Login: React.FC = () => {
     
     try {
       await login(email, password);
+      // Check subscription to navigate appropriately
+      let userData: any = {};
+      let subscriptions: any[] = [];
+
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          userData = JSON.parse(storedUser);
+        }
+      } catch (error) {
+        console.error('Failed to parse user data:', error);
+        // userData remains {}
+      }
+
+      try {
+        const storedSubs = localStorage.getItem('team_subscriptions');
+        if (storedSubs) {
+          subscriptions = JSON.parse(storedSubs);
+        }
+      } catch (error) {
+        console.error('Failed to parse subscription data:', error);
+        // subscriptions remains []
+      }
+
+      // Only check if we have valid user data with role
+      if (userData && userData.role === 'owner') {
+        // If owner has no subscriptions or empty array, redirect to subscription page
+        if (!subscriptions || !Array.isArray(subscriptions) || subscriptions.length === 0) {
+          navigate('/subscription');
+          return;
+        }
+      }
+
+      // For members or owners with subscriptions, go to projects
       navigate('/projects');
     } catch (error) {
       console.error('Login error:', error);

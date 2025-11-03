@@ -5,27 +5,26 @@ import Button from './Button';
 interface InviteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (email: string, role: string) => void;
+  onSubmit: (email: string) => void;
+  isSubmitting?: boolean;
 }
 
 const InviteModal: React.FC<InviteModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  isSubmitting = false,
 }) => {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('member');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(email, role);
+    onSubmit(email);
     setEmail('');
-    setRole('member');
   };
 
   const handleClose = () => {
     setEmail('');
-    setRole('member');
     onClose();
   };
 
@@ -61,22 +60,6 @@ const InviteModal: React.FC<InviteModalProps> = ({
               />
             </div>
             
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Role
-              </label>
-              <select
-                id="role"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="superadmin">Super Admin</option>
-              </select>
-            </div>
-            
             <div className="mt-2">
               <p className="text-sm text-gray-500">
                 An invitation will be sent to this email address. They'll be able to join your organization once they accept.
@@ -89,6 +72,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               type="button"
               variant="outline"
               onClick={handleClose}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
@@ -96,6 +80,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               type="submit"
               variant="primary"
               disabled={!email}
+              isLoading={isSubmitting}
             >
               Send Invitation
             </Button>

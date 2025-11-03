@@ -37,12 +37,14 @@ apiClient.interceptors.response.use(
       const isOnAuthPage = window.location.pathname == '/login' ||
                            window.location.pathname == '/register' ||
                            window.location.pathname == '/forgot-password' ||
-                           window.location.pathname == '/reset-password';
+                           window.location.pathname == '/reset-password' ||
+                           window.location.pathname.startsWith('/invitation/setup-account');
 
       if (status === 401 && !isOnAuthPage) {
         // Clear auth state and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('team_subscriptions');
         window.location.href = '/login';
         showErrorToast('Session expired, please login again.');
         return;
@@ -100,11 +102,13 @@ export async function makeStreamRequest<T>(
       const isOnAuthPage = window.location.pathname === '/login' ||
                            window.location.pathname === '/register' ||
                            window.location.pathname === '/forgot-password' ||
-                           window.location.pathname === '/reset-password';
+                           window.location.pathname === '/reset-password' ||
+                           window.location.pathname.startsWith('/invitation/setup-account');
       
       if (!isOnAuthPage) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('team_subscriptions');
         window.location.href = '/login';
         showErrorToast('Session expired, please login again.');
       }

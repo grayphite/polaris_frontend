@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI } from '../services/authService';
+import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI, TeamSubscription } from '../services/authService';
+import { createTeam } from '../services/teamService';
+import { showErrorToast, showSuccessToast } from '../utils/toast';
 
 interface User {
   id: string;
@@ -7,7 +9,7 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
-  role: 'admin' | 'member';
+  role: 'owner' | 'member';
   companyId?: string;
 }
 
@@ -15,19 +17,53 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  subscription: TeamSubscription | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
+  register: (firstName: string, lastName: string, email: string, password: string, invitationToken?: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
+  refreshSubscription: (subscriptions: TeamSubscription[] | undefined) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const SUBSCRIPTION_STORAGE_KEY = 'team_subscriptions';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Helper to safely parse and get subscription from localStorage
+  const getStoredSubscription = (): TeamSubscription | null => {
+    try {
+      const stored = localStorage.getItem(SUBSCRIPTION_STORAGE_KEY);
+      if (!stored) return null;
+      
+      const subscriptions = JSON.parse(stored);
+      // Return first subscription if array exists and has items
+      if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+        return subscriptions[0];
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to parse stored subscription data:', error);
+      localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
+      return null;
+    }
+  };
+
+  // Helper to store subscription
+  const storeSubscription = (subscriptions: TeamSubscription[] | undefined) => {
+    if (!subscriptions || subscriptions.length === 0) {
+      localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(SUBSCRIPTION_STORAGE_KEY, JSON.stringify(subscriptions));
+  };
+
+  const [subscription, setSubscription] = useState<TeamSubscription | null>(() => getStoredSubscription());
 
   useEffect(() => {
     // Check if user has a token in localStorage
@@ -39,11 +75,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Restore user data from localStorage
         const userData = JSON.parse(storedUser);
         setUser(userData);
+        
+        // Restore subscription data from localStorage
+        const storedSubscription = getStoredSubscription();
+        setSubscription(storedSubscription);
       } catch (error) {
         console.error('Failed to parse stored user data:', error);
         // Clear invalid data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
       }
     }
     setIsLoading(false);
@@ -62,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           firstName: response.user.first_name,
           lastName: response.user.last_name,
           email: response.user.email,
-          role: (response.user.role === 'admin' ? 'admin' : 'member') as 'admin' | 'member',
+          role: (response.user.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
           companyId: response.user.companyId
         };
         
@@ -70,6 +111,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
+
+        // Store subscription data
+        storeSubscription(response.team_subscriptions);
+        const storedSub = getStoredSubscription();
+        setSubscription(storedSub);
       } else {
         throw new Error(response.error || 'Login failed');
       }
@@ -81,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (firstName: string, lastName: string, email: string, password: string) => {
+  const register = async (firstName: string, lastName: string, email: string, password: string, invitationToken?: string) => {
     setIsLoading(true);
     
     try {
@@ -89,7 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         senha: password,
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
+        invitation_token: invitationToken
       });
       
       if (response.success && response.token && response.user) {
@@ -99,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           firstName: response.user.first_name,
           lastName: response.user.last_name,
           email: response.user.email,
-          role: (response.user.role === 'admin' ? 'admin' : 'member') as 'admin' | 'member',
+          role: (response.user.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
           companyId: response.user.companyId
         };
         
@@ -107,6 +154,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
+
+        // Store subscription data
+        storeSubscription(response.team_subscriptions);
+        const storedSub = getStoredSubscription();
+        setSubscription(storedSub);
+        
+        // Only create a team for owners
+        if (userData.role === 'owner') {
+          await createTeamWithRetry(userData.firstName);
+        }
       } else {
         throw new Error(response.error || 'Registration failed');
       }
@@ -118,10 +175,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Helper function to create team with retry logic
+  const createTeamWithRetry = async (firstName: string, maxRetries = 3) => {
+    const teamName = `${firstName} Team 1`;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const team = await createTeam({ name: teamName, description: '' });
+        console.log(`Team "${teamName}" created successfully`);
+        
+        // Store teamId in localStorage
+        if (team && team.id) {
+          localStorage.setItem('teamId', team.id.toString());
+        }
+        
+        // Optional: Show subtle success message
+        // showSuccessToast('Team created successfully');
+        return; // Success, exit the function
+      } catch (error) {
+        console.error(`Team creation attempt ${attempt} failed:`, error);
+        
+        if (attempt === maxRetries) {
+          // All retries exhausted
+          showErrorToast('Failed to create team. You can create one from the dashboard.');
+          return; // Exit gracefully, allow user to proceed
+        }
+        
+        // Wait before retrying with exponential backoff (1s, 2s, 4s)
+        const delay = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('teamId');
+    localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
     setUser(null);
+    setSubscription(null);
+  };
+
+  const refreshSubscription = (subscriptions: TeamSubscription[] | undefined) => {
+    storeSubscription(subscriptions);
+    const storedSub = getStoredSubscription();
+    setSubscription(storedSub);
   };
 
   const forgotPassword = async (email: string) => {
@@ -168,12 +267,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     isAuthenticated: !!user,
     isLoading,
+    subscription,
     login,
     register,
     logout,
     forgotPassword,
     resetPassword,
-    updateUser
+    updateUser,
+    refreshSubscription
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
