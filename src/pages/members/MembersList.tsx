@@ -10,6 +10,7 @@ import { showErrorToast, showSuccessToast } from '../../utils/toast';
 import Loader from '../../components/common/Loader';
 import DeleteInvitationModal from '../../components/ui/DeleteInvitationModal';
 import { useAuth } from '../../context/AuthContext';
+import { useInvitations } from '../../context/InvitationsContext';
 
 type TableRow = {
   id: string;
@@ -39,6 +40,7 @@ const MembersList: React.FC = () => {
   
   // Get user role for permission checks
   const { user } = useAuth();
+  const { setInvitationsResponse } = useInvitations();
   const isOwner = user?.role === 'owner';
   
   const mapStatus = (status: InvitationDTO['status']): TableRow['status'] => {
@@ -58,7 +60,7 @@ const MembersList: React.FC = () => {
     return undefined;
   };
 
-  // Validate team on mount and when invite timestamp/filters change
+  // Validate team on mount and when invite timestamp changes
   useEffect(() => {
     const validateTeam = async () => {
       setIsLoading(true);
@@ -81,35 +83,16 @@ const MembersList: React.FC = () => {
           
           setTeamId(freshTeamId);
           setOwner(teamOwner ? { first_name: teamOwner.first_name, last_name: teamOwner.last_name, email: teamOwner.email } : null);
-
-          // After determining team, load invitations (no isLoading toggles here)
-          try {
-            const apiStatus = mapFilterStatusToApi(filterStatus);
-            const res = await fetchInvitations({
-              page,
-              per_page: perPage,
-              team_id: Number(freshTeamId),
-              status: apiStatus,
-            });
-            const mapped: TableRow[] = res.invitations.map((inv) => ({
-              id: String(inv.id),
-              email: inv.invited_email,
-              status: mapStatus(inv.status),
-              invitedAt: inv.invited_at,
-            }));
-            setRows(mapped);
-            setTotal(res.pagination.total);
-          } catch (e: any) {
-            const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to load invitations';
-            showErrorToast(msg);
-          }
+          // Don't set isLoading(false) here - let loadInvitations manage it
         } else {
-          // No teams - clear cache and invitations
+          // No teams - clear cache and state
           localStorage.removeItem('teamId');
           setTeamId(null);
           setRows([]);
           setTotal(0);
           setOwner(null);
+          setInvitationsResponse(null);
+          setIsLoading(false);
         }
       } catch (e: any) {
         const msg = e?.response?.data?.message || 'Failed to load team';
@@ -118,13 +101,12 @@ const MembersList: React.FC = () => {
         setRows([]);
         setTotal(0);
         setOwner(null);
-      } finally {
         setIsLoading(false);
       }
     };
     
     validateTeam();
-  }, [inviteTimestamp, filterStatus, page, perPage]);
+  }, [inviteTimestamp, isOwner, setInvitationsResponse]);
 
   const loadInvitations = useCallback(async () => {
     if (!teamId) {
@@ -132,7 +114,16 @@ const MembersList: React.FC = () => {
       setTotal(0);
       return;
     }
+    
+    setIsLoading(true);
     try {
+      // Fetch all invitations (no filter) and store in context
+      const allRes = await fetchInvitations({
+        team_id: Number(teamId),
+      });
+      setInvitationsResponse(allRes);
+      
+      // Fetch filtered invitations for display
       const apiStatus = mapFilterStatusToApi(filterStatus);
       const res = await fetchInvitations({
         page,
@@ -140,19 +131,23 @@ const MembersList: React.FC = () => {
         team_id: Number(teamId),
         status: apiStatus,
       });
+      
       const mapped: TableRow[] = res.invitations.map((inv) => ({
         id: String(inv.id),
         email: inv.invited_email,
         status: mapStatus(inv.status),
         invitedAt: inv.invited_at,
       }));
+      
       setRows(mapped);
       setTotal(res.pagination.total);
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to load invitations';
       showErrorToast(msg);
+    } finally {
+      setIsLoading(false);
     }
-  }, [teamId, page, perPage, filterStatus]);
+  }, [teamId, page, perPage, filterStatus, setInvitationsResponse]);
 
   // Load invitations when dependencies change
   useEffect(() => {

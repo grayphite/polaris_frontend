@@ -1,30 +1,94 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Button from './Button';
+import { useAuth } from '../../context/AuthContext';
+import { useInvitations } from '../../context/InvitationsContext';
+import { createTeam, createTeamInvitation } from '../../services/teamService';
+import { showSuccessToast } from '../../utils/toast';
 
 interface InviteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (email: string) => void;
-  isSubmitting?: boolean;
+  onSuccess?: () => void;
 }
 
 const InviteModal: React.FC<InviteModalProps> = ({
   isOpen,
   onClose,
-  onSubmit,
-  isSubmitting = false,
+  onSuccess,
 }) => {
+  const { user } = useAuth();
+  const { invitationCount } = useInvitations();
   const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isOpen) {
+      setEmail('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(email);
-    setEmail('');
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      let teamId = localStorage.getItem('teamId');
+
+      if (!teamId) {
+        const firstName = user?.firstName;
+        if (!firstName) {
+          setError('Your profile is missing first name. Please update your profile.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const team = await createTeam({
+          name: `${firstName} Team`,
+          description: 'Default team description',
+        });
+        teamId = String(team.id);
+        localStorage.setItem('teamId', teamId);
+      }
+
+      await createTeamInvitation(Number(teamId), { invited_email: email });
+      showSuccessToast('Invitation sent successfully');
+      setEmail('');
+      onSuccess?.();
+      onClose();
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const errorData = error?.response?.data;
+      const errorMessage = errorData?.error || errorData?.message;
+
+      if (status === 409 || status === 400) {
+        if (
+          errorMessage?.includes('already registered') ||
+          errorMessage?.includes('already a member') ||
+          errorMessage?.includes('pending invitation already exists')
+        ) {
+          setError('This email is already registered or has been invited. Please use a different email address.');
+        } else if (errorMessage?.includes('Invalid email format')) {
+          setError('Please enter a valid email address.');
+        } else if (errorMessage?.includes('required')) {
+          setError('Please enter an email address.');
+        } else {
+          setError(errorMessage || 'Failed to send invitation. Please try again.');
+        }
+      } else {
+        setError(errorMessage || 'Failed to send invitation. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     setEmail('');
+    setError('');
     onClose();
   };
 
@@ -45,6 +109,14 @@ const InviteModal: React.FC<InviteModalProps> = ({
         
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
+            {invitationCount >= 2 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm text-yellow-800">
+                  You are inviting an additional user. If this user accepts the invitation, you will be charged 50.00 BRL from your card.
+                </p>
+              </div>
+            )}
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email Address
@@ -52,12 +124,20 @@ const InviteModal: React.FC<InviteModalProps> = ({
               <input
                 type="email"
                 id="email"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                  error ? 'border-red-300' : 'border-gray-300'
+                }`}
                 placeholder="colleague@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
                 required
               />
+              {error && (
+                <p className="mt-1 text-sm text-red-600">{error}</p>
+              )}
             </div>
             
             <div className="mt-2">
