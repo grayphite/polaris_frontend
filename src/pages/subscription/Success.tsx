@@ -5,70 +5,23 @@ import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { getSubscriptionStatus } from '../../services/paymentService';
 import { TeamSubscription } from '../../services/authService';
-import { listTeams, createTeam } from '../../services/teamService';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 
 const Success: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshSubscription, user } = useAuth();
+  const { refreshSubscription } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(true);
-
-  // Helper function to ensure teamId exists (fetch from API or create if missing)
-  const ensureTeamId = async (): Promise<string | null> => {
-    // First, try to get from localStorage
-    let teamId = localStorage.getItem('teamId');
-    
-    if (teamId) {
-      return teamId;
-    }
-
-    // If not in localStorage, try to fetch from API
-    try {
-      const { teams } = await listTeams({ 
-        page: 1, 
-        per_page: 1,
-        teamsFilter: user?.role === 'owner' ? 'own-teams' : 'enrolled-teams'
-      });
-      
-      if (teams && teams.length > 0) {
-        teamId = String(teams[0].id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-
-      // If no teams exist and user is owner, create a new team
-      if (user && user.role === 'owner') {
-        const firstName = user.firstName || 'User';
-        const teamName = `${firstName} Team 1`;
-        
-        const team = await createTeam({ 
-          name: teamName, 
-          description: 'Default team' 
-        });
-        
-        teamId = String(team.id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-    } catch (error) {
-      console.error('Failed to fetch or create team:', error);
-      showErrorToast('Failed to load team information. Please try again.');
-      return null;
-    }
-
-    return null;
-  };
 
   // Refresh subscription data after successful payment
   useEffect(() => {
     const refreshSubscriptionData = async () => {
       try {
-        // Ensure teamId exists before fetching subscription
-        const teamId = await ensureTeamId();
+        const teamId = localStorage.getItem('teamId');
         
         if (!teamId) {
-          console.error('Team ID not found and could not be created');
+          console.error('Team ID not found');
+          showErrorToast('Unable to get team information. Please try logging in again.');
           setIsRefreshing(false);
           return;
         }

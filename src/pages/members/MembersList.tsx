@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/dateTime';
 import { fetchInvitations, InvitationDTO, deleteInvitation } from '../../services/invitationService';
-import { listTeams } from '../../services/teamService';
 import { showErrorToast, showSuccessToast } from '../../utils/toast';
 import Loader from '../../components/common/Loader';
 import DeleteInvitationModal from '../../components/ui/DeleteInvitationModal';
@@ -60,53 +59,37 @@ const MembersList: React.FC = () => {
     return undefined;
   };
 
-  // Validate team on mount and when invite timestamp changes
+  // Load team info from localStorage on mount and when invite timestamp changes
   useEffect(() => {
-    const validateTeam = async () => {
-      setIsLoading(true);
-      try {
-        const { teams } = await listTeams({ 
-          page: 1, 
-          per_page: 10,
-          teamsFilter: isOwner ? 'own-teams' : 'enrolled-teams'
-        });
+    const loadTeamInfo = () => {
+      const storedTeamId = localStorage.getItem('teamId');
+      const storedOwner = localStorage.getItem('teamOwner');
+
+      if (storedTeamId) {
+        setTeamId(storedTeamId);
         
-        if (teams && teams.length > 0) {
-          const freshTeamId = String(teams[0].id);
-          const cachedTeamId = localStorage.getItem('teamId');
-          const teamOwner = (teams as any)[0]?.owner as { first_name: string; last_name: string; email: string } | undefined;
-          
-          // Update cache if different or missing
-          if (cachedTeamId !== freshTeamId) {
-            localStorage.setItem('teamId', freshTeamId);
+        if (storedOwner) {
+          try {
+            const ownerInfo = JSON.parse(storedOwner);
+            setOwner(ownerInfo);
+          } catch (error) {
+            console.error('Failed to parse stored owner data:', error);
+            setOwner(null);
           }
-          
-          setTeamId(freshTeamId);
-          setOwner(teamOwner ? { first_name: teamOwner.first_name, last_name: teamOwner.last_name, email: teamOwner.email } : null);
-          // Don't set isLoading(false) here - let loadInvitations manage it
         } else {
-          // No teams - clear cache and state
-          localStorage.removeItem('teamId');
-          setTeamId(null);
-          setRows([]);
-          setTotal(0);
           setOwner(null);
-          setInvitationsResponse(null);
-          setIsLoading(false);
         }
-      } catch (e: any) {
-        const msg = e?.response?.data?.message || 'Failed to load team';
-        showErrorToast(msg);
+      } else {
         setTeamId(null);
+        setOwner(null);
         setRows([]);
         setTotal(0);
-        setOwner(null);
-        setIsLoading(false);
+        setInvitationsResponse(null);
       }
     };
-    
-    validateTeam();
-  }, [inviteTimestamp, isOwner, setInvitationsResponse]);
+
+    loadTeamInfo();
+  }, [inviteTimestamp, setInvitationsResponse]);
 
   const loadInvitations = useCallback(async () => {
     if (!teamId) {

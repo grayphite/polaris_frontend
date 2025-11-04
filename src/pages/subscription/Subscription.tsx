@@ -4,15 +4,12 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/common/Card';
 import Loader from '../../components/common/Loader';
 import { getPlans, createCheckoutSession, Plan } from '../../services/paymentService';
-import { listTeams, createTeam } from '../../services/teamService';
-import { useAuth } from '../../context/AuthContext';
 import { showErrorToast } from '../../utils/toast';
 
 const Subscription: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const { user } = useAuth();
 
   useEffect(() => {
     fetchPlans();
@@ -30,55 +27,8 @@ const Subscription: React.FC = () => {
     }
   };
 
-  // Helper function to ensure teamId exists (fetch from API or create if missing)
-  const ensureTeamId = async (): Promise<string | null> => {
-    // First, try to get from localStorage
-    let teamId = localStorage.getItem('teamId');
-    
-    if (teamId) {
-      return teamId;
-    }
-
-    // If not in localStorage, try to fetch from API
-    try {
-      const { teams } = await listTeams({ 
-        page: 1, 
-        per_page: 1,
-        teamsFilter: user?.role === 'owner' ? 'own-teams' : 'enrolled-teams'
-      });
-      
-      if (teams && teams.length > 0) {
-        teamId = String(teams[0].id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-
-      // If no teams exist and user is owner, create a new team
-      if (user && user.role === 'owner') {
-        const firstName = user.firstName || 'User';
-        const teamName = `${firstName} Team 1`;
-        
-        const team = await createTeam({ 
-          name: teamName, 
-          description: 'Default team' 
-        });
-        
-        teamId = String(team.id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-    } catch (error) {
-      console.error('Failed to fetch or create team:', error);
-      showErrorToast('Failed to load team information. Please try again.');
-      return null;
-    }
-
-    return null;
-  };
-
   const handleSubscribe = async (stripeePriceId: string) => {
-    // Ensure teamId exists before proceeding
-    const teamId = await ensureTeamId();
+    const teamId = localStorage.getItem('teamId');
     
     if (!teamId) {
       showErrorToast('Unable to get team information. Please try logging in again.');

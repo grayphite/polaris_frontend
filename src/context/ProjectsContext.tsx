@@ -75,7 +75,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const loadProjects = async () => {
     try {
       setProjectsLoading(true);
-      const response = await fetchProjects(currentPage, 12, searchQuery, false);
+      const teamId = localStorage.getItem('teamId');
+      const response = await fetchProjects(currentPage, 12, searchQuery, false, teamId);
       setProjects(response.projects.map(r => ({ 
         id: r.id.toString(), 
         name: r.name,
@@ -109,7 +110,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     setSidebarLoading(true);
     try {
-      const response = await fetchProjects(sidebarPage, 10, sidebarProjectSearchQuery, false);
+      const teamId = localStorage.getItem('teamId');
+      const response = await fetchProjects(sidebarPage, 10, sidebarProjectSearchQuery, false, teamId);
       const newProjects = response.projects.map(r => ({ 
         id: r.id.toString(), 
         name: r.name,
@@ -169,7 +171,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       setSidebarLoading(true);
       try {
-        const response = await fetchProjects(1, 10, sidebarProjectSearchQuery, false);
+        const teamId = localStorage.getItem('teamId');
+        const response = await fetchProjects(1, 10, sidebarProjectSearchQuery, false, teamId);
         const newProjects = response.projects.map(r => ({ 
           id: r.id.toString(), 
           name: r.name,

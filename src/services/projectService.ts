@@ -29,7 +29,8 @@ export async function fetchProjects(
   page: number = 1,
   perPage: number = 10,
   search: string = '',
-  includeDeleted: boolean = false
+  includeDeleted: boolean = false,
+  teamId?: string | null
 ): Promise<ProjectsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -37,6 +38,10 @@ export async function fetchProjects(
     search: search,
     include_deleted: includeDeleted.toString()
   });
+  
+  if (teamId) {
+    params.set('team_id', teamId);
+  }
   
   return makeRequest<ProjectsResponse>(`/projects?${params}`, { method: 'GET' });
 }
