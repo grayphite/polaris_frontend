@@ -1,13 +1,18 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useProjects } from '../../context/ProjectsContext';
 import { useChats } from '../../context/ChatContext';
+import { useAuth } from '../../context/AuthContext';
 import { fetchProjectById } from '../../services/projectService';
+import { listProjectMembers, ProjectMemberDTO } from '../../services/projectMemberService';
 import Loader from '../../components/common/Loader';
-
 import Button from '../../components/ui/Button';
 import { motion } from 'framer-motion';
 import { formatDate, formatTime } from '../../utils/dateTime';
+import InviteProjectMemberModal from '../../components/ui/InviteProjectMemberModal';
+import EditProjectMemberModal from '../../components/ui/EditProjectMemberModal';
+import DeleteProjectMemberModal from '../../components/ui/DeleteProjectMemberModal';
+import { showErrorToast } from '../../utils/toast';
 
 interface Conversation {
   id: string;
@@ -17,22 +22,35 @@ interface Conversation {
   messageCount: number;
 }
 
-interface ProjectMember {
-  id: string;
-  name: string;
-  email: string;
-  role: 'owner' | 'editor' | 'viewer';
-  avatarUrl?: string;
-}
 
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'conversations' | 'members' | 'settings'>('conversations');
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [didMount, setDidMount] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  
+  // Members state
+  const [members, setMembers] = useState<ProjectMemberDTO[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersPagination, setMembersPagination] = useState<{
+    total: number;
+    pages: number;
+    current_page: number;
+    per_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+  } | null>(null);
+  const [currentMemberPage, setCurrentMemberPage] = useState(1);
+  const [isProjectOwner, setIsProjectOwner] = useState(false);
+  
+  // Modal state
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [editMemberUserId, setEditMemberUserId] = useState<number | null>(null);
+  const [deleteMemberUserId, setDeleteMemberUserId] = useState<number | null>(null);
   
   const { projects } = useProjects();
   const { 
@@ -110,33 +128,37 @@ const ProjectDetail: React.FC = () => {
     }));
   }, [chatsByProject, projectId]);
   
-  // Mock data for members
-  const members: ProjectMember[] = [
-    {
-      id: '1',
-      name: 'Alex Johnson',
-      email: 'alex@example.com',
-      role: 'owner',
-    },
-    {
-      id: '2',
-      name: 'Sarah Williams',
-      email: 'sarah@example.com',
-      role: 'editor',
-    },
-    {
-      id: '3',
-      name: 'Michael Brown',
-      email: 'michael@example.com',
-      role: 'editor',
-    },
-    {
-      id: '4',
-      name: 'Emily Davis',
-      email: 'emily@example.com',
-      role: 'viewer',
-    },
-  ];
+  // Load project members
+  const loadMembers = useCallback(async () => {
+    if (!projectId) return;
+    
+    setMembersLoading(true);
+    try {
+      const response = await listProjectMembers(projectId, currentMemberPage, 10);
+      setMembers(response.members);
+      setMembersPagination(response.pagination);
+      
+      // Determine if current user is project owner
+      const ownerMember = response.members.find(m => m.role === 'owner');
+      if (ownerMember && user) {
+        setIsProjectOwner(ownerMember.user_id === Number(user.id));
+      }
+    } catch (err: any) {
+      showErrorToast(err?.response?.data?.error || 'Failed to load members');
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [projectId, currentMemberPage, user]);
+
+  useEffect(() => {
+    if (activeTab === 'members' && projectId) {
+      loadMembers();
+    }
+  }, [activeTab, projectId, loadMembers]);
+
+  const handleMemberAction = () => {
+    loadMembers();
+  };
   
   const handleDeleteProject = () => {
     if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
@@ -426,73 +448,176 @@ const ProjectDetail: React.FC = () => {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-gray-900">Project Members</h2>
-                <Button
-                  variant="outline"
-                  leftIcon={
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                    </svg>
-                  }
-                >
-                  Invite Member
-                </Button>
+                {isProjectOwner && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setInviteModalOpen(true)}
+                    leftIcon={
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                      </svg>
+                    }
+                  >
+                    Invite Member
+                  </Button>
+                )}
               </div>
               
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {members.map((member) => (
-                      <tr key={member.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              {member.avatarUrl ? (
-                                <img className="h-10 w-10 rounded-full" src={member.avatarUrl} alt={member.name} />
-                              ) : (
-                                <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
-                                  {member.name.charAt(0).toUpperCase()}
+              {membersLoading ? (
+                <div className="py-8">
+                  <Loader />
+                </div>
+              ) : members.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No members yet</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {isProjectOwner ? 'Invite team members to collaborate on this project.' : 'This project has no members.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Name
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Role
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {members.map((member) => {
+                          const isOwner = member.role === 'owner';
+                          const canEdit = isProjectOwner && !isOwner;
+                          const displayName = `${member.user.first_name} ${member.user.last_name}`.trim();
+                          const displayEmail = member.user.email;
+                          const initials = displayName ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : member.user.email[0].toUpperCase();
+                          
+                          return (
+                            <tr key={member.id}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
+                                      {initials}
+                                    </div>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">{displayName}</div>
+                                    <div className="text-sm text-gray-500">{displayEmail}</div>
+                                  </div>
                                 </div>
-                              )}
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                              <div className="text-sm text-gray-500">{member.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            member.role === 'owner'
-                              ? 'bg-purple-100 text-purple-800'
-                              : member.role === 'editor'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button>
-                          <button className="text-red-600 hover:text-red-900">Remove</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  member.role === 'owner'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : member.role === 'editor'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                {canEdit && (
+                                  <>
+                                    <button
+                                      onClick={() => setEditMemberUserId(member.user_id)}
+                                      className="text-primary-600 hover:text-primary-900 mr-4"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteMemberUserId(member.user_id)}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      Remove
+                                    </button>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Members pagination */}
+                  {membersPagination && membersPagination.pages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                      <div className="flex-1 flex justify-between sm:hidden">
+                        <button
+                          onClick={() => setCurrentMemberPage(currentMemberPage - 1)}
+                          disabled={!membersPagination.has_prev}
+                          className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() => setCurrentMemberPage(currentMemberPage + 1)}
+                          disabled={!membersPagination.has_next}
+                          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            Showing{' '}
+                            <span className="font-medium">
+                              {((membersPagination.current_page - 1) * membersPagination.per_page) + 1}
+                            </span>{' '}
+                            to{' '}
+                            <span className="font-medium">
+                              {Math.min(membersPagination.current_page * membersPagination.per_page, membersPagination.total)}
+                            </span>{' '}
+                            of{' '}
+                            <span className="font-medium">{membersPagination.total}</span> results
+                          </p>
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => setCurrentMemberPage(currentMemberPage - 1)}
+                            disabled={!membersPagination.has_prev}
+                            className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            onClick={() => setCurrentMemberPage(currentMemberPage + 1)}
+                            disabled={!membersPagination.has_next}
+                            className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
           
@@ -550,6 +675,51 @@ const ProjectDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* Modals */}
+      {projectId && (
+        <>
+          <InviteProjectMemberModal
+            isOpen={inviteModalOpen}
+            onClose={() => setInviteModalOpen(false)}
+            projectId={projectId}
+            existingMemberUserIds={members.map(m => m.user_id)}
+            onSuccess={handleMemberAction}
+          />
+          
+          {editMemberUserId !== null && (() => {
+            const member = members.find(m => m.user_id === editMemberUserId);
+            if (!member) return null;
+            const memberName = `${member.user.first_name} ${member.user.last_name}`.trim();
+            return (
+              <EditProjectMemberModal
+                isOpen={true}
+                onClose={() => setEditMemberUserId(null)}
+                projectId={projectId}
+                memberUserId={editMemberUserId}
+                currentRole={member.role}
+                memberName={memberName}
+                onSuccess={handleMemberAction}
+              />
+            );
+          })()}
+          
+          {deleteMemberUserId !== null && (() => {
+            const member = members.find(m => m.user_id === deleteMemberUserId);
+            if (!member) return null;
+            const memberName = `${member.user.first_name} ${member.user.last_name}`.trim();
+            return (
+              <DeleteProjectMemberModal
+                isOpen={true}
+                onClose={() => setDeleteMemberUserId(null)}
+                projectId={projectId}
+                memberUserId={deleteMemberUserId}
+                memberName={memberName}
+                onSuccess={handleMemberAction}
+              />
+            );
+          })()}
+        </>
+      )}
     </div>
   );
 };

@@ -63,4 +63,41 @@ export async function createTeamInvitation(
   });
 }
 
+export type TeamMemberDTO = {
+  id: number;
+  team_id: number;
+  user_id: number;
+  role: string;
+  permissions: any;
+  joined_at: string;
+  updated_at: string;
+  left_at: string | null;
+  added_by: number | null;
+  removed_by: number | null;
+  is_deleted: boolean;
+  user: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    username: string;
+  };
+};
+
+export type TeamMembersResponse = {
+  success: boolean;
+  members: TeamMemberDTO[];
+  pagination: {
+    total: number;
+    pages: number;
+    current_page: number;
+    per_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+};
+
+export async function listTeamMembers(teamId: string): Promise<TeamMembersResponse> {
+  return makeRequest<TeamMembersResponse>(`/teams/${teamId}/members`, { method: 'GET' });
+}
 
