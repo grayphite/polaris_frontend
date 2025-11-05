@@ -2,7 +2,8 @@
  * Permission utilities - all users have access to everything
  */
 
-export type UserRole = 'owner' | 'member';
+export type UserRole = 'owner' | 'member'; // Global/team roles
+export type ProjectRole = 'owner' | 'editor' | 'viewer'; // Project-level roles
 
 export interface User {
   id: string;
@@ -76,10 +77,10 @@ export const canManageMembers = (user: User | null): boolean => {
 };
 
 /**
- * Check if user can create projects - all users can create
+ * Check if user can create projects - only global 'owner' (team owner) can create
  */
 export const canCreateProjects = (user: User | null): boolean => {
-  return user !== null;
+  return user?.role === 'owner';
 };
 
 /**
@@ -87,4 +88,30 @@ export const canCreateProjects = (user: User | null): boolean => {
  */
 export const canAccessRoute = (user: User | null, route: string): boolean => {
   return user !== null;
+};
+
+// ==================== Project-Level Permissions ====================
+
+/**
+ * Get user's project role from project members list
+ */
+export const getUserProjectRole = (
+  user: User | null,
+  members: Array<{ user_id: number; role: string }>
+): ProjectRole | null => {
+  if (!user) return null;
+  
+  const userId = Number(user.id);
+  const member = members.find(m => m.user_id === userId);
+  
+  if (!member) return null;
+  
+  // Normalize role - backend might return 'member' for legacy roles
+  const role = member.role.toLowerCase();
+  if (role === 'owner' || role === 'editor' || role === 'viewer') {
+    return role as ProjectRole;
+  }
+  
+  // Legacy: treat 'member' as 'viewer' by default
+  return 'viewer';
 };

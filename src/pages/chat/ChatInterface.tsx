@@ -1,5 +1,6 @@
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useChats } from '../../context/ChatContext';
+import { useProjectRole } from '../../hooks/useProjectRole';
 import { fetchChatById, sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -84,6 +85,7 @@ const ChatInterface: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   const { chatsByProject, hydrateProjectChats, updateChat, deleteChat } = useChats();
+  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -949,10 +951,11 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
         
-        {/* Input area */}
-        <div className="border-t border-gray-200 p-4">
-          <div className="max-w-3xl mx-auto">
-          <form onSubmit={handleSubmit} className="flex items-end space-x-2">
+        {/* Input area - Only visible for owner or editor (hidden while loading) */}
+        {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') ? (
+          <div className="border-t border-gray-200 p-4">
+            <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             <div className="flex-1 rounded-lg border border-gray-200 p-2">
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (
@@ -1108,9 +1111,16 @@ const ChatInterface: React.FC = () => {
               </div>
             </div>
             
-          </form>
+            </form>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="border-t border-gray-200 p-4">
+            <div className="max-w-3xl mx-auto text-center text-gray-500 text-sm">
+              <p>You don't have permission to send messages. Viewers can only view conversations.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

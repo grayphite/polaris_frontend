@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useProjects } from '../../context/ProjectsContext';
 import { useChats } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import { useProjectRole } from '../../hooks/useProjectRole';
 import { fetchProjectById } from '../../services/projectService';
 import { listProjectMembers, ProjectMemberDTO } from '../../services/projectMemberService';
 import Loader from '../../components/common/Loader';
@@ -65,6 +66,8 @@ const ProjectDetail: React.FC = () => {
     createChat
   } = useChats();
 
+  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
+  
   const project = useMemo(() => {
     const ctxProject = (projects || []).find(p => p.id === projectId);
     return {
@@ -180,29 +183,32 @@ const ProjectDetail: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="primary"
-              isLoading={isCreatingChat}
-              onClick={async () => {
-                if (!projectId) return;
-                setIsCreatingChat(true);
-                try {
-                  const chatId = await createChat(projectId, 'New Chat', '');
-                  navigate(`/projects/${projectId}/chat/${chatId}`);
-                } catch {
-                  // Error handled in context
-                } finally {
-                  setIsCreatingChat(false);
+            {/* New Conversation button - hidden while loading, only show for owner/editor */}
+            {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') && (
+              <Button
+                variant="primary"
+                isLoading={isCreatingChat}
+                onClick={async () => {
+                  if (!projectId) return;
+                  setIsCreatingChat(true);
+                  try {
+                    const chatId = await createChat(projectId, 'New Chat', '');
+                    navigate(`/projects/${projectId}/chat/${chatId}`);
+                  } catch {
+                    // Error handled in context
+                  } finally {
+                    setIsCreatingChat(false);
+                  }
+                }}
+                leftIcon={
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                  </svg>
                 }
-              }}
-              leftIcon={
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                </svg>
-              }
-            >
-              {isCreatingChat ? 'Creating...' : 'New Conversation'}
-            </Button>
+              >
+                {isCreatingChat ? 'Creating...' : 'New Conversation'}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -621,8 +627,8 @@ const ProjectDetail: React.FC = () => {
             </div>
           )}
           
-          {/* Settings tab */}
-          {activeTab === 'settings' && (
+          {/* Settings tab - Only for project owners (hidden while loading) */}
+          {activeTab === 'settings' && !projectRoleLoading && projectRole === 'owner' && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Project Settings</h2>

@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useProjects } from '../../context/ProjectsContext';
+import { useAuth } from '../../context/AuthContext';
 import { motion } from 'framer-motion';
 import Loader from '../../components/common/Loader';
 
@@ -27,6 +28,7 @@ const ProjectsList: React.FC = () => {
     setCurrentPage, 
     pagination 
   } = useProjects();
+  const { user } = useAuth();
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [didMount, setDidMount] = useState(false);
   
@@ -89,8 +91,9 @@ const ProjectsList: React.FC = () => {
           />
         </div>
         
-        {/* New Project Button */}
-        <Button
+        {/* New Project Button - Only visible to global owners */}
+        {user?.role === 'owner' && (
+          <Button
             variant="primary"
             leftIcon={
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -101,6 +104,7 @@ const ProjectsList: React.FC = () => {
           >
             New Project
           </Button>
+        )}
       </div>
       
       {/* Projects grid */}

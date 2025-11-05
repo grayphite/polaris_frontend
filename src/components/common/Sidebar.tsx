@@ -4,6 +4,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../context/ProjectsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
+import { useProjectRole } from '../../hooks/useProjectRole';
 import EditChatModal from '../ui/EditChatModal';
 import ProjectModal from '../ui/ProjectModal';
 import DeleteProjectModal from '../ui/DeleteProjectModal';
@@ -16,6 +17,128 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+// Component for project menu dropdown that uses the hook
+interface ProjectMenuDropdownProps {
+  projectId: string;
+  menuDirection: 'up' | 'down';
+  menuFocusIndex: number;
+  focusMenuItem: (idx: number) => void;
+  menuItemRefs: React.MutableRefObject<HTMLButtonElement | null>[];
+  onEdit: () => void;
+  onDelete: () => void;
+  menuTriggerId: string;
+}
+
+// Component for project menu button that conditionally shows based on permissions
+interface ProjectMenuButtonProps {
+  projectId: string;
+  menuOpenForProject: string | null;
+  setMenuOpenForProject: (id: string | null) => void;
+  setMenuDirection: (dir: 'up' | 'down') => void;
+  setMenuFocusIndex: (idx: number) => void;
+  calculateMenuDirection: (el: HTMLElement) => 'up' | 'down';
+  menuContainerRef: React.RefObject<HTMLDivElement | null>;
+  menuTriggerRef: React.RefObject<HTMLButtonElement | null>;
+}
+
+const ProjectMenuButton: React.FC<ProjectMenuButtonProps & { children?: React.ReactNode }> = ({
+  projectId,
+  menuOpenForProject,
+  setMenuOpenForProject,
+  setMenuDirection,
+  setMenuFocusIndex,
+  calculateMenuDirection,
+  menuContainerRef,
+  menuTriggerRef,
+  children,
+}) => {
+  const { role, isLoading } = useProjectRole(projectId);
+
+  // Safe default: don't show button until role is loaded, and only show for project owners
+  if (isLoading || role !== 'owner') return null;
+
+  return (
+    <div className="relative flex-shrink-0" ref={menuContainerRef}>
+      <button
+        ref={menuTriggerRef}
+        className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
+        aria-haspopup="menu"
+        aria-expanded={menuOpenForProject === projectId}
+        aria-controls={menuOpenForProject === projectId ? `project-menu-${projectId}` : undefined}
+        id={`project-menu-trigger-${projectId}`}
+        title="Project options"
+        onClick={(e) => { 
+          const direction = calculateMenuDirection(e.currentTarget);
+          setMenuDirection(direction);
+          setMenuOpenForProject(menuOpenForProject === projectId ? null : projectId); 
+          setMenuFocusIndex(0); 
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 3a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4z" />
+        </svg>
+      </button>
+      {children}
+    </div>
+  );
+};
+
+const ProjectMenuDropdown: React.FC<ProjectMenuDropdownProps> = ({
+  projectId,
+  menuDirection,
+  menuFocusIndex,
+  focusMenuItem,
+  menuItemRefs,
+  onEdit,
+  onDelete,
+  menuTriggerId,
+}) => {
+  const { role, isLoading } = useProjectRole(projectId);
+
+  // Safe default: don't show menu until role is loaded, and only show for owners
+  if (isLoading || role !== 'owner') return null;
+
+  return (
+    <div
+      id={`project-menu-${projectId}`}
+      role="menu"
+      aria-labelledby={menuTriggerId}
+      className={`absolute right-0 w-40 bg-primary-50 text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
+        menuDirection === 'up' 
+          ? 'bottom-full mb-1 origin-bottom-right' 
+          : 'top-full mt-1 origin-top-right'
+      }`}
+      onMouseDown={(e) => { e.stopPropagation(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); focusMenuItem(menuFocusIndex + 1); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); focusMenuItem(menuFocusIndex - 1); }
+        if (e.key === 'Tab') { e.preventDefault(); focusMenuItem(menuFocusIndex + (e.shiftKey ? -1 : 1)); }
+      }}
+    >
+      <button
+        type="button"
+        ref={menuItemRefs[0]}
+        role="menuitem"
+        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200 hover:text-gray-900 focus:outline-none focus-visible:bg-primary-200"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        ref={menuItemRefs[1]}
+        role="menuitem"
+        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700 focus:outline-none focus-visible:bg-primary-200"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+      >
+        Delete
+      </button>
+    </div>
+  );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({
   open,
   isDesktop,
@@ -27,6 +150,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const match = location.pathname.match(/^\/projects\/([^\/]+)/);
     return match ? match[1] : null;
   })();
+  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(selectedProjectId);
   const [localSidebarSearch, setLocalSidebarSearch] = React.useState('');
   const [sidebarSearchDidMount, setSidebarSearchDidMount] = React.useState(false);
   const [localProjectSearch, setLocalProjectSearch] = React.useState('');
@@ -341,15 +465,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onChange={(e) => setLocalProjectSearch(e.target.value)}
                     />
                   </div>
-                  <button
-                    onClick={openCreate}
-                    className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white flex-shrink-0"
-                    title="New Project"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+                  {user?.role === 'owner' && (
+                    <button
+                      onClick={openCreate}
+                      className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white flex-shrink-0"
+                      title="New Project"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -374,66 +500,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </svg>
                         <span className="truncate min-w-0" title={p.name}>{p.name}</span>
                       </NavLink>
-                      <div className="relative flex-shrink-0" ref={menuContainerRef}>
-                        <button
-                          ref={menuTriggerRef}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
-                          aria-haspopup="menu"
-                          aria-expanded={menuOpenForProject === p.id}
-                          aria-controls={menuOpenForProject === p.id ? `project-menu-${p.id}` : undefined}
-                          id={`project-menu-trigger-${p.id}`}
-                          title="Project options"
-                          onClick={(e) => { 
-                            const direction = calculateMenuDirection(e.currentTarget);
-                            setMenuDirection(direction);
-                            setMenuOpenForProject(prev => (prev === p.id ? null : p.id)); 
-                            setMenuFocusIndex(0); 
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 3a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4z" />
-                          </svg>
-                        </button>
+                      <ProjectMenuButton
+                        projectId={p.id}
+                        menuOpenForProject={menuOpenForProject}
+                        setMenuOpenForProject={setMenuOpenForProject}
+                        setMenuDirection={setMenuDirection}
+                        setMenuFocusIndex={setMenuFocusIndex}
+                        calculateMenuDirection={calculateMenuDirection}
+                        menuContainerRef={menuContainerRef}
+                        menuTriggerRef={menuTriggerRef}
+                      >
                         {menuOpenForProject === p.id && (
-                          <div
-                            id={`project-menu-${p.id}`}
-                            role="menu"
-                            aria-labelledby={`project-menu-trigger-${p.id}`}
-                            className={`absolute right-0 w-40 bg-primary-50 text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
-                              menuDirection === 'up' 
-                                ? 'bottom-full mb-1 origin-bottom-right' 
-                                : 'top-full mt-1 origin-top-right'
-                            }`}
-                            onMouseDown={(e) => { e.stopPropagation(); }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'ArrowDown') { e.preventDefault(); focusMenuItem(menuFocusIndex + 1); }
-                              if (e.key === 'ArrowUp') { e.preventDefault(); focusMenuItem(menuFocusIndex - 1); }
-                              if (e.key === 'Tab') { e.preventDefault(); focusMenuItem(menuFocusIndex + (e.shiftKey ? -1 : 1)); }
-                            }}
-                          >
-                            <button
-                              type="button"
-                              ref={menuItemRefs[0]}
-                              role="menuitem"
-                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200 hover:text-gray-900 focus:outline-none focus-visible:bg-primary-200"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => { e.stopPropagation(); openEdit(p.id); setMenuOpenForProject(null); }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              ref={menuItemRefs[1]}
-                              role="menuitem"
-                              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700 focus:outline-none focus-visible:bg-primary-200"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => { e.stopPropagation(); setDeleteProjectId(p.id); setMenuOpenForProject(null); }}
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          <ProjectMenuDropdown
+                            projectId={p.id}
+                            menuDirection={menuDirection}
+                            menuFocusIndex={menuFocusIndex}
+                            focusMenuItem={focusMenuItem}
+                            menuItemRefs={menuItemRefs}
+                            onEdit={() => { openEdit(p.id); setMenuOpenForProject(null); }}
+                            onDelete={() => { setDeleteProjectId(p.id); setMenuOpenForProject(null); }}
+                            menuTriggerId={`project-menu-trigger-${p.id}`}
+                          />
                         )}
-                      </div>
+                      </ProjectMenuButton>
                     </div>
 
                     {selectedProjectId === p.id && (
@@ -455,23 +544,24 @@ const Sidebar: React.FC<SidebarProps> = ({
                             />
                           </div>
                           
-                          {/* New Chat button - full width */}
-                          <button
-                            className="w-full px-3 py-2 text-sm text-gray-200 font-medium hover:text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            disabled={isSubmittingChat}
-                            onClick={async () => { 
-                              if (!selectedProjectId) return;
-                              setIsSubmittingChat(true);
-                              try {
-                                const cid = await createChat(selectedProjectId, 'New Chat', '');
-                                navigate(`/projects/${selectedProjectId}/chat/${cid}`);
-                              } catch {
-                                // Error handled in context
-                              } finally {
-                                setIsSubmittingChat(false);
-                              }
-                            }}
-                          >
+                          {/* New Chat button - only for owner or editor (hidden while loading) */}
+                          {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') && (
+                            <button
+                              className="w-full px-3 py-2 text-sm text-gray-200 font-medium hover:text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              disabled={isSubmittingChat}
+                              onClick={async () => { 
+                                if (!selectedProjectId) return;
+                                setIsSubmittingChat(true);
+                                try {
+                                  const cid = await createChat(selectedProjectId, 'New Chat', '');
+                                  navigate(`/projects/${selectedProjectId}/chat/${cid}`);
+                                } catch {
+                                  // Error handled in context
+                                } finally {
+                                  setIsSubmittingChat(false);
+                                }
+                              }}
+                            >
                             {isSubmittingChat ? (
                               <>
                                 <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -488,7 +578,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 New Chat
                               </>
                             )}
-                          </button>
+                            </button>
+                          )}
                         </div>
 
                         <ul className="mt-2 space-y-1 pl-3">
@@ -511,43 +602,50 @@ const Sidebar: React.FC<SidebarProps> = ({
                                   >
                                     {c.title}
                                   </NavLink>
-                                  <div className="relative" data-chat-menu>
-                                    <button
-                                      className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
-                                      title="Chat options"
-                                      onClick={(e) => { 
-                                        const direction = calculateMenuDirection(e.currentTarget);
-                                        setChatMenuDirection(direction);
-                                        setChatMenuOpenId(prev => prev === c.id ? null : c.id); 
-                                      }}
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 3a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4z" />
-                                      </svg>
-                                    </button>
+                                  {/* Chat menu - only show if role is loaded and user has permissions */}
+                                  {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') && (
+                                    <div className="relative" data-chat-menu>
+                                      <button
+                                        className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
+                                        title="Chat options"
+                                        onClick={(e) => { 
+                                          const direction = calculateMenuDirection(e.currentTarget);
+                                          setChatMenuDirection(direction);
+                                          setChatMenuOpenId(prev => prev === c.id ? null : c.id); 
+                                        }}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                          <path d="M10 3a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4zm0 5a2 2 0 110 4 2 2 0 010-4z" />
+                                        </svg>
+                                      </button>
                                     {chatMenuOpenId === c.id && (
                                       <div className={`absolute right-0 w-40 bg-primary-50 text-gray-800 rounded-md overflow-hidden shadow-lg ring-1 ring-black/5 z-20 transform transition ease-out duration-150 ${
                                         chatMenuDirection === 'up' 
                                           ? 'bottom-full mb-1 origin-bottom-right' 
                                           : 'top-full mt-1 origin-top-right'
                                       }`}>
-                                        <button
-                                          type="button"
-                                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200"
-                                          onClick={() => { openEditChat(c.id); setChatMenuOpenId(null); }}
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700"
-                                          onClick={() => { setChatDeleteId(c.id); setChatMenuOpenId(null); }}
-                                        >
-                                          Delete
-                                        </button>
+                                        {(projectRole === 'owner' || projectRole === 'editor') && (
+                                          <button
+                                            type="button"
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200"
+                                            onClick={() => { openEditChat(c.id); setChatMenuOpenId(null); }}
+                                          >
+                                            Edit
+                                          </button>
+                                        )}
+                                        {projectRole === 'owner' && (
+                                          <button
+                                            type="button"
+                                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700"
+                                            onClick={() => { setChatDeleteId(c.id); setChatMenuOpenId(null); }}
+                                          >
+                                            Delete
+                                          </button>
+                                        )}
                                       </div>
                                     )}
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
                               </li>
                             ))}
