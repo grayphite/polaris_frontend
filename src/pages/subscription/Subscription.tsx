@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import Card from '../../components/common/Card';
@@ -7,6 +8,7 @@ import { getPlans, createCheckoutSession, Plan } from '../../services/paymentSer
 import { showErrorToast } from '../../utils/toast';
 
 const Subscription: React.FC = () => {
+  const { t } = useTranslation();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
@@ -21,7 +23,7 @@ const Subscription: React.FC = () => {
       setPlans(response.plans);
     } catch (error) {
       console.error('Failed to fetch plans:', error);
-      showErrorToast('Failed to load plans. Please try again.');
+      showErrorToast(t('subscription.loadPlansError', { tryAgain: t('common.errors.tryAgain') }));
     } finally {
       setLoading(false);
     }
@@ -31,7 +33,7 @@ const Subscription: React.FC = () => {
     const teamId = localStorage.getItem('teamId');
     
     if (!teamId) {
-      showErrorToast('Unable to get team information. Please try logging in again.');
+      showErrorToast(t('subscription.teamInfoError'));
       return;
     }
 
@@ -43,7 +45,7 @@ const Subscription: React.FC = () => {
       window.location.href = response.checkout_url;
     } catch (error) {
       console.error('Failed to create checkout session:', error);
-      showErrorToast('Failed to start checkout. Please try again.');
+      showErrorToast(t('subscription.checkoutError', { tryAgain: t('common.errors.tryAgain') }));
       setCheckoutLoading(null);
     }
   };
@@ -66,10 +68,10 @@ const Subscription: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Choose Your Plan
+            {t('subscription.choosePlan')}
           </h1>
           <p className="text-lg text-gray-600">
-            Select the perfect plan for your team and start your journey
+            {t('subscription.choosePlanSubtitle')}
           </p>
         </div>
 
@@ -90,14 +92,14 @@ const Subscription: React.FC = () => {
                 <div className="mb-6">
                   <div className="flex items-baseline mb-2">
                     <span className="text-sm text-gray-500">
-                      Up to {plan.max_team_members_per_team} team members
+                      {t('subscription.upToMembers', { count: plan.max_team_members_per_team })}
                     </span>
                   </div>
                   <div className="flex items-baseline">
                     <span className="text-sm text-gray-500">
                       {plan.max_projects === -1
-                        ? 'Unlimited projects'
-                        : `${plan.max_projects} projects`}
+                        ? t('subscription.unlimitedProjects')
+                        : t('subscription.projects', { count: plan.max_projects })}
                     </span>
                   </div>
                 </div>
@@ -114,26 +116,26 @@ const Subscription: React.FC = () => {
                           BRL 500.00
                         </span>
                         <span className="ml-2 text-gray-500">
-                          /{price.interval}
+                          {t('subscription.perMonth', { interval: price.interval })}
                         </span>
                       </div>
 
                       {price.trial_days > 0 && (
                         <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-4">
-                          {price.trial_days}-day free trial
+                          {t('subscription.trialDays', { days: price.trial_days })}
                         </div>
                       )}
 
                       <p className="text-sm text-gray-600">
-                        After trial: BRL 500.00/month
+                        {t('subscription.afterTrial', { price: formatPrice(price.amount_cents, price.currency), interval: price.interval })}
                       </p>
                     </div>
 
                     {price.per_seat_amount_cents > 0 && (
                       <div className="bg-gray-50 rounded-lg p-4 mb-4">
                         <p className="text-sm text-gray-700">
-                          <span className="font-medium">Additional team members:</span><br />
-                          {formatPrice(price.per_seat_amount_cents, price.currency)}/{price.interval} per extra member
+                          <span className="font-medium">{t('subscription.additionalMembers')}</span><br />
+                          {t('subscription.perExtraMember', { price: formatPrice(price.per_seat_amount_cents, price.currency), interval: price.interval })}
                         </p>
                       </div>
                     )}
@@ -146,7 +148,7 @@ const Subscription: React.FC = () => {
                       isLoading={checkoutLoading === price.stripe_price_id}
                       onClick={() => handleSubscribe(price.stripe_price_id)}
                     >
-                      Start Free Trial
+                      {t('subscription.startFreeTrial')}
                     </Button>
                   </div>
                 ))}

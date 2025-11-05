@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import Button from './Button';
@@ -23,6 +24,7 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
   existingMemberUserIds,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const [selectedUserId, setSelectedUserId] = useState<number | ''>('');
   const [selectedRole, setSelectedRole] = useState<'owner' | 'editor' | 'viewer'>('editor');
   const [teamMembers, setTeamMembers] = useState<Array<{ id: number; username: string; email: string; firstName: string; lastName: string }>>([]);
@@ -42,7 +44,7 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
   const loadTeamMembers = async () => {
     const teamId = localStorage.getItem('teamId');
     if (!teamId) {
-      setError('No team found');
+      setError(t('projectMember.noTeamFound'));
       return;
     }
 
@@ -60,7 +62,7 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
         lastName: m.user.last_name,
       })));
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to load team members');
+      setError(err?.response?.data?.error || t('projectMember.loadMembersFailed'));
     } finally {
       setIsLoadingMembers(false);
     }
@@ -75,11 +77,11 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
 
     try {
       await addProjectMember(projectId, selectedUserId as number, selectedRole);
-      showSuccessToast('Member added successfully');
+      showSuccessToast(t('projectMember.memberAdded'));
       onSuccess();
       onClose();
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Failed to add member';
+      const errorMsg = err?.response?.data?.error || t('projectMember.addFailed');
       setError(errorMsg);
       showErrorToast(errorMsg);
     } finally {
@@ -106,24 +108,24 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
         className="relative bg-white rounded-lg shadow-xl max-w-xl w-full mx-4"
       >
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Invite Member</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('projectMember.inviteTitle')}</h3>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Team Member
+                {t('projectMember.teamMemberLabel')}
               </label>
               {isLoadingMembers ? (
                 <div className="relative">
                   <div className="block w-full rounded-md shadow-sm py-2 pl-4 pr-10 border border-gray-300 bg-gray-50 flex items-center">
                     <Loader size="sm" color="gray" className="mr-3" />
-                    <span className="text-sm text-gray-500">Loading team members...</span>
+                    <span className="text-sm text-gray-500">{t('projectMember.loadingMembers')}</span>
                   </div>
                 </div>
               ) : teamMembers.length === 0 ? (
-                <p className="text-sm text-gray-500 py-2">No available team members to add</p>
+                <p className="text-sm text-gray-500 py-2">{t('projectMember.noAvailableMembers')}</p>
               ) : (
                 <Select
                   id="member"
@@ -133,7 +135,7 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
                     value: member.id,
                     label: `${member.firstName} ${member.lastName} (${member.email})`,
                   }))}
-                  placeholder="Select a team member"
+                  placeholder={t('projectMember.selectTeamMember')}
                   required
                 />
               )}
@@ -142,14 +144,14 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
             <div>
               <Select
                 id="role"
-                label="Role"
+                label={t('common.role')}
                 value={selectedRole}
                 onChange={(value) => setSelectedRole(value as 'owner' | 'editor' | 'viewer')}
                 options={[
-                  { value: 'editor', label: 'Editor' },
-                  { value: 'viewer', label: 'Viewer' },
+                  { value: 'editor', label: t('projects.detail.members.roles.editor') },
+                  { value: 'viewer', label: t('projects.detail.members.roles.viewer') },
                 ]}
-                placeholder="Select a role"
+                placeholder={t('projectMember.selectTeamMember')}
                 disabled={isLoadingMembers || !selectedUserId}
                 required
               />
@@ -160,7 +162,7 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
 
           <div className="mt-6 flex justify-end space-x-3">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
@@ -168,7 +170,7 @@ const InviteProjectMemberModal: React.FC<InviteProjectMemberModalProps> = ({
               disabled={!selectedUserId || isLoadingMembers || teamMembers.length === 0}
               isLoading={isSubmitting}
             >
-              Add Member
+              {t('projectMember.addMember')}
             </Button>
           </div>
         </form>

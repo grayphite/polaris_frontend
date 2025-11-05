@@ -1,6 +1,7 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
 interface StatCardProps {
@@ -74,9 +75,9 @@ const RecentProject: React.FC<RecentProjectProps> = ({ name, description, lastUp
           </div>
         </div>
         <div className="mt-4 flex justify-between items-center">
-          <span className="text-xs text-gray-500">Last updated {lastUpdated}</span>
+          <span className="text-xs text-gray-500">{t('dashboard.lastUpdated', { date: lastUpdated })}</span>
           <span className="text-xs bg-light-300 px-2 py-1 rounded-full">
-            {conversations} conversations
+            {t('dashboard.conversations', { count: conversations })}
           </span>
         </div>
       </div>
@@ -85,13 +86,14 @@ const RecentProject: React.FC<RecentProjectProps> = ({ name, description, lastUp
 };
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { openCreateProject } = useOutletContext<{ openCreateProject: () => void }>();
   
   // Mock data for dashboard
   const stats = [
     {
-      title: 'Total Projects',
+      title: t('dashboard.totalProjects'),
       value: 12,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" viewBox="0 0 20 20" fill="currentColor">
@@ -102,7 +104,7 @@ const Dashboard: React.FC = () => {
       isPositive: true,
     },
     {
-      title: 'Active Conversations',
+      title: t('dashboard.activeConversations'),
       value: 28,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-secondary-600" viewBox="0 0 20 20" fill="currentColor">
@@ -114,7 +116,7 @@ const Dashboard: React.FC = () => {
       isPositive: true,
     },
     {
-      title: 'Team Members',
+      title: t('dashboard.teamMembers'),
       value: 8,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
@@ -123,8 +125,8 @@ const Dashboard: React.FC = () => {
       ),
     },
     {
-      title: 'Subscription',
-      value: 'Pro Plan',
+      title: t('dashboard.subscription'),
+      value: t('dashboard.proPlan'),
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm4.707 3.707a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L8.414 9H10a3 3 0 013 3v1a1 1 0 102 0v-1a5 5 0 00-5-5H8.414l1.293-1.293z" clipRule="evenodd" />
@@ -161,8 +163,10 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Welcome section */}
       <div className="bg-white rounded-lg shadow-card p-6">
-        <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.username || 'User'}!</h1>
-        <p className="mt-1 text-gray-600">Here's what's happening with your projects today.</p>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {user?.username ? t('dashboard.welcome', { username: user.username }) : t('dashboard.welcomeDefault')}
+        </h1>
+        <p className="mt-1 text-gray-600">{t('dashboard.subtitle')}</p>
       </div>
       
       {/* Stats grid */}
@@ -182,9 +186,9 @@ const Dashboard: React.FC = () => {
       {/* Recent projects */}
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Recent Projects</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t('dashboard.recentProjects')}</h2>
           <Link to="/projects" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-            View all
+            {t('dashboard.viewAll')}
           </Link>
         </div>
         
@@ -204,7 +208,7 @@ const Dashboard: React.FC = () => {
       
       {/* Quick actions */}
       <div className="bg-white rounded-lg shadow-card p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('dashboard.quickActions')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <button onClick={openCreateProject} className="text-left">
             <div className="border border-gray-200 rounded-lg p-4 hover:bg-light-300 transition-colors flex items-center w-full">
@@ -213,7 +217,7 @@ const Dashboard: React.FC = () => {
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
               </div>
-              <span className="text-sm font-medium">New Project</span>
+              <span className="text-sm font-medium">{t('dashboard.newProject')}</span>
             </div>
           </button>
           
@@ -225,7 +229,7 @@ const Dashboard: React.FC = () => {
                   <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
                 </svg>
               </div>
-              <span className="text-sm font-medium">Invite Team Member</span>
+              <span className="text-sm font-medium">{t('dashboard.inviteTeamMember')}</span>
             </div>
           </Link>
           
@@ -236,7 +240,7 @@ const Dashboard: React.FC = () => {
                   <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clipRule="evenodd" />
                 </svg>
               </div>
-              <span className="text-sm font-medium">Manage Subscription</span>
+              <span className="text-sm font-medium">{t('dashboard.manageSubscription')}</span>
             </div>
           </Link>
           
@@ -247,7 +251,7 @@ const Dashboard: React.FC = () => {
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
                 </svg>
               </div>
-              <span className="text-sm font-medium">Edit Profile</span>
+              <span className="text-sm font-medium">{t('dashboard.editProfile')}</span>
             </div>
           </Link>
         </div>

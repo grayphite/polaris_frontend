@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -8,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { showErrorToast } from '../../utils/toast';
 
 const Login: React.FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,15 +28,15 @@ const Login: React.FC = () => {
     const newErrors: { email?: string; password?: string } = {};
     
     if (!email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.emailRequired');
       hasErrors = true;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('validation.emailInvalid');
       hasErrors = true;
     }
     
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.passwordRequired');
       hasErrors = true;
     }
     
@@ -82,7 +84,7 @@ const Login: React.FC = () => {
       navigate('/projects');
     } catch (error) {
       console.error('Login error:', error);
-      showErrorToast('Invalid email or password');
+      showErrorToast(t('auth.login.invalidCredentials'));
     }
   };
 
@@ -94,15 +96,15 @@ const Login: React.FC = () => {
       className="w-full"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-        <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
+        <h2 className="text-3xl font-bold text-gray-900">{t('auth.login.title')}</h2>
+        <p className="mt-2 text-gray-600">{t('auth.login.subtitle')}</p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input
-          label="Email Address"
+          label={t('common.form.emailAddress')}
           type="email"
-          placeholder="you@example.com"
+          placeholder={t('auth.login.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={errors.email}
@@ -116,9 +118,9 @@ const Login: React.FC = () => {
         />
         
         <Input
-          label="Password"
+          label={t('common.form.password')}
           type={showPassword ? "text" : "password"}
-          placeholder="••••••••"
+          placeholder={t('auth.login.passwordPlaceholder')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
@@ -158,12 +160,12 @@ const Login: React.FC = () => {
               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
             <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-              Remember me
+              {t('auth.login.rememberMe')}
             </label>
           </div>
           
           <Link to="/forgot-password" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-            Forgot your password?
+            {t('auth.login.forgotPassword')}
           </Link>
         </div>
         
@@ -175,16 +177,16 @@ const Login: React.FC = () => {
             size="lg"
             isLoading={isLoading}
           >
-            Sign in
+            {t('auth.login.submitButton')}
           </Button>
         </div>
       </form>
       
       <div className="mt-8 text-center">
         <p className="text-sm text-gray-600">
-          Don't have an account?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-            Sign up
+            {t('auth.login.signUp')}
           </Link>
         </p>
       </div>

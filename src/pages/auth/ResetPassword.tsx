@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -8,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { showErrorToast } from '../../utils/toast';
 
 const ResetPassword: React.FC = () => {
+  const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
@@ -46,15 +48,15 @@ const ResetPassword: React.FC = () => {
     const newErrors: { password?: string; confirmPassword?: string } = {};
     
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.passwordRequired');
       hasErrors = true;
     } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('validation.passwordMinLength');
       hasErrors = true;
     }
     
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('validation.passwordMismatch');
       hasErrors = true;
     }
     
@@ -73,7 +75,7 @@ const ResetPassword: React.FC = () => {
       }, 3000);
     } catch (error) {
       console.error('Reset password error:', error);
-      showErrorToast('Failed to reset password. The link may be expired.');
+      showErrorToast(t('errors.resetPasswordFailed'));
     }
   };
 
@@ -85,8 +87,8 @@ const ResetPassword: React.FC = () => {
       className="w-full"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Reset your password</h2>
-        <p className="mt-2 text-gray-600">Enter your new password below</p>
+        <h2 className="text-3xl font-bold text-gray-900">{t('auth.resetPassword.title')}</h2>
+        <p className="mt-2 text-gray-600">{t('auth.resetPassword.subtitle')}</p>
       </div>
       
       {isSuccess ? (
@@ -96,22 +98,22 @@ const ResetPassword: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Password reset successful</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t('auth.resetPassword.successTitle')}</h3>
           <p className="text-sm text-gray-600 mb-6">
-            Your password has been reset successfully. You will be redirected to the login page shortly.
+            {t('auth.resetPassword.successMessage')}
           </p>
           <Link to="/login">
             <Button variant="primary" fullWidth>
-              Go to login
+              {t('auth.resetPassword.goToLogin')}
             </Button>
           </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="New Password"
+            label={t('common.form.newPassword')}
             type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
+            placeholder={t('auth.resetPassword.passwordPlaceholder')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={errors.password}
@@ -139,14 +141,14 @@ const ResetPassword: React.FC = () => {
                 )}
               </button>
             }
-            helperText="Password must be at least 8 characters"
+            helperText={t('validation.passwordMinLength')}
             autoComplete="new-password"
           />
           
           <Input
-            label="Confirm New Password"
+            label={t('common.form.confirmPassword')}
             type={showConfirmPassword ? "text" : "password"}
-            placeholder="••••••••"
+            placeholder={t('auth.resetPassword.passwordPlaceholder')}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             error={errors.confirmPassword}
@@ -185,13 +187,13 @@ const ResetPassword: React.FC = () => {
               size="lg"
               isLoading={isLoading}
             >
-              Reset password
+              {t('auth.resetPassword.submitButton')}
             </Button>
           </div>
           
           <div className="text-center">
             <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-              Back to login
+              {t('auth.resetPassword.backToLogin')}
             </Link>
           </div>
         </form>

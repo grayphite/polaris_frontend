@@ -2,8 +2,11 @@ import { Outlet } from 'react-router-dom';
 import React from 'react';
 import { motion } from 'framer-motion';
 import logo from '../assets/polaris_logo.png';
+import { useTranslation } from 'react-i18next';
 
 const AuthLayout: React.FC = () => {
+  const { t } = useTranslation();
+  
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-primary-50 to-secondary-50">
       <div className="flex flex-col md:flex-row w-full">
@@ -17,7 +20,7 @@ const AuthLayout: React.FC = () => {
           >
             <img src={logo} alt="Polaris" className='w-30 h-20 mb-6 ml-12'/>
             <p className="text-xl mb-6">
-              Your intelligent assistant for seamless conversations and project management.
+              {t('auth.layout.tagline', 'Your intelligent assistant for seamless conversations and project management.')}
             </p>
             <div className="space-y-4">
               <div className="flex items-center">
@@ -26,7 +29,7 @@ const AuthLayout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
                 </div>
-                <p>Intelligent conversations with AI</p>
+                <p>{t('auth.layout.feature1', 'Intelligent conversations with AI')}</p>
               </div>
               <div className="flex items-center">
                 <div className="bg-white/20 p-2 rounded-full mr-4">
@@ -34,7 +37,7 @@ const AuthLayout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
                 </div>
-                <p>Organize your projects efficiently</p>
+                <p>{t('auth.layout.feature2', 'Organize your projects efficiently')}</p>
               </div>
               <div className="flex items-center">
                 <div className="bg-white/20 p-2 rounded-full mr-4">
@@ -42,7 +45,7 @@ const AuthLayout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <p>Collaborate with your team</p>
+                <p>{t('auth.layout.feature3', 'Collaborate with your team')}</p>
               </div>
               <div className="flex items-center">
                 <div className="bg-white/20 p-2 rounded-full mr-4">
@@ -50,7 +53,7 @@ const AuthLayout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 </div>
-                <p>AI-powered legal research & guidance</p>
+                <p>{t('auth.layout.feature4')}</p>
               </div>
               <div className="flex items-center">
                 <div className="bg-white/20 p-2 rounded-full mr-4">
@@ -58,7 +61,7 @@ const AuthLayout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
-                <p>Secure & private consultations</p>
+                <p>{t('auth.layout.feature5')}</p>
               </div>
             </div>
           </motion.div>

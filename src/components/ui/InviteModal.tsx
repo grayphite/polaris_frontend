@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import Button from './Button';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +18,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { invitationCount } = useInvitations();
   const [email, setEmail] = useState('');
@@ -41,7 +43,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
       if (!teamId) {
         const firstName = user?.firstName;
         if (!firstName) {
-          setError('Your profile is missing first name. Please update your profile.');
+          setError(t('inviteModal.missingFirstName'));
           setIsSubmitting(false);
           return;
         }
@@ -55,7 +57,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
       }
 
       await createTeamInvitation(Number(teamId), { invited_email: email });
-      showSuccessToast('Invitation sent successfully');
+      showSuccessToast(t('inviteModal.invitationSent'));
       setEmail('');
       onSuccess?.();
       onClose();
@@ -70,16 +72,16 @@ const InviteModal: React.FC<InviteModalProps> = ({
           errorMessage?.includes('already a member') ||
           errorMessage?.includes('pending invitation already exists')
         ) {
-          setError('This email is already registered or has been invited. Please use a different email address.');
+          setError(t('inviteModal.emailAlreadyRegistered'));
         } else if (errorMessage?.includes('Invalid email format')) {
-          setError('Please enter a valid email address.');
+          setError(t('inviteModal.invalidEmailFormat'));
         } else if (errorMessage?.includes('required')) {
-          setError('Please enter an email address.');
+          setError(t('inviteModal.emailRequired'));
         } else {
-          setError(errorMessage || 'Failed to send invitation. Please try again.');
+          setError(errorMessage || t('inviteModal.inviteFailed', { tryAgain: t('common.errors.tryAgain') }));
         }
       } else {
-        setError(errorMessage || 'Failed to send invitation. Please try again.');
+        setError(errorMessage || t('inviteModal.inviteFailed'));
       }
     } finally {
       setIsSubmitting(false);
@@ -104,7 +106,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
         className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
       >
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Invite Team Member</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('inviteModal.title')}</h3>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
@@ -112,14 +114,14 @@ const InviteModal: React.FC<InviteModalProps> = ({
             {invitationCount >= 2 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                 <p className="text-sm text-yellow-800">
-                  You are inviting an additional user. If this user accepts the invitation, you will be charged 50.00 BRL from your card.
+                  {t('inviteModal.additionalUserWarning')}
                 </p>
               </div>
             )}
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
+                {t('common.form.emailAddress')}
               </label>
               <input
                 type="email"
@@ -127,7 +129,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
                 className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
                   error ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder="colleague@example.com"
+                placeholder={t('inviteModal.emailPlaceholder')}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -142,7 +144,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
             
             <div className="mt-2">
               <p className="text-sm text-gray-500">
-                An invitation will be sent to this email address. They'll be able to join your organization once they accept.
+                {t('inviteModal.invitationMessage')}
               </p>
             </div>
           </div>
@@ -154,7 +156,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               onClick={handleClose}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
@@ -162,7 +164,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
               disabled={!email}
               isLoading={isSubmitting}
             >
-              Send Invitation
+              {t('inviteModal.sendInvite')}
             </Button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProjects } from '../../context/ProjectsContext';
 import { useChats } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +26,7 @@ interface Conversation {
 
 
 const ProjectDetail: React.FC = () => {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -125,11 +127,11 @@ const ProjectDetail: React.FC = () => {
     return list.map((c) => ({
       id: c.id,
       title: c.title,
-      lastMessage: c.details || 'No details available.',
+      lastMessage: c.details || t('chat.interface.noDetailsAvailable'),
       updatedAt: c.updated_at || c.created_at || new Date().toISOString(),
       messageCount: c.message_count || 0,
     }));
-  }, [chatsByProject, projectId]);
+  }, [chatsByProject, projectId, t]);
   
   // Load project members
   const loadMembers = useCallback(async () => {
@@ -147,7 +149,7 @@ const ProjectDetail: React.FC = () => {
         setIsProjectOwner(ownerMember.user_id === Number(user.id));
       }
     } catch (err: any) {
-      showErrorToast(err?.response?.data?.error || 'Failed to load members');
+      showErrorToast(err?.response?.data?.error || t('errors.loadMembersFailed'));
     } finally {
       setMembersLoading(false);
     }
@@ -164,7 +166,7 @@ const ProjectDetail: React.FC = () => {
   };
   
   const handleDeleteProject = () => {
-    if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+    if (window.confirm(t('projects.detail.settings.confirmDelete'))) {
       // In a real app, you would make an API call here
       navigate('/projects');
     }
@@ -179,7 +181,7 @@ const ProjectDetail: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
             <p title={project.description} className="mt-1 text-gray-600 line-clamp-2">{project.description}</p>
             <p className="mt-2 text-sm text-gray-500">
-              Created on {formatDate(project.createdAt)} • Last updated {formatDate(project.updatedAt)}
+              {t('projects.detail.createdOn', { date: formatDate(project.createdAt) })} • {t('projects.detail.lastUpdated', { date: formatDate(project.updatedAt) })}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -206,7 +208,7 @@ const ProjectDetail: React.FC = () => {
                   </svg>
                 }
               >
-                {isCreatingChat ? 'Creating...' : 'New Conversation'}
+                {isCreatingChat ? t('common.creating') : t('projects.detail.newConversation')}
               </Button>
             )}
           </div>
@@ -225,7 +227,7 @@ const ProjectDetail: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Conversations
+              {t('projects.detail.tabs.conversations')}
             </button>
             <button
               onClick={() => setActiveTab('members')}
@@ -235,7 +237,7 @@ const ProjectDetail: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Members
+              {t('projects.detail.tabs.members')}
             </button>
             {/* <button
               onClick={() => setActiveTab('settings')}
@@ -263,7 +265,7 @@ const ProjectDetail: React.FC = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search conversations..."
+                  placeholder={t('projects.detail.conversations.search')}
                   className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm shadow-sm"
                   value={localSearchQuery}
                   onChange={(e) => setLocalSearchQuery(e.target.value)}
@@ -291,11 +293,11 @@ const ProjectDetail: React.FC = () => {
                               <p className="mt-1 text-sm text-gray-500 line-clamp-2">{conversation.lastMessage}</p>
                             </div>
                             <span className="bg-light-300 text-xs px-2 py-1 rounded-full">
-                              {conversation.messageCount === 0 ? '-' : conversation.messageCount === 1 ? '1 message' : `${conversation.messageCount} messages`}
+                              {t('projects.detail.conversations.messages', { count: conversation.messageCount })}
                             </span>
                           </div>
                           <div className="mt-3 text-xs text-gray-500">
-                            Last updated on {formatDate(conversation.updatedAt)} at {formatTime(conversation.updatedAt)}
+                            {t('projects.detail.conversations.lastUpdated', { date: formatDate(conversation.updatedAt), time: formatTime(conversation.updatedAt) })}
                           </div>
                         </div>
                       </Link>
@@ -317,8 +319,8 @@ const ProjectDetail: React.FC = () => {
                       d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
                     />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No conversations yet</h3>
-                  <p className="mt-1 text-sm text-gray-500">Start a new conversation from the sidebar.</p>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('projects.detail.conversations.noConversations')}</h3>
+                  <p className="mt-1 text-sm text-gray-500">{t('projects.detail.conversations.noConversationsMessage')}</p>
                 </div>
               )}
 
@@ -331,40 +333,40 @@ const ProjectDetail: React.FC = () => {
                       disabled={!pagination.has_prev}
                       className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Previous
+                      {t('pagination.previous')}
                     </button>
                     <button
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={!pagination.has_next}
                       className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      {t('pagination.next')}
                     </button>
                   </div>
                   <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        Showing{' '}
+                        {t('pagination.showing')}{' '}
                         <span className="font-medium">
                           {((pagination.current_page - 1) * (pagination.per_page || 10)) + 1}
                         </span>{' '}
-                        to{' '}
+                        {t('pagination.to')}{' '}
                         <span className="font-medium">
                           {Math.min(pagination.current_page * (pagination.per_page || 10), pagination.total || 0)}
                         </span>{' '}
-                        of{' '}
+                        {t('pagination.of')}{' '}
                         <span className="font-medium">{pagination.total || 0}</span>{' '}
-                        results
+                        {t('pagination.results')}
                       </p>
                     </div>
                     <div>
-                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label={t('pagination.previous')}>
                         <button
                           onClick={() => setCurrentPage(currentPage - 1)}
                           disabled={!pagination.has_prev}
                           className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <span className="sr-only">Previous</span>
+                          <span className="sr-only">{t('pagination.previous')}</span>
                           <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
                           </svg>
@@ -435,7 +437,7 @@ const ProjectDetail: React.FC = () => {
                           disabled={!pagination.has_next}
                           className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <span className="sr-only">Next</span>
+                          <span className="sr-only">{t('pagination.next')}</span>
                           <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                           </svg>
@@ -453,7 +455,7 @@ const ProjectDetail: React.FC = () => {
           {activeTab === 'members' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900">Project Members</h2>
+                <h2 className="text-lg font-medium text-gray-900">{t('projects.detail.members.title')}</h2>
                 {isProjectOwner && (
                   <Button
                     variant="outline"
@@ -464,7 +466,7 @@ const ProjectDetail: React.FC = () => {
                       </svg>
                     }
                   >
-                    Invite Member
+                    {t('projects.detail.members.inviteMember')}
                   </Button>
                 )}
               </div>
@@ -488,9 +490,9 @@ const ProjectDetail: React.FC = () => {
                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No members yet</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('projects.detail.members.noMembers')}</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {isProjectOwner ? 'Invite team members to collaborate on this project.' : 'This project has no members.'}
+                    {isProjectOwner ? t('projects.detail.members.noMembersMessage') : t('projects.detail.members.noMembersMessageViewer')}
                   </p>
                 </div>
               ) : (
@@ -500,13 +502,13 @@ const ProjectDetail: React.FC = () => {
                       <thead className="bg-gray-50">
                         <tr>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Name
+                            {t('projects.detail.members.tableHeaders.name')}
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Role
+                            {t('projects.detail.members.tableHeaders.role')}
                           </th>
                           <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
+                            {t('projects.detail.members.tableHeaders.actions')}
                           </th>
                         </tr>
                       </thead>
@@ -541,7 +543,7 @@ const ProjectDetail: React.FC = () => {
                                     ? 'bg-blue-100 text-blue-800'
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                                  {t(`projects.detail.members.roles.${member.role}`)}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -551,13 +553,13 @@ const ProjectDetail: React.FC = () => {
                                       onClick={() => setEditMemberUserId(member.user_id)}
                                       className="text-primary-600 hover:text-primary-900 mr-4"
                                     >
-                                      Edit
+                                      {t('common.edit')}
                                     </button>
                                     <button
                                       onClick={() => setDeleteMemberUserId(member.user_id)}
                                       className="text-red-600 hover:text-red-900"
                                     >
-                                      Remove
+                                      {t('common.remove')}
                                     </button>
                                   </>
                                 )}
@@ -578,29 +580,29 @@ const ProjectDetail: React.FC = () => {
                           disabled={!membersPagination.has_prev}
                           className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Previous
+                          {t('pagination.previous')}
                         </button>
                         <button
                           onClick={() => setCurrentMemberPage(currentMemberPage + 1)}
                           disabled={!membersPagination.has_next}
                           className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Next
+                          {t('pagination.next')}
                         </button>
                       </div>
                       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                         <div>
                           <p className="text-sm text-gray-700">
-                            Showing{' '}
+                            {t('pagination.showing')}{' '}
                             <span className="font-medium">
                               {((membersPagination.current_page - 1) * membersPagination.per_page) + 1}
                             </span>{' '}
-                            to{' '}
+                            {t('pagination.to')}{' '}
                             <span className="font-medium">
                               {Math.min(membersPagination.current_page * membersPagination.per_page, membersPagination.total)}
                             </span>{' '}
-                            of{' '}
-                            <span className="font-medium">{membersPagination.total}</span> results
+                            {t('pagination.of')}{' '}
+                            <span className="font-medium">{membersPagination.total}</span> {t('pagination.results')}
                           </p>
                         </div>
                         <div>
@@ -609,14 +611,14 @@ const ProjectDetail: React.FC = () => {
                             disabled={!membersPagination.has_prev}
                             className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Previous
+                            {t('pagination.previous')}
                           </button>
                           <button
                             onClick={() => setCurrentMemberPage(currentMemberPage + 1)}
                             disabled={!membersPagination.has_next}
                             className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Next
+                            {t('pagination.next')}
                           </button>
                         </div>
                       </div>
@@ -631,12 +633,12 @@ const ProjectDetail: React.FC = () => {
           {activeTab === 'settings' && !projectRoleLoading && projectRole === 'owner' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Project Settings</h2>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">{t('projects.detail.settings.title')}</h2>
                 
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">
-                      Project Name
+                      {t('projects.detail.settings.projectNameLabel')}
                     </label>
                     <input
                       type="text"
@@ -648,7 +650,7 @@ const ProjectDetail: React.FC = () => {
                   
                   <div>
                     <label htmlFor="project-description" className="block text-sm font-medium text-gray-700">
-                      Description
+                      {t('projects.detail.settings.descriptionLabel')}
                     </label>
                     <textarea
                       id="project-description"
@@ -659,21 +661,21 @@ const ProjectDetail: React.FC = () => {
                   </div>
                   
                   <div className="pt-4">
-                    <Button variant="primary">Save Changes</Button>
+                    <Button variant="primary">{t('common.saveChanges')}</Button>
                   </div>
                 </div>
               </div>
               
               <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">{t('projects.detail.settings.dangerZone')}</h3>
                 <p className="text-sm text-gray-500 mb-4">
-                  Once you delete a project, there is no going back. Please be certain.
+                  {t('projects.detail.settings.dangerZoneMessage')}
                 </p>
                 <Button
                   variant="danger"
                   onClick={handleDeleteProject}
                 >
-                  Delete Project
+                  {t('projects.detail.settings.deleteProject')}
                 </Button>
               </div>
             </div>

@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import AuthLayout from './layouts/AuthLayout';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ChatInterface from './pages/chat/ChatInterface';
 import CompanyProfile from './pages/profile/CompanyProfile';
 // import Dashboard from './pages/Dashboard';
@@ -32,8 +33,9 @@ import GuestRoute from './components/common/GuestRoute';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <LanguageProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           {/* Auth routes - only accessible to unauthenticated users */}
           <Route element={
@@ -98,8 +100,9 @@ function App() {
         
         {/* Toast Container */}
         <ToastContainer />
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -8,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { showErrorToast } from '../../utils/toast';
 
 const ForgotPassword: React.FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -21,10 +23,10 @@ const ForgotPassword: React.FC = () => {
     
     // Validation
     if (!email) {
-      setError('Email is required');
+      setError(t('validation.emailRequired'));
       return;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Email is invalid');
+      setError(t('validation.emailInvalid'));
       return;
     }
     
@@ -33,7 +35,7 @@ const ForgotPassword: React.FC = () => {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Forgot password error:', error);
-      showErrorToast('Failed to send password reset email. Please try again.');
+      showErrorToast(t('errors.forgotPasswordFailed', { tryAgain: t('common.errors.tryAgain') }));
     }
   };
 
@@ -45,11 +47,11 @@ const ForgotPassword: React.FC = () => {
       className="w-full"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Forgot password?</h2>
+        <h2 className="text-3xl font-bold text-gray-900">{t('auth.forgotPassword.title')}</h2>
         <p className="mt-2 text-gray-600">
           {isSubmitted 
-            ? 'Check your email for reset instructions' 
-            : 'Enter your email and we will send you a link to reset your password'}
+            ? t('auth.forgotPassword.subtitleSuccess')
+            : t('auth.forgotPassword.subtitle')}
         </p>
       </div>
       
@@ -61,21 +63,21 @@ const ForgotPassword: React.FC = () => {
             </svg>
           </div>
           <p className="text-sm text-gray-600 mb-6">
-            We've sent a password reset link to <span className="font-medium">{email}</span>
+            {t('auth.forgotPassword.sentTo')} <span className="font-medium">{email}</span>
           </p>
           <p className="text-sm text-gray-500">
-            Didn't receive the email? Check your spam folder or{' '}
+            {t('auth.forgotPassword.didntReceive')}{' '}
             <button 
               onClick={() => setIsSubmitted(false)}
               className="text-primary-600 hover:text-primary-500"
             >
-              try again
+              {t('auth.forgotPassword.tryAgain')}
             </button>
           </p>
           <div className="mt-6">
             <Link to="/login">
               <Button variant="outline" fullWidth>
-                Back to login
+                {t('auth.forgotPassword.backToLogin')}
               </Button>
             </Link>
           </div>
@@ -83,9 +85,9 @@ const ForgotPassword: React.FC = () => {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Email Address"
+            label={t('common.form.emailAddress')}
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('auth.forgotPassword.emailPlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={error}
@@ -106,13 +108,13 @@ const ForgotPassword: React.FC = () => {
               size="lg"
               isLoading={isLoading}
             >
-              Send reset link
+              {t('auth.forgotPassword.submitButton')}
             </Button>
           </div>
           
           <div className="text-center">
             <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-              Back to login
+              {t('auth.forgotPassword.backToLogin')}
             </Link>
           </div>
         </form>

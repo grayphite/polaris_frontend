@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
 import { motion } from 'framer-motion';
 
 const CompanyProfile: React.FC = () => {
+  const { t } = useTranslation();
   // Form state
   const [formData, setFormData] = useState({
     name: 'Acme Corporation',
@@ -64,13 +66,13 @@ const CompanyProfile: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Company Profile</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('companyProfile.title')}</h1>
         {!isEditing ? (
           <Button
             variant="primary"
             onClick={() => setIsEditing(true)}
           >
-            Edit Company Profile
+            {t('companyProfile.editCompanyProfile')}
           </Button>
         ) : (
           <div className="flex space-x-3">
@@ -78,14 +80,14 @@ const CompanyProfile: React.FC = () => {
               variant="outline"
               onClick={() => setIsEditing(false)}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
               onClick={handleSaveProfile}
               isLoading={isSaving}
             >
-              Save Changes
+              {t('common.saveChanges')}
             </Button>
           </div>
         )}
@@ -110,7 +112,7 @@ const CompanyProfile: React.FC = () => {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900">{formData.name}</h2>
-              <p className="text-gray-500">{formData.industry} • {formData.size} employees</p>
+              <p className="text-gray-500">{formData.industry} • {t(`companyProfile.sizeOptions.${formData.size}`)}</p>
               <div className="mt-2 flex items-center text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
@@ -141,7 +143,7 @@ const CompanyProfile: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                      Company Name
+                      {t('companyProfile.companyNameLabel')}
                     </label>
                     <input
                       type="text"
@@ -155,7 +157,7 @@ const CompanyProfile: React.FC = () => {
                   
                   <div>
                     <label htmlFor="website" className="block text-sm font-medium text-gray-700">
-                      Website
+                      {t('companyProfile.websiteLabel')}
                     </label>
                     <input
                       type="url"
@@ -169,7 +171,7 @@ const CompanyProfile: React.FC = () => {
                   
                   <div>
                     <label htmlFor="industry" className="block text-sm font-medium text-gray-700">
-                      Industry
+                      {t('companyProfile.industryLabel')}
                     </label>
                     <select
                       id="industry"
@@ -178,19 +180,19 @@ const CompanyProfile: React.FC = () => {
                       value={formData.industry}
                       onChange={handleInputChange}
                     >
-                      <option value="Technology">Technology</option>
-                      <option value="Finance">Finance</option>
-                      <option value="Healthcare">Healthcare</option>
-                      <option value="Education">Education</option>
-                      <option value="Retail">Retail</option>
-                      <option value="Manufacturing">Manufacturing</option>
-                      <option value="Other">Other</option>
+                      <option value="Technology">{t('companyProfile.industryOptions.technology')}</option>
+                      <option value="Finance">{t('companyProfile.industryOptions.finance')}</option>
+                      <option value="Healthcare">{t('companyProfile.industryOptions.healthcare')}</option>
+                      <option value="Education">{t('companyProfile.industryOptions.education')}</option>
+                      <option value="Retail">{t('companyProfile.industryOptions.retail')}</option>
+                      <option value="Manufacturing">{t('companyProfile.industryOptions.manufacturing')}</option>
+                      <option value="Other">{t('companyProfile.industryOptions.other')}</option>
                     </select>
                   </div>
                   
                   <div>
                     <label htmlFor="size" className="block text-sm font-medium text-gray-700">
-                      Company Size
+                      {t('companyProfile.companySizeLabel')}
                     </label>
                     <select
                       id="size"
@@ -199,18 +201,18 @@ const CompanyProfile: React.FC = () => {
                       value={formData.size}
                       onChange={handleInputChange}
                     >
-                      <option value="1-10">1-10 employees</option>
-                      <option value="11-50">11-50 employees</option>
-                      <option value="50-100">50-100 employees</option>
-                      <option value="101-500">101-500 employees</option>
-                      <option value="501-1000">501-1000 employees</option>
-                      <option value="1000+">1000+ employees</option>
+                      <option value="1-10">{t('companyProfile.sizeOptions.1-10')}</option>
+                      <option value="11-50">{t('companyProfile.sizeOptions.11-50')}</option>
+                      <option value="50-100">{t('companyProfile.sizeOptions.50-100')}</option>
+                      <option value="101-500">{t('companyProfile.sizeOptions.101-500')}</option>
+                      <option value="501-1000">{t('companyProfile.sizeOptions.501-1000')}</option>
+                      <option value="1000+">{t('companyProfile.sizeOptions.1000+')}</option>
                     </select>
                   </div>
                   
                   <div className="md:col-span-2">
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                      Company Description
+                      {t('companyProfile.companyDescriptionLabel')}
                     </label>
                     <textarea
                       id="description"
@@ -224,11 +226,11 @@ const CompanyProfile: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Company Address</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">{t('companyProfile.address')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
                       <label htmlFor="address.street" className="block text-sm font-medium text-gray-700">
-                        Street Address
+                        {t('companyProfile.streetAddressLabel')}
                       </label>
                       <input
                         type="text"
@@ -242,7 +244,7 @@ const CompanyProfile: React.FC = () => {
                     
                     <div>
                       <label htmlFor="address.city" className="block text-sm font-medium text-gray-700">
-                        City
+                        {t('companyProfile.cityLabel')}
                       </label>
                       <input
                         type="text"
@@ -256,7 +258,7 @@ const CompanyProfile: React.FC = () => {
                     
                     <div>
                       <label htmlFor="address.state" className="block text-sm font-medium text-gray-700">
-                        State / Province
+                        {t('companyProfile.stateLabel')}
                       </label>
                       <input
                         type="text"
@@ -270,7 +272,7 @@ const CompanyProfile: React.FC = () => {
                     
                     <div>
                       <label htmlFor="address.zipCode" className="block text-sm font-medium text-gray-700">
-                        ZIP / Postal Code
+                        {t('companyProfile.zipCodeLabel')}
                       </label>
                       <input
                         type="text"
@@ -284,7 +286,7 @@ const CompanyProfile: React.FC = () => {
                     
                     <div>
                       <label htmlFor="address.country" className="block text-sm font-medium text-gray-700">
-                        Country
+                        {t('companyProfile.countryLabel')}
                       </label>
                       <input
                         type="text"
@@ -301,10 +303,10 @@ const CompanyProfile: React.FC = () => {
             </motion.div>
           ) : (
             <div className="mt-6">
-              <h3 className="text-lg font-medium text-gray-900">About</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t('companyProfile.about')}</h3>
               <p className="mt-1 text-gray-600">{formData.description}</p>
               
-              <h3 className="text-lg font-medium text-gray-900 mt-6">Address</h3>
+              <h3 className="text-lg font-medium text-gray-900 mt-6">{t('companyProfile.address')}</h3>
               <address className="mt-1 not-italic text-gray-600">
                 {formData.address.street}<br />
                 {formData.address.city}, {formData.address.state} {formData.address.zipCode}<br />
@@ -319,30 +321,30 @@ const CompanyProfile: React.FC = () => {
       <div className="bg-white rounded-lg shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-gray-900">Subscription</h3>
+            <h3 className="text-lg font-medium text-gray-900">{t('companyProfile.subscription.title')}</h3>
             <Button
               variant="primary"
               size="sm"
               onClick={() => window.location.href = '/subscription'}
             >
-              Manage Subscription
+              {t('companyProfile.subscription.manageSubscription')}
             </Button>
           </div>
         </div>
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xl font-semibold text-gray-900">Pro Plan</h4>
-              <p className="text-gray-600 mt-1">$49/month per user • Billed monthly</p>
+              <h4 className="text-xl font-semibold text-gray-900">{t('companyProfile.subscription.proPlan')}</h4>
+              <p className="text-gray-600 mt-1">{t('companyProfile.subscription.monthlyPrice')}</p>
             </div>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-              Active
+              {t('companyProfile.subscription.active')}
             </span>
           </div>
           
           <div className="mt-6">
             <div className="flex justify-between mb-2">
-              <span className="text-gray-600">Users</span>
+              <span className="text-gray-600">{t('companyProfile.subscription.users')}</span>
               <span className="font-medium">8 / 10</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -355,14 +357,14 @@ const CompanyProfile: React.FC = () => {
           
           <div className="mt-6">
             <div className="flex justify-between mb-2">
-              <span className="text-gray-600">Projects</span>
-              <span className="font-medium">12 / Unlimited</span>
+              <span className="text-gray-600">{t('companyProfile.subscription.projects')}</span>
+              <span className="font-medium">12 / {t('companyProfile.subscription.unlimited')}</span>
             </div>
           </div>
           
           <div className="mt-6">
             <div className="flex justify-between mb-2">
-              <span className="text-gray-600">Storage</span>
+              <span className="text-gray-600">{t('companyProfile.subscription.storage')}</span>
               <span className="font-medium">2.4 GB / 50 GB</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -372,7 +374,7 @@ const CompanyProfile: React.FC = () => {
           
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              Your subscription will renew on <span className="font-medium">November 15, 2023</span>. You can cancel or change your plan at any time.
+              {t('companyProfile.subscription.renewalMessage', { date: 'November 15, 2023' })}
             </p>
           </div>
         </div>

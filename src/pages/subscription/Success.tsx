@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
@@ -9,6 +10,7 @@ import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 
 const Success: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { refreshSubscription } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(true);
@@ -21,7 +23,7 @@ const Success: React.FC = () => {
         
         if (!teamId) {
           console.error('Team ID not found');
-          showErrorToast('Unable to get team information. Please try logging in again.');
+          showErrorToast(t('subscription.teamInfoError'));
           setIsRefreshing(false);
           return;
         }
@@ -60,7 +62,7 @@ const Success: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to refresh subscription:', error);
-        showErrorToast('Failed to refresh subscription data. You may need to refresh the page.');
+        showErrorToast(t('subscription.success.refreshError'));
       } finally {
         setIsRefreshing(false);
       }
@@ -106,19 +108,19 @@ const Success: React.FC = () => {
 
           {/* Success Message */}
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Subscription Successful!
+            {t('subscription.success.title')}
           </h2>
           <p className="text-gray-600 mb-2">
-            Thank you for subscribing to Polaris.
+            {t('subscription.success.message1')}
           </p>
           <p className="text-gray-600 mb-8">
-            Your subscription is now active and you can start using all the features.
+            {t('subscription.success.message2')}
           </p>
 
           {/* Trial Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
             <p className="text-sm text-blue-800">
-              Your free trial has started! You won't be charged until the trial period ends.
+              {t('subscription.success.trialMessage')}
             </p>
           </div>
 
@@ -129,7 +131,7 @@ const Success: React.FC = () => {
             size="lg"
             onClick={() => navigate('/projects')}
           >
-            Go to Dashboard
+            {t('subscription.success.goToDashboard')}
           </Button>
         </div>
       </motion.div>

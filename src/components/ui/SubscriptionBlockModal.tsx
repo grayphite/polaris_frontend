@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeamSubscription } from '../../services/authService';
 
@@ -7,6 +8,7 @@ interface SubscriptionBlockModalProps {
 }
 
 const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscription }) => {
+  const { t } = useTranslation();
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return 'N/A';
     try {
@@ -24,8 +26,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
     switch (subscription.status) {
       case 'past_due':
         return {
-          title: 'Subscription Payment Failed',
-          message: 'Your subscription payment failed. Please update your payment method to continue accessing the system. Contact support if you need assistance.',
+          title: t('subscriptionBlock.pastDue.title'),
+          message: t('subscriptionBlock.pastDue.message'),
           iconColor: 'text-orange-500',
           icon: (
             <svg className="h-12 w-12 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,8 +37,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
         };
       case 'incomplete':
         return {
-          title: 'Payment Incomplete',
-          message: 'Your payment process was not completed. Please complete your payment to access the system.',
+          title: t('subscriptionBlock.incomplete.title'),
+          message: t('subscriptionBlock.incomplete.message'),
           iconColor: 'text-yellow-500',
           icon: (
             <svg className="h-12 w-12 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,8 +48,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
         };
       case 'incomplete_expired':
         return {
-          title: 'Payment Session Expired',
-          message: 'Your payment session has expired. Please contact support or log in again to start a new subscription.',
+          title: t('subscriptionBlock.incompleteExpired.title'),
+          message: t('subscriptionBlock.incompleteExpired.message'),
           iconColor: 'text-red-500',
           icon: (
             <svg className="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,8 +59,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
         };
       case 'canceled':
         return {
-          title: 'Subscription Canceled',
-          message: 'Your subscription has been canceled. Please renew your subscription to access the system.',
+          title: t('subscriptionBlock.canceled.title'),
+          message: t('subscriptionBlock.canceled.message'),
           iconColor: 'text-red-500',
           icon: (
             <svg className="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -68,8 +70,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
         };
       case 'unpaid':
         return {
-          title: 'Subscription Suspended',
-          message: 'Your subscription payment failed and access has been suspended. Please update your payment method to restore access.',
+          title: t('subscriptionBlock.unpaid.title'),
+          message: t('subscriptionBlock.unpaid.message'),
           iconColor: 'text-red-500',
           icon: (
             <svg className="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -79,8 +81,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
         };
       default:
         return {
-          title: 'Subscription Issue',
-          message: 'There is an issue with your subscription. Please contact support for assistance.',
+          title: t('subscriptionBlock.default.title'),
+          message: t('subscriptionBlock.default.message'),
           iconColor: 'text-gray-500',
           icon: (
             <svg className="h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,7 +127,7 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
 
               {/* Plan Information */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-1">Plan</p>
+                <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.plan')}</p>
                 <p className="text-lg font-semibold text-gray-900">{subscription.plan.display_name}</p>
               </div>
 
@@ -133,12 +135,12 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
               <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
                 {subscription.trial_end && (
                   <div className="mb-2">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Trial End Date</p>
+                    <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.trialEndDate')}</p>
                     <p className="text-sm text-gray-900">{formatDate(subscription.trial_end)}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">Current Period End</p>
+                  <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.currentPeriodEnd')}</p>
                   <p className="text-sm text-gray-900">{formatDate(subscription.current_period_end)}</p>
                 </div>
               </div>

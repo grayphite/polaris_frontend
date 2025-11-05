@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -14,6 +15,7 @@ const Header: React.FC<HeaderProps> = ({
   user,
   onLogout,
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -43,14 +45,14 @@ const Header: React.FC<HeaderProps> = ({
             className="text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gray-700"
             aria-controls="app-sidebar"
             aria-expanded={sidebarOpen}
-            aria-label="Toggle sidebar"
+            aria-label={t('header.toggleSidebar')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
           <h2 className="ml-1 sm:ml-2 text-base sm:text-lg font-medium truncate">
-            {location.pathname === '/' ? 'Projects' : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
+            {location.pathname === '/' ? t('header.projects') : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
           </h2>
         </div>
         
@@ -75,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => setUserMenuOpen(false)}
               >
-                Your Profile
+                {t('header.yourProfile')}
               </NavLink>
               
               {/* All menu items accessible to all users */}
@@ -84,7 +86,7 @@ const Header: React.FC<HeaderProps> = ({
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => setUserMenuOpen(false)}
               >
-                Manage Team
+                {t('header.manageTeam')}
               </NavLink>
               {/* <NavLink
                 to="/company-profile"
@@ -105,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({
                 onClick={onLogout}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
-                Sign out
+                {t('header.signOut')}
               </button>
             </div>
           )}

@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 
 const Failure: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -35,10 +37,10 @@ const Failure: React.FC = () => {
 
           {/* Error Message */}
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Payment Failed
+            {t('subscription.failure.title')}
           </h2>
           <p className="text-gray-600 mb-8">
-            We couldn't process your payment. Please try again or contact support if the problem persists.
+            {t('subscription.failure.message', { tryAgainOrContact: t('common.errors.tryAgainOrContact') })}
           </p>
 
           {/* Action Button */}
@@ -48,18 +50,18 @@ const Failure: React.FC = () => {
             size="lg"
             onClick={() => navigate('/subscription')}
           >
-            Try Again
+            {t('subscription.failure.tryAgain')}
           </Button>
 
           {/* Support Link */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              Need help?{' '}
+              {t('subscription.failure.needHelp')}{' '}
               <a
                 href="mailto:support@polaris.com"
                 className="text-primary-600 hover:text-primary-700 font-medium"
               >
-                Contact Support
+                {t('subscription.failure.contactSupport')}
               </a>
             </p>
           </div>

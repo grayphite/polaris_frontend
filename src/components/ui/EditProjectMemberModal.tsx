@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import Button from './Button';
@@ -25,6 +26,7 @@ const EditProjectMemberModal: React.FC<EditProjectMemberModalProps> = ({
   memberName,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const [selectedRole, setSelectedRole] = useState<'owner' | 'editor' | 'viewer'>('editor');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +42,7 @@ const EditProjectMemberModal: React.FC<EditProjectMemberModalProps> = ({
     e.preventDefault();
 
     if (currentRole === 'owner') {
-      setError('Cannot change project owner role');
+      setError(t('projectMember.ownerCannotChange'));
       return;
     }
 
@@ -54,11 +56,11 @@ const EditProjectMemberModal: React.FC<EditProjectMemberModalProps> = ({
 
     try {
       await updateProjectMemberRole(projectId, memberUserId, selectedRole);
-      showSuccessToast('Member role updated successfully');
+      showSuccessToast(t('projectMember.roleUpdated'));
       onSuccess();
       onClose();
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Failed to update member role';
+      const errorMsg = err?.response?.data?.error || t('projectMember.updateFailed');
       setError(errorMsg);
       showErrorToast(errorMsg);
     } finally {
@@ -84,34 +86,34 @@ const EditProjectMemberModal: React.FC<EditProjectMemberModalProps> = ({
         className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
       >
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Edit Member Role</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t('projectMember.editTitle')}</h3>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 mb-4">
-                Update role for <span className="font-medium">{memberName}</span>
+                {t('projectMember.updateRoleFor', { name: memberName })}
               </p>
             </div>
 
             <div>
               <Select
                 id="role"
-                label="Role"
+                label={t('common.role')}
                 value={selectedRole}
                 onChange={(value) => setSelectedRole(value as 'owner' | 'editor' | 'viewer')}
                 options={[
-                  { value: 'editor', label: 'Editor' },
-                  { value: 'viewer', label: 'Viewer' },
-                  { value: 'owner', label: 'Owner' },
+                  { value: 'editor', label: t('projects.detail.members.roles.editor') },
+                  { value: 'viewer', label: t('projects.detail.members.roles.viewer') },
+                  { value: 'owner', label: t('projects.detail.members.roles.owner') },
                 ]}
-                placeholder="Select a role"
+                placeholder={t('projectMember.selectTeamMember')}
                 disabled={currentRole === 'owner'}
                 required
               />
               {currentRole === 'owner' && (
-                <p className="mt-1 text-sm text-gray-500">Project owner role cannot be changed</p>
+                <p className="mt-1 text-sm text-gray-500">{t('projectMember.ownerCannotChangeMessage')}</p>
               )}
             </div>
 
@@ -120,10 +122,10 @@ const EditProjectMemberModal: React.FC<EditProjectMemberModalProps> = ({
 
           <div className="mt-6 flex justify-end space-x-3">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" variant="primary" disabled={isSubmitting} isLoading={isSubmitting}>
-              Save Changes
+              {t('common.save')}
             </Button>
           </div>
         </form>

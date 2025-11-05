@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useProjects } from '../../context/ProjectsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
@@ -52,6 +53,7 @@ const ProjectMenuButton: React.FC<ProjectMenuButtonProps & { children?: React.Re
   menuTriggerRef,
   children,
 }) => {
+  const { t } = useTranslation();
   const { role, isLoading } = useProjectRole(projectId);
 
   // Safe default: don't show button until role is loaded, and only show for project owners
@@ -66,7 +68,7 @@ const ProjectMenuButton: React.FC<ProjectMenuButtonProps & { children?: React.Re
         aria-expanded={menuOpenForProject === projectId}
         aria-controls={menuOpenForProject === projectId ? `project-menu-${projectId}` : undefined}
         id={`project-menu-trigger-${projectId}`}
-        title="Project options"
+        title={t('sidebar.projectOptions')}
         onClick={(e) => { 
           const direction = calculateMenuDirection(e.currentTarget);
           setMenuDirection(direction);
@@ -93,6 +95,7 @@ const ProjectMenuDropdown: React.FC<ProjectMenuDropdownProps> = ({
   onDelete,
   menuTriggerId,
 }) => {
+  const { t } = useTranslation();
   const { role, isLoading } = useProjectRole(projectId);
 
   // Safe default: don't show menu until role is loaded, and only show for owners
@@ -123,7 +126,7 @@ const ProjectMenuDropdown: React.FC<ProjectMenuDropdownProps> = ({
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onEdit(); }}
       >
-        Edit
+        {t('common.edit')}
       </button>
       <button
         type="button"
@@ -133,7 +136,7 @@ const ProjectMenuDropdown: React.FC<ProjectMenuDropdownProps> = ({
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
       >
-        Delete
+        {t('common.delete')}
       </button>
     </div>
   );
@@ -144,6 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   isDesktop,
   onToggle,
 }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const location = useLocation();
   const selectedProjectId = (() => {
@@ -448,7 +452,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <div className="p-4">
-              <Link to="/projects" className="text-sm uppercase tracking-wide text-gray-400">Projects</Link>
+              <Link to="/projects" className="text-sm uppercase tracking-wide text-gray-400">{t('sidebar.projects')}</Link>
               <div className="my-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="relative flex-1 mr-2">
@@ -459,7 +463,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                     <input
                       type="text"
-                      placeholder="Search Projects..."
+                      placeholder={t('sidebar.searchProjects')}
                       className="block w-full pl-8 pr-2 py-1.5 text-sm rounded-md bg-dark-200 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
                       value={localProjectSearch}
                       onChange={(e) => setLocalProjectSearch(e.target.value)}
@@ -469,7 +473,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       onClick={openCreate}
                       className="p-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white flex-shrink-0"
-                      title="New Project"
+                      title={t('sidebar.newProject')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -538,7 +542,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <input
                               type="text"
                               className="w-full pl-8 pr-2 py-1.5 text-sm rounded-md bg-dark-200 text-gray-200 placeholder-gray-400 border border-dark-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                              placeholder="Search Chats..."
+                              placeholder={t('sidebar.searchChats')}
                               value={localSidebarSearch}
                               onChange={(e) => setLocalSidebarSearch(e.target.value)}
                             />
@@ -568,14 +572,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Creating...
+                                {t('common.creating')}
                               </>
                             ) : (
                               <>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                                 </svg>
-                                New Chat
+                                {t('sidebar.newChat')}
                               </>
                             )}
                             </button>
@@ -586,7 +590,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           {loadingSidebarProjects.has(p.id) ? (
                             <li className="py-2 text-sm text-gray-400 flex items-center gap-2">
                               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                              Loading conversations...
+                              {t('sidebar.loadingConversations')}
                             </li>
                           ) : conversations.map((c) => (
                               <li key={c.id}>
@@ -607,7 +611,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     <div className="relative" data-chat-menu>
                                       <button
                                         className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
-                                        title="Chat options"
+                                        title={t('sidebar.chatOptions')}
                                         onClick={(e) => { 
                                           const direction = calculateMenuDirection(e.currentTarget);
                                           setChatMenuDirection(direction);
@@ -630,7 +634,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-primary-200"
                                             onClick={() => { openEditChat(c.id); setChatMenuOpenId(null); }}
                                           >
-                                            Edit
+                                            {t('common.edit')}
                                           </button>
                                         )}
                                         {projectRole === 'owner' && (
@@ -639,7 +643,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700"
                                             onClick={() => { setChatDeleteId(c.id); setChatMenuOpenId(null); }}
                                           >
-                                            Delete
+                                            {t('common.delete')}
                                           </button>
                                         )}
                                       </div>
@@ -662,10 +666,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                               {loadingSidebarProjects.has(p.id) ? (
                                 <div className="flex items-center justify-center gap-2">
                                   <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                  Loading more chats...
+                                  {t('common.loading')}
                                 </div>
                               ) : (
-                                'Load More Chats'
+                                t('sidebar.loadMoreChats')
                               )}
                             </button>
                           </div>
@@ -687,10 +691,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {sidebarLoading ? (
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
-                          Loading...
+                          {t('common.loading')}
                         </div>
                       ) : (
-                        'Load More Projects'
+                        t('sidebar.loadMoreProjects')
                       )}
                     </button>
                   </div>
