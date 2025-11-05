@@ -26,18 +26,8 @@ import SubscriptionSuccess from './pages/subscription/Success';
 import SubscriptionFailure from './pages/subscription/Failure';
 import SubscriptionGuard from './components/common/SubscriptionGuard';
 import { ChatProvider } from './context/ChatContext';
-
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // This is a placeholder for actual authentication logic
-  const isAuthenticated = localStorage.getItem('token') !== null;
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
+import ProtectedRoute from './components/common/ProtectedRoute';
+import GuestRoute from './components/common/GuestRoute';
 
 
 function App() {
@@ -45,8 +35,12 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Auth routes */}
-          <Route element={<AuthLayout />}>
+          {/* Auth routes - only accessible to unauthenticated users */}
+          <Route element={
+            <GuestRoute>
+              <AuthLayout />
+            </GuestRoute>
+          }>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
