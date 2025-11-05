@@ -22,7 +22,13 @@ const resources = {
 
 // Detect language from browser on every app load
 const detectLanguage = (): string => {
-  // Always detect from browser on every load
+  // Check localStorage first for user preference
+  const savedLang = localStorage.getItem('language');
+  if (savedLang && (savedLang === 'en' || savedLang.startsWith('pt'))) {
+    return savedLang;
+  }
+  
+  // Fall back to browser detection
   const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
   
   // Check if Portuguese (any variant)

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import LanguageToggle from './LanguageToggle';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -56,7 +57,9 @@ const Header: React.FC<HeaderProps> = ({
           </h2>
         </div>
         
-        <div className="relative flex-shrink-0" ref={userMenuRef}>
+        <div className="flex items-center gap-3">
+          <LanguageToggle />
+          <div className="relative flex-shrink-0" ref={userMenuRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center text-sm focus:outline-none"
@@ -111,6 +114,7 @@ const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </header>

@@ -3,12 +3,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import logo from '../assets/polaris_logo.png';
 import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../components/common/LanguageToggle';
 
 const AuthLayout: React.FC = () => {
   const { t } = useTranslation();
   
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-primary-50 to-secondary-50">
+      {/* Language Toggle - Top Right */}
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageToggle />
+      </div>
+      
       <div className="flex flex-col md:flex-row w-full">
         {/* Left side - Brand & Info */}
         <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-primary-600 to-secondary-700 text-white p-8 justify-center items-center">

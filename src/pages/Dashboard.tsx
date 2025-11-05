@@ -59,6 +59,7 @@ interface RecentProjectProps {
 }
 
 const RecentProject: React.FC<RecentProjectProps> = ({ name, description, lastUpdated, conversations, id }) => {
+  const { t } = useTranslation();
   return (
     <Link to={`/projects/${id}`} className="block">
       <div className="bg-white rounded-lg shadow-card p-6 hover:shadow-lg transition-shadow">
