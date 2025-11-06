@@ -11,6 +11,7 @@ import Loader from '../../components/common/Loader';
 import DeleteInvitationModal from '../../components/ui/DeleteInvitationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useInvitations } from '../../context/InvitationsContext';
+import { getBillingSummary, BillingSummaryResponse } from '../../services/paymentService';
 
 type TableRow = {
   id: string;
@@ -32,6 +33,8 @@ const MembersList: React.FC = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [invitationToDelete, setInvitationToDelete] = useState<{ id: number; email?: string } | null>(null);
   const [owner, setOwner] = useState<{ first_name: string; last_name: string; email: string } | null>(null);
+  const [billingData, setBillingData] = useState<BillingSummaryResponse | null>(null);
+  const [isLoadingBilling, setIsLoadingBilling] = useState(false);
   
   // Get the openInviteModal function and inviteTimestamp from MainLayout context
   const { openInviteModal, inviteTimestamp } = useOutletContext<{ 
@@ -139,6 +142,35 @@ const MembersList: React.FC = () => {
     loadInvitations();
   }, [loadInvitations, inviteTimestamp]);
 
+  // Load billing summary when teamId changes
+  const loadBillingSummary = useCallback(async () => {
+    if (!teamId || !isOwner) {
+      setBillingData(null);
+      return;
+    }
+
+    setIsLoadingBilling(true);
+    try {
+      const billingResponse = await getBillingSummary(teamId);
+      setBillingData(billingResponse);
+    } catch (e: any) {
+      // Silently fail - don't show error toast as billing is not critical for members page
+      console.error('Failed to load billing summary:', e);
+      setBillingData(null);
+    } finally {
+      setIsLoadingBilling(false);
+    }
+  }, [teamId, isOwner]);
+
+  useEffect(() => {
+    loadBillingSummary();
+  }, [loadBillingSummary]);
+
+  const formatPrice = (cents: number, currency: string): string => {
+    const amount = cents / 100;
+    return `${currency.toUpperCase()} ${amount.toFixed(2)}`;
+  };
+
   const openDeleteModal = (id: number, email?: string) => {
     setInvitationToDelete({ id, email });
     setIsDeleteOpen(true);
@@ -201,15 +233,64 @@ const MembersList: React.FC = () => {
           </Button>
         )}
       </div>
-      {owner && (
-        <div className="w-full md:w-[40%] bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-gray-500">{t('members.teamOwner')}</p>
-              <p className="text-base font-medium text-gray-900">{owner.first_name} {owner.last_name}</p>
-              <a href={`mailto:${owner.email}`} className="text-sm text-primary-600 hover:text-primary-700">{owner.email}</a>
+      {(owner || (isOwner && billingData?.upcoming_invoice)) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {owner && (
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">{t('members.teamOwner')}</p>
+                  <p className="text-base font-medium text-gray-900">{owner.first_name} {owner.last_name}</p>
+                  <a href={`mailto:${owner.email}`} className="text-sm text-primary-600 hover:text-primary-700">{owner.email}</a>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+          
+          {isOwner && billingData?.upcoming_invoice && (
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              {isLoadingBilling ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader size="sm" color="primary" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-500">{t('members.currentBill')}</p>
+                  {billingData.upcoming_invoice.line_items.length > 0 && (
+                    <div className="space-y-2">
+                      {/* Plan price (first item) */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-700">
+                          {billingData.upcoming_invoice.line_items[0].description}
+                        </span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {formatPrice(billingData.upcoming_invoice.line_items[0].amount, billingData.upcoming_invoice.line_items[0].currency)}
+                        </span>
+                      </div>
+                      {/* Overage charges (remaining items) */}
+                      {billingData.upcoming_invoice.line_items.slice(1).map((item) => (
+                        <div key={item.id} className="flex justify-between items-center">
+                          <span className="text-sm text-gray-700">
+                            {item.description}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {formatPrice(item.amount, item.currency)}
+                          </span>
+                        </div>
+                      ))}
+                      {/* Total */}
+                      <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
+                        <span className="text-sm font-semibold text-gray-900">{t('members.total')}</span>
+                        <span className="text-base font-bold text-gray-900">
+                          {formatPrice(billingData.upcoming_invoice.total, billingData.upcoming_invoice.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       

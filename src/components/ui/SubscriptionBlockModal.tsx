@@ -1,7 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeamSubscription } from '../../services/authService';
+import Button from './Button';
 
 interface SubscriptionBlockModalProps {
   subscription: TeamSubscription;
@@ -9,6 +11,7 @@ interface SubscriptionBlockModalProps {
 
 const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscription }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return 'N/A';
     try {
@@ -146,9 +149,23 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
               </div>
 
               {/* Status Message */}
-              <p className="text-gray-600 mb-0">
+              <p className="text-gray-600 mb-6">
                 {content.message}
               </p>
+
+              {/* Renew Button - Only for canceled status */}
+              {subscription.status === 'canceled' && (
+                <div className="mt-6">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    onClick={() => navigate('/subscription')}
+                  >
+                    {t('subscriptionBlock.canceled.renewButton')}
+                  </Button>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

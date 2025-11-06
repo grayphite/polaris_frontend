@@ -106,7 +106,6 @@ const EditProjectMemberModal: React.FC<EditProjectMemberModalProps> = ({
                 options={[
                   { value: 'editor', label: t('projects.detail.members.roles.editor') },
                   { value: 'viewer', label: t('projects.detail.members.roles.viewer') },
-                  { value: 'owner', label: t('projects.detail.members.roles.owner') },
                 ]}
                 placeholder={t('projectMember.selectTeamMember')}
                 disabled={currentRole === 'owner'}

@@ -75,6 +75,67 @@ export interface MemberAdditionPreviewResponse {
   additional_members: number;
 }
 
+// Billing Types
+export interface Price {
+  id: string;
+  nickname: string | null;
+  unit_amount: number;
+  currency: string;
+}
+
+export interface Period {
+  start: string;
+  end: string;
+}
+
+export interface LineItem {
+  id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  quantity: number;
+  price: Price;
+  period: Period;
+  proration: boolean;
+}
+
+export interface Invoice {
+  invoice_id: string | null;
+  subscription_id: string;
+  customer_id: string;
+  amount_due: number;
+  amount_paid: number;
+  amount_remaining: number;
+  subtotal: number;
+  total: number;
+  currency: string;
+  period_start: string;
+  period_end: string;
+  next_payment_attempt?: string;
+  status: string;
+  hosted_invoice_url?: string | null;
+  invoice_pdf?: string | null;
+  line_items: LineItem[];
+  discount?: any | null;
+  tax?: number;
+  has_proration?: boolean;
+}
+
+export interface BillingSummaryResponse {
+  current_invoice: Invoice;
+  upcoming_invoice: Invoice;
+}
+
+export interface CancelSubscriptionResponse {
+  success: boolean;
+  subscription: {
+    status: string;
+    cancel_at_period_end: boolean;
+    current_period_end: string;
+    canceled_at: string | null;
+  };
+}
+
 // API Functions
 export async function getPlans(): Promise<PlansResponse> {
   return makeRequest<PlansResponse>('/plans', {
@@ -101,6 +162,22 @@ export async function getSubscriptionStatus(teamId: string): Promise<Subscriptio
 export async function previewMemberAddition(teamId: string): Promise<MemberAdditionPreviewResponse> {
   return makeRequest<MemberAdditionPreviewResponse>(`/subscriptions/${teamId}/members/preview`, {
     method: 'POST',
+  });
+}
+
+export async function getBillingSummary(teamId: string): Promise<BillingSummaryResponse> {
+  return makeRequest<BillingSummaryResponse>(`/subscriptions/${teamId}/billing-summary`, {
+    method: 'GET',
+  });
+}
+
+export async function cancelSubscription(
+  teamId: string,
+  cancelAtPeriodEnd: boolean
+): Promise<CancelSubscriptionResponse> {
+  return makeRequest<CancelSubscriptionResponse>(`/subscriptions/${teamId}/cancel`, {
+    method: 'POST',
+    data: { cancel_at_period_end: cancelAtPeriodEnd },
   });
 }
 

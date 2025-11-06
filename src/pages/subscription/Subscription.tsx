@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import Card from '../../components/common/Card';
 import Loader from '../../components/common/Loader';
 import { getPlans, createCheckoutSession, Plan } from '../../services/paymentService';
-import { showErrorToast } from '../../utils/toast';
+import { showErrorToast, showInfoToast } from '../../utils/toast';
 
 const Subscription: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  // Show message if redirected from cancellation
+  useEffect(() => {
+    const message = (location.state as any)?.message;
+    if (message) {
+      showInfoToast(message);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     fetchPlans();

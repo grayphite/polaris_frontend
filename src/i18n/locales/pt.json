@@ -26,6 +26,7 @@
     "saveChanges": "Salvar Alterações",
     "creating": "Criando...",
     "saving": "Salvando...",
+    "retry": "Tentar Novamente",
     "form": {
       "emailAddress": "Endereço de E-mail",
       "email": "E-mail",
@@ -328,7 +329,9 @@
     "removeMember": "Remover Membro",
     "editRole": "Editar Função",
     "delete": "Excluir",
-    "activate": "Ativar"
+    "activate": "Ativar",
+    "currentBill": "Fatura Atual",
+    "total": "Total"
   },
   "profile": {
     "title": "Configurações de Perfil",
@@ -596,7 +599,8 @@
     },
     "canceled": {
       "title": "Assinatura Cancelada",
-      "message": "Sua assinatura foi cancelada. Por favor, renove sua assinatura para acessar o sistema."
+      "message": "Sua assinatura foi cancelada. Por favor, renove sua assinatura para acessar o sistema.",
+      "renewButton": "Renovar Assinatura"
     },
     "unpaid": {
       "title": "Assinatura Suspensa",
@@ -609,6 +613,76 @@
     "plan": "Plano",
     "trialEndDate": "Data de Término do Trial",
     "currentPeriodEnd": "Fim do Período Atual"
+  },
+  "billing": {
+    "title": "Detalhes da Assinatura",
+    "subtitle": "Visualize seu plano atual e informações de pagamento futuras",
+    "currentSubscription": "Assinatura Atual",
+    "purchasedPlan": "Plano Comprado",
+    "upcomingInvoice": "Próxima Fatura",
+    "monthlyPrice": "Preço Mensal",
+    "perSeat": "Por Assento",
+    "trialEnds": "Trial Termina",
+    "maxMembers": "Máximo de Membros da Equipe",
+    "period": "Período",
+    "total": "Total",
+    "nextPayment": "Próximo Pagamento",
+    "amountDue": "Valor Devido",
+    "viewInvoice": "Ver Fatura",
+    "downloadPDF": "Baixar PDF",
+    "lineItems": "Itens da Fatura",
+    "description": "Descrição",
+    "quantity": "Quantidade",
+    "amount": "Valor",
+    "proration": "Proporcional",
+    "prorated": "Proporcional",
+    "hasProration": "Esta fatura inclui cobranças proporcionais",
+    "showDetails": "Mostrar Detalhes",
+    "hideDetails": "Ocultar Detalhes",
+    "cancelSubscription": "Cancelar Assinatura",
+    "willCancelAtPeriodEnd": "Será cancelado no final do período",
+    "confirmCancel": "Confirmar Cancelamento",
+    "cancelling": "Cancelando...",
+    "completePayment": "Completar Pagamento",
+    "resubscribe": "Reassinar",
+    "updatePayment": "Atualizar Pagamento",
+    "canceledRedirectMessage": "Sua assinatura foi cancelada. Por favor, reassine para continuar usando o serviço.",
+    "noInvoiceAccess": "Acesso à Fatura Indisponível",
+    "noInvoiceAccessDescription": "Os detalhes da fatura estão disponíveis apenas para assinaturas ativas, em período de teste ou com pagamento pendente.",
+    "cancelModal": {
+      "title": "Cancelar Assinatura",
+      "message": "Como você gostaria de cancelar sua assinatura?",
+      "cancelAtEnd": "Cancelar no Fim do Período",
+      "cancelAtEndDescription": "Mantenha o acesso até o final do período de cobrança atual, depois cancele automaticamente.",
+      "cancelImmediately": "Cancelar Imediatamente",
+      "warning": "Sua assinatura será cancelada imediatamente. Você pode receber um reembolso proporcional pelos dias restantes."
+    },
+    "status": {
+      "trialing": "Período de teste ativo — {{days}} dias restantes",
+      "trialingActive": "Período de teste ativo",
+      "active": "Assinatura ativa",
+      "pastDue": "Pagamento falhou — Atualize as informações de cobrança",
+      "incomplete": "Pagamento não concluído — Finalize a configuração",
+      "canceled": "Assinatura cancelada",
+      "unpaid": "Pagamento falhou — Atualize o pagamento e reative"
+    },
+    "success": {
+      "cancelled": "Assinatura cancelada com sucesso"
+    },
+    "errors": {
+      "noTeamId": "ID da equipe não encontrado",
+      "loadFailed": "Falha ao carregar informações de cobrança",
+      "noSubscription": "Nenhuma Assinatura Ativa",
+      "noSubscriptionDescription": "Nenhuma assinatura ativa encontrada para sua equipe.",
+      "notLinked": "Assinatura Não Vinculada",
+      "notLinkedDescription": "Sua assinatura não está vinculada ao Stripe. Entre em contato com o suporte.",
+      "noUpcoming": "Nenhuma Fatura Futura",
+      "noUpcomingDescription": "Nenhuma fatura futura está disponível para esta assinatura.",
+      "stripeError": "Erro do Stripe",
+      "serverError": "Erro do Servidor",
+      "serverErrorDescription": "Ocorreu um erro ao carregar as informações de cobrança. Tente novamente.",
+      "cancelFailed": "Falha ao cancelar assinatura"
+    }
   }
 }
 

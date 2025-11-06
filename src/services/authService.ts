@@ -34,6 +34,8 @@ export interface TeamSubscription {
   plan: TeamSubscriptionPlan;
   price: TeamSubscriptionPrice;
   billing_user_id: number;
+  cancel_at_period_end?: boolean;
+  canceled_at?: string | null;
 }
 
 export interface TeamOwner {

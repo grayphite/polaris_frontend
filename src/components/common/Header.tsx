@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from './LanguageToggle';
+import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -53,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({
             </svg>
           </button>
           <h2 className="ml-1 sm:ml-2 text-base sm:text-lg font-medium truncate">
-            {location.pathname === '/' ? t('header.projects') : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
+            {location.pathname === '/projects' ? t('header.projects') : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
           </h2>
         </div>
         
@@ -98,13 +99,13 @@ const Header: React.FC<HeaderProps> = ({
               >
                 Company Profile
               </NavLink> */}
-              {/* <NavLink
-                to="/subscription"
+              {user?.role === 'owner' && <NavLink
+                to="/subscription-details"
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => setUserMenuOpen(false)}
               >
                 Subscription
-              </NavLink> */}
+              </NavLink>}
               
               <button
                 onClick={onLogout}

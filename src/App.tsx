@@ -25,6 +25,7 @@ import SetupAccount from './pages/auth/SetupAccount';
 import Subscription from './pages/subscription/Subscription';
 import SubscriptionSuccess from './pages/subscription/Success';
 import SubscriptionFailure from './pages/subscription/Failure';
+import SubscriptionDetails from './pages/subscription/SubscriptionDetails';
 import SubscriptionGuard from './components/common/SubscriptionGuard';
 import { ChatProvider } from './context/ChatContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -91,6 +92,9 @@ function App() {
             {/* All routes accessible to all users */}
             <Route path="/members" element={<MembersList />} />
             <Route path="/company-profile" element={<CompanyProfile />} />
+            
+            {/* Owner-only routes */}
+            <Route path="/subscription-details" element={<SubscriptionDetails />} />
           </Route>
           
           {/* Not found route */}

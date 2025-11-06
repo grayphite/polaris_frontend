@@ -26,6 +26,7 @@
     "saveChanges": "Save Changes",
     "creating": "Creating...",
     "saving": "Saving...",
+    "retry": "Retry",
     "form": {
       "emailAddress": "Email Address",
       "email": "Email",
@@ -328,7 +329,9 @@
     "removeMember": "Remove Member",
     "editRole": "Edit Role",
     "delete": "Delete",
-    "activate": "Activate"
+    "activate": "Activate",
+    "currentBill": "Current Bill",
+    "total": "Total"
   },
   "profile": {
     "title": "Profile Settings",
@@ -596,7 +599,8 @@
     },
     "canceled": {
       "title": "Subscription Canceled",
-      "message": "Your subscription has been canceled. Please renew your subscription to access the system."
+      "message": "Your subscription has been canceled. Please renew your subscription to access the system.",
+      "renewButton": "Renew Subscription"
     },
     "unpaid": {
       "title": "Subscription Suspended",
@@ -609,6 +613,76 @@
     "plan": "Plan",
     "trialEndDate": "Trial End Date",
     "currentPeriodEnd": "Current Period End"
+  },
+  "billing": {
+    "title": "Subscription Details",
+    "subtitle": "View your current plan and upcoming payment information",
+    "currentSubscription": "Current Subscription",
+    "purchasedPlan": "Purchased Plan",
+    "upcomingInvoice": "Upcoming Invoice",
+    "monthlyPrice": "Monthly Price",
+    "perSeat": "Per Seat",
+    "trialEnds": "Trial Ends",
+    "maxMembers": "Max Team Members",
+    "period": "Period",
+    "total": "Total",
+    "nextPayment": "Next Payment",
+    "amountDue": "Amount Due",
+    "viewInvoice": "View Invoice",
+    "downloadPDF": "Download PDF",
+    "lineItems": "Line Items",
+    "description": "Description",
+    "quantity": "Quantity",
+    "amount": "Amount",
+    "proration": "Proration",
+    "prorated": "Prorated",
+    "hasProration": "This invoice includes prorated charges",
+    "showDetails": "Show Details",
+    "hideDetails": "Hide Details",
+    "cancelSubscription": "Cancel Subscription",
+    "willCancelAtPeriodEnd": "Will be Cancelled at Period End",
+    "confirmCancel": "Confirm Cancellation",
+    "cancelling": "Cancelling...",
+    "completePayment": "Complete Payment",
+    "resubscribe": "Resubscribe",
+    "updatePayment": "Update Payment",
+    "canceledRedirectMessage": "Your subscription has been canceled. Please resubscribe to continue using the service.",
+    "noInvoiceAccess": "Invoice Access Unavailable",
+    "noInvoiceAccessDescription": "Invoice details are only available for active, trialing, or past due subscriptions.",
+    "cancelModal": {
+      "title": "Cancel Subscription",
+      "message": "How would you like to cancel your subscription?",
+      "cancelAtEnd": "Cancel at Period End",
+      "cancelAtEndDescription": "Keep access until the current billing period ends, then cancel automatically.",
+      "cancelImmediately": "Cancel Immediately",
+      "warning": "Your subscription will be cancelled immediately. You may receive a prorated refund for the remaining days."
+    },
+    "status": {
+      "trialing": "Trial active — {{days}} days left",
+      "trialingActive": "Trial active",
+      "active": "Subscription active",
+      "pastDue": "Payment failed — Update billing info",
+      "incomplete": "Payment not completed — Finish setup",
+      "canceled": "Subscription canceled",
+      "unpaid": "Payment failed — Update payment and reactivate"
+    },
+    "success": {
+      "cancelled": "Subscription cancelled successfully"
+    },
+    "errors": {
+      "noTeamId": "Team ID not found",
+      "loadFailed": "Failed to load billing information",
+      "noSubscription": "No Active Subscription",
+      "noSubscriptionDescription": "No active subscription found for your team.",
+      "notLinked": "Subscription Not Linked",
+      "notLinkedDescription": "Your subscription is not linked to Stripe. Please contact support.",
+      "noUpcoming": "No Upcoming Invoice",
+      "noUpcomingDescription": "No upcoming invoice is available for this subscription.",
+      "stripeError": "Stripe Error",
+      "serverError": "Server Error",
+      "serverErrorDescription": "An error occurred while loading billing information. Please try again.",
+      "cancelFailed": "Failed to cancel subscription"
+    }
   }
 }
 
