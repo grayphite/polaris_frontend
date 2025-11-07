@@ -6,10 +6,13 @@ import { TeamSubscription } from '../../services/authService';
 import Button from './Button';
 
 interface SubscriptionBlockModalProps {
-  subscription: TeamSubscription;
+  subscription: TeamSubscription | null;
+  viewerRole: string;
 }
 
-const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscription }) => {
+type SubscriptionStatus = TeamSubscription['status'] | 'unknown';
+
+const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscription, viewerRole }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const formatDate = (dateString: string | null): string => {
@@ -25,8 +28,8 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
     }
   };
 
-  const getStatusContent = () => {
-    switch (subscription.status) {
+  const getStatusContent = (status: SubscriptionStatus) => {
+    switch (status) {
       case 'past_due':
         return {
           title: t('subscriptionBlock.pastDue.title'),
@@ -96,7 +99,22 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
     }
   };
 
-  const content = getStatusContent();
+  const status: SubscriptionStatus = subscription?.status ?? 'unknown';
+  const content = getStatusContent(status);
+  const statusLabel = t(`subscriptionBlock.status.${status}`, {
+    defaultValue: t('subscriptionBlock.status.unknown'),
+  });
+  const isOwnerView = viewerRole === 'owner';
+  
+  // Get member-specific message based on status
+  const getMemberMessage = () => {
+    if (status === 'canceled') {
+      return t('subscriptionBlock.memberCanceled');
+    }
+    return t('subscriptionBlock.memberBlocked', { status: statusLabel });
+  };
+  
+  const memberMessage = isOwnerView ? null : getMemberMessage();
 
   return (
     <AnimatePresence>
@@ -128,33 +146,43 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
                 {content.title}
               </h3>
 
-              {/* Plan Information */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.plan')}</p>
-                <p className="text-lg font-semibold text-gray-900">{subscription.plan.display_name}</p>
-              </div>
+                {/* Status */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.statusLabel')}</p>
+                  <p className="text-lg font-semibold text-gray-900">{statusLabel}</p>
+                </div>
 
-              {/* Dates */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
-                {subscription.trial_end && (
-                  <div className="mb-2">
-                    <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.trialEndDate')}</p>
-                    <p className="text-sm text-gray-900">{formatDate(subscription.trial_end)}</p>
+                {/* Plan Information - Only show if plan data is available */}
+                {subscription?.plan && (
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.plan')}</p>
+                    <p className="text-lg font-semibold text-gray-900">{subscription.plan.display_name}</p>
                   </div>
                 )}
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.currentPeriodEnd')}</p>
-                  <p className="text-sm text-gray-900">{formatDate(subscription.current_period_end)}</p>
+
+                {/* Dates - Only show for owners */}
+                {subscription && isOwnerView && (
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
+                    {subscription?.trial_end && (
+                      <div className="mb-2">
+                        <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.trialEndDate')}</p>
+                        <p className="text-sm text-gray-900">{formatDate(subscription.trial_end)}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">{t('subscriptionBlock.currentPeriodEnd')}</p>
+                      <p className="text-sm text-gray-900">{formatDate(subscription.current_period_end)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status Message */}
+                <div className="text-gray-600 mb-6">
+                  <p>{isOwnerView ? content.message : memberMessage}</p>
                 </div>
-              </div>
 
-              {/* Status Message */}
-              <p className="text-gray-600 mb-6">
-                {content.message}
-              </p>
-
-              {/* Renew Button - Only for canceled status */}
-              {subscription.status === 'canceled' && (
+              {/* Renew Button - Only for canceled status and owners */}
+              {subscription?.status === 'canceled' && isOwnerView && (
                 <div className="mt-6">
                   <Button
                     variant="primary"

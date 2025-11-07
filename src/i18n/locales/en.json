@@ -610,6 +610,19 @@
       "title": "Subscription Issue",
       "message": "There is an issue with your subscription. Please contact support for assistance."
     },
+    "statusLabel": "Subscription Status",
+    "memberBlocked": "Your team's subscription is currently {{status}}. Contact your team owner to renew the plan and regain access.",
+    "memberCanceled": "Your team owner has canceled the subscription. You no longer have access to the system. Please contact your team owner to discuss renewing the subscription.",
+    "status": {
+      "trialing": "Trialing",
+      "active": "Active",
+      "past_due": "Past due",
+      "incomplete": "Incomplete",
+      "incomplete_expired": "Incomplete (expired)",
+      "canceled": "Canceled",
+      "unpaid": "Unpaid",
+      "unknown": "Unknown"
+    },
     "plan": "Plan",
     "trialEndDate": "Trial End Date",
     "currentPeriodEnd": "Current Period End"

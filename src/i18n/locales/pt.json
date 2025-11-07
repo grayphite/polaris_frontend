@@ -610,6 +610,19 @@
       "title": "Problema com Assinatura",
       "message": "Há um problema com sua assinatura. Por favor, entre em contato com o suporte para obter assistência."
     },
+    "statusLabel": "Status da Assinatura",
+    "memberBlocked": "A assinatura da sua equipe está atualmente {{status}}. Entre em contato com o proprietário da equipe para renovar o plano e recuperar o acesso.",
+    "memberCanceled": "O proprietário da sua equipe cancelou a assinatura. Você não tem mais acesso ao sistema. Entre em contato com o proprietário da equipe para discutir a renovação da assinatura.",
+    "status": {
+      "trialing": "Período de teste",
+      "active": "Ativa",
+      "past_due": "Pagamento atrasado",
+      "incomplete": "Incompleta",
+      "incomplete_expired": "Incompleta (expirada)",
+      "canceled": "Cancelada",
+      "unpaid": "Não paga",
+      "unknown": "Desconhecido"
+    },
     "plan": "Plano",
     "trialEndDate": "Data de Término do Trial",
     "currentPeriodEnd": "Fim do Período Atual"

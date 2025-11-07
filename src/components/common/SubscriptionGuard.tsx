@@ -25,14 +25,13 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
     return null;
   }
 
-  // Members always have access
-  if (user.role === 'member') {
-    return <>{children}</>;
-  }
-
-  // Owners need subscription check
-  // No subscription or empty array - redirect to subscription page (without MainLayout)
+  // No subscription or empty array - redirect owners to subscription page (without MainLayout)
   if (!subscription) {
+    if (user.role !== 'owner') {
+      return (
+        <SubscriptionBlockModal subscription={null} viewerRole={user.role} />
+      );
+    }
     return <Navigate to="/subscription" replace />;
   }
 
@@ -44,7 +43,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   // Invalid subscription status - block with modal
   return (
     <>
-      <SubscriptionBlockModal subscription={subscription} />
+      <SubscriptionBlockModal subscription={subscription} viewerRole={user.role} />
     </>
   );
 };
