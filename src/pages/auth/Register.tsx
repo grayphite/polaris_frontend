@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -8,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { showErrorToast } from '../../utils/toast';
 
 const Register: React.FC = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -50,33 +52,33 @@ const Register: React.FC = () => {
     } = {};
     
     if (!formData.firstName) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = t('validation.required');
       hasErrors = true;
     }
     
     if (!formData.lastName) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = t('validation.required');
       hasErrors = true;
     }
     
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.emailRequired');
       hasErrors = true;
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('validation.emailInvalid');
       hasErrors = true;
     }
     
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.passwordRequired');
       hasErrors = true;
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('validation.passwordMinLength');
       hasErrors = true;
     }
     
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('validation.passwordMismatch');
       hasErrors = true;
     }
     
@@ -90,7 +92,7 @@ const Register: React.FC = () => {
       navigate('/subscription');
     } catch (error) {
       console.error('Registration error:', error);
-      showErrorToast('Registration failed. Please try again.');
+      showErrorToast(t('auth.register.registrationFailed', { tryAgain: t('common.errors.tryAgain') }));
     }
   };
 
@@ -102,17 +104,17 @@ const Register: React.FC = () => {
       className="w-full"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Create an account</h2>
-        <p className="mt-2 text-gray-600">Join Polaris to start your journey</p>
+        <h2 className="text-3xl font-bold text-gray-900">{t('auth.register.title')}</h2>
+        <p className="mt-2 text-gray-600">{t('auth.register.subtitle')}</p>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="First Name"
+            label={t('common.form.firstName')}
             type="text"
             name="firstName"
-            placeholder="John"
+            placeholder={t('auth.register.firstNamePlaceholder')}
             value={formData.firstName}
             onChange={handleChange}
             error={errors.firstName}
@@ -125,10 +127,10 @@ const Register: React.FC = () => {
           />
           
           <Input
-            label="Last Name"
+            label={t('common.form.lastName')}
             type="text"
             name="lastName"
-            placeholder="Doe"
+            placeholder={t('auth.register.lastNamePlaceholder')}
             value={formData.lastName}
             onChange={handleChange}
             error={errors.lastName}
@@ -142,10 +144,10 @@ const Register: React.FC = () => {
         </div>
         
         <Input
-          label="Email Address"
+          label={t('common.form.emailAddress')}
           type="email"
           name="email"
-          placeholder="you@example.com"
+          placeholder={t('auth.register.emailPlaceholder')}
           value={formData.email}
           onChange={handleChange}
           error={errors.email}
@@ -159,10 +161,10 @@ const Register: React.FC = () => {
         />
         
         <Input
-          label="Password"
+          label={t('common.form.password')}
           type={showPassword ? "text" : "password"}
           name="password"
-          placeholder="••••••••"
+          placeholder={t('auth.register.passwordPlaceholder')}
           value={formData.password}
           onChange={handleChange}
           error={errors.password}
@@ -190,15 +192,15 @@ const Register: React.FC = () => {
               )}
             </button>
           }
-          helperText="Password must be at least 8 characters"
+          helperText={t('validation.passwordMinLength')}
           autoComplete="new-password"
         />
         
         <Input
-          label="Confirm Password"
+          label={t('common.form.confirmPassword')}
           type={showConfirmPassword ? "text" : "password"}
           name="confirmPassword"
-          placeholder="••••••••"
+          placeholder={t('auth.register.passwordPlaceholder')}
           value={formData.confirmPassword}
           onChange={handleChange}
           error={errors.confirmPassword}
@@ -237,29 +239,29 @@ const Register: React.FC = () => {
             size="lg"
             isLoading={isLoading}
           >
-            Create account
+            {t('auth.register.submitButton')}
           </Button>
         </div>
       </form>
       
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600">
-          Already have an account?{' '}
+          {t('auth.register.haveAccount')}{' '}
           <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
-            Sign in
+            {t('auth.register.signIn')}
           </Link>
         </p>
       </div>
       
       <div className="mt-6">
         <p className="text-xs text-center text-gray-500">
-          By signing up, you agree to our{' '}
+          {t('auth.register.termsPrefix')}{' '}
           <a href="#" className="text-primary-600 hover:text-primary-500">
-            Terms of Service
+            {t('auth.register.termsLink')}
           </a>{' '}
-          and{' '}
+          {t('auth.register.and')}{' '}
           <a href="#" className="text-primary-600 hover:text-primary-500">
-            Privacy Policy
+            {t('auth.register.privacyLink')}
           </a>
         </p>
       </div>

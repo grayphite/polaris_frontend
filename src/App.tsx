@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import AuthLayout from './layouts/AuthLayout';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ChatInterface from './pages/chat/ChatInterface';
 import CompanyProfile from './pages/profile/CompanyProfile';
 // import Dashboard from './pages/Dashboard';
@@ -24,29 +25,25 @@ import SetupAccount from './pages/auth/SetupAccount';
 import Subscription from './pages/subscription/Subscription';
 import SubscriptionSuccess from './pages/subscription/Success';
 import SubscriptionFailure from './pages/subscription/Failure';
+import SubscriptionDetails from './pages/subscription/SubscriptionDetails';
 import SubscriptionGuard from './components/common/SubscriptionGuard';
 import { ChatProvider } from './context/ChatContext';
-
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // This is a placeholder for actual authentication logic
-  const isAuthenticated = localStorage.getItem('token') !== null;
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
+import ProtectedRoute from './components/common/ProtectedRoute';
+import GuestRoute from './components/common/GuestRoute';
 
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <LanguageProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
-          {/* Auth routes */}
-          <Route element={<AuthLayout />}>
+          {/* Auth routes - only accessible to unauthenticated users */}
+          <Route element={
+            <GuestRoute>
+              <AuthLayout />
+            </GuestRoute>
+          }>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -95,6 +92,9 @@ function App() {
             {/* All routes accessible to all users */}
             <Route path="/members" element={<MembersList />} />
             <Route path="/company-profile" element={<CompanyProfile />} />
+            
+            {/* Owner-only routes */}
+            <Route path="/subscription-details" element={<SubscriptionDetails />} />
           </Route>
           
           {/* Not found route */}
@@ -104,8 +104,9 @@ function App() {
         
         {/* Toast Container */}
         <ToastContainer />
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

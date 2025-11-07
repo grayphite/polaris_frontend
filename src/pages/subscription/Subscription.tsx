@@ -1,18 +1,27 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import Card from '../../components/common/Card';
 import Loader from '../../components/common/Loader';
 import { getPlans, createCheckoutSession, Plan } from '../../services/paymentService';
-import { listTeams, createTeam } from '../../services/teamService';
-import { useAuth } from '../../context/AuthContext';
-import { showErrorToast } from '../../utils/toast';
+import { showErrorToast, showInfoToast } from '../../utils/toast';
 
 const Subscription: React.FC = () => {
+  const { t } = useTranslation();
+  const location = useLocation();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const { user } = useAuth();
+
+  // Show message if redirected from cancellation
+  useEffect(() => {
+    const message = (location.state as any)?.message;
+    if (message) {
+      showInfoToast(message);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     fetchPlans();
@@ -24,64 +33,17 @@ const Subscription: React.FC = () => {
       setPlans(response.plans);
     } catch (error) {
       console.error('Failed to fetch plans:', error);
-      showErrorToast('Failed to load plans. Please try again.');
+      showErrorToast(t('subscription.loadPlansError', { tryAgain: t('common.errors.tryAgain') }));
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function to ensure teamId exists (fetch from API or create if missing)
-  const ensureTeamId = async (): Promise<string | null> => {
-    // First, try to get from localStorage
-    let teamId = localStorage.getItem('teamId');
-    
-    if (teamId) {
-      return teamId;
-    }
-
-    // If not in localStorage, try to fetch from API
-    try {
-      const { teams } = await listTeams({ 
-        page: 1, 
-        per_page: 1,
-        teamsFilter: user?.role === 'owner' ? 'own-teams' : 'enrolled-teams'
-      });
-      
-      if (teams && teams.length > 0) {
-        teamId = String(teams[0].id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-
-      // If no teams exist and user is owner, create a new team
-      if (user && user.role === 'owner') {
-        const firstName = user.firstName || 'User';
-        const teamName = `${firstName} Team 1`;
-        
-        const team = await createTeam({ 
-          name: teamName, 
-          description: 'Default team' 
-        });
-        
-        teamId = String(team.id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-    } catch (error) {
-      console.error('Failed to fetch or create team:', error);
-      showErrorToast('Failed to load team information. Please try again.');
-      return null;
-    }
-
-    return null;
-  };
-
   const handleSubscribe = async (stripeePriceId: string) => {
-    // Ensure teamId exists before proceeding
-    const teamId = await ensureTeamId();
+    const teamId = localStorage.getItem('teamId');
     
     if (!teamId) {
-      showErrorToast('Unable to get team information. Please try logging in again.');
+      showErrorToast(t('subscription.teamInfoError'));
       return;
     }
 
@@ -93,7 +55,7 @@ const Subscription: React.FC = () => {
       window.location.href = response.checkout_url;
     } catch (error) {
       console.error('Failed to create checkout session:', error);
-      showErrorToast('Failed to start checkout. Please try again.');
+      showErrorToast(t('subscription.checkoutError', { tryAgain: t('common.errors.tryAgain') }));
       setCheckoutLoading(null);
     }
   };
@@ -116,10 +78,10 @@ const Subscription: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Choose Your Plan
+            {t('subscription.choosePlan')}
           </h1>
           <p className="text-lg text-gray-600">
-            Select the perfect plan for your team and start your journey
+            {t('subscription.choosePlanSubtitle')}
           </p>
         </div>
 
@@ -140,14 +102,14 @@ const Subscription: React.FC = () => {
                 <div className="mb-6">
                   <div className="flex items-baseline mb-2">
                     <span className="text-sm text-gray-500">
-                      Up to {plan.max_team_members_per_team} team members
+                      {t('subscription.upToMembers', { count: plan.max_team_members_per_team })}
                     </span>
                   </div>
                   <div className="flex items-baseline">
                     <span className="text-sm text-gray-500">
                       {plan.max_projects === -1
-                        ? 'Unlimited projects'
-                        : `${plan.max_projects} projects`}
+                        ? t('subscription.unlimitedProjects')
+                        : t('subscription.projects', { count: plan.max_projects })}
                     </span>
                   </div>
                 </div>
@@ -164,26 +126,26 @@ const Subscription: React.FC = () => {
                           BRL 500.00
                         </span>
                         <span className="ml-2 text-gray-500">
-                          /{price.interval}
+                          {t('subscription.perMonth', { interval: price.interval })}
                         </span>
                       </div>
 
                       {price.trial_days > 0 && (
                         <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-4">
-                          {price.trial_days}-day free trial
+                          {t('subscription.trialDays', { days: price.trial_days })}
                         </div>
                       )}
 
                       <p className="text-sm text-gray-600">
-                        After trial: BRL 500.00/month
+                        {t('subscription.afterTrial', { price: formatPrice(price.amount_cents, price.currency), interval: price.interval })}
                       </p>
                     </div>
 
                     {price.per_seat_amount_cents > 0 && (
                       <div className="bg-gray-50 rounded-lg p-4 mb-4">
                         <p className="text-sm text-gray-700">
-                          <span className="font-medium">Additional team members:</span><br />
-                          {formatPrice(price.per_seat_amount_cents, price.currency)}/{price.interval} per extra member
+                          <span className="font-medium">{t('subscription.additionalMembers')}</span><br />
+                          {t('subscription.perExtraMember', { price: formatPrice(price.per_seat_amount_cents, price.currency), interval: price.interval })}
                         </p>
                       </div>
                     )}
@@ -196,7 +158,7 @@ const Subscription: React.FC = () => {
                       isLoading={checkoutLoading === price.stripe_price_id}
                       onClick={() => handleSubscribe(price.stripe_price_id)}
                     >
-                      Start Free Trial
+                      {t('subscription.startFreeTrial')}
                     </Button>
                   </div>
                 ))}

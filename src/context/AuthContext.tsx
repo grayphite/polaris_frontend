@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI, TeamSubscription } from '../services/authService';
 import { createTeam } from '../services/teamService';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
+import { clearProjectRoleCache } from '../hooks/useProjectRole';
 
 interface User {
   id: string;
@@ -30,6 +31,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUBSCRIPTION_STORAGE_KEY = 'team_subscriptions';
+const TEAM_OWNER_STORAGE_KEY = 'teamOwner';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -61,6 +63,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     localStorage.setItem(SUBSCRIPTION_STORAGE_KEY, JSON.stringify(subscriptions));
+  };
+
+  // Helper to store team info (teamId and owner)
+  const storeTeamInfo = (teams: any[] | undefined) => {
+    if (!teams || teams.length === 0) {
+      localStorage.removeItem('teamId');
+      localStorage.removeItem(TEAM_OWNER_STORAGE_KEY);
+      return;
+    }
+
+    const firstTeam = teams[0];
+    if (firstTeam?.id) {
+      localStorage.setItem('teamId', String(firstTeam.id));
+    }
+
+    if (firstTeam?.owner) {
+      const ownerInfo = {
+        first_name: firstTeam.owner.first_name,
+        last_name: firstTeam.owner.last_name,
+        email: firstTeam.owner.email,
+      };
+      localStorage.setItem(TEAM_OWNER_STORAGE_KEY, JSON.stringify(ownerInfo));
+    }
   };
 
   const [subscription, setSubscription] = useState<TeamSubscription | null>(() => getStoredSubscription());
@@ -116,6 +141,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         storeSubscription(response.team_subscriptions);
         const storedSub = getStoredSubscription();
         setSubscription(storedSub);
+
+        // Store team info (teamId and owner)
+        storeTeamInfo(response.teams);
       } else {
         throw new Error(response.error || 'Login failed');
       }
@@ -159,10 +187,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         storeSubscription(response.team_subscriptions);
         const storedSub = getStoredSubscription();
         setSubscription(storedSub);
-        
-        // Only create a team for owners
-        if (userData.role === 'owner') {
-          await createTeamWithRetry(userData.firstName);
+
+        // Store team info (teamId and owner) if present
+        if (response.teams && response.teams.length > 0) {
+          storeTeamInfo(response.teams);
+        } else {
+          // Only create a team for owners if teams array is not provided
+          if (userData.role === 'owner') {
+            await createTeamWithRetry(userData.firstName);
+          }
         }
       } else {
         throw new Error(response.error || 'Registration failed');
@@ -184,10 +217,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const team = await createTeam({ name: teamName, description: '' });
         console.log(`Team "${teamName}" created successfully`);
         
-        // Store teamId in localStorage
-        if (team && team.id) {
-          localStorage.setItem('teamId', team.id.toString());
-        }
+        // Store team info (teamId and owner) using storeTeamInfo
+        // The createTeam API response includes owner object even though TeamDTO type doesn't reflect it
+        storeTeamInfo([team as any]);
         
         // Optional: Show subtle success message
         // showSuccessToast('Team created successfully');
@@ -213,8 +245,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user');
     localStorage.removeItem('teamId');
     localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
+    localStorage.removeItem(TEAM_OWNER_STORAGE_KEY);
     setUser(null);
     setSubscription(null);
+    
+    // Clear project role cache when user logs out
+    // This prevents cached roles from being used by the next user
+    clearProjectRoleCache();
   };
 
   const refreshSubscription = (subscriptions: TeamSubscription[] | undefined) => {

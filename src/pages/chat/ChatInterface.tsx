@@ -1,5 +1,7 @@
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
+import { useProjectRole } from '../../hooks/useProjectRole';
 import { fetchChatById, sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -53,6 +55,7 @@ const sortMessagesByTimestamp = (messages: Message[]) => {
 };
 
 const ChatInterface: React.FC = () => {
+  const { t } = useTranslation();
   const { projectId, chatId } = useParams<{ projectId: string; chatId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -84,6 +87,7 @@ const ChatInterface: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   const { chatsByProject, hydrateProjectChats, updateChat, deleteChat } = useChats();
+  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -209,7 +213,7 @@ const ChatInterface: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to load message history:', error);
-        showErrorToast('Failed to load messages. Please try again.');
+        showErrorToast(t('chat.interface.loadMessagesError', { tryAgain: t('common.errors.tryAgain') }));
         setMessages([]); // Clear messages on error to show empty state
         setHasMoreMessages(false);
       } finally {
@@ -403,7 +407,7 @@ const ChatInterface: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load more messages:', error);
-      showErrorToast('Failed to load more messages.');
+      showErrorToast(t('chat.interface.loadMoreError'));
     } finally {
       setIsLoadingMore(false);
     }
@@ -478,13 +482,13 @@ const ChatInterface: React.FC = () => {
       try {
         // Validate file type based on selection
         if (fileType === 'document' && !isValidDocumentType(file)) {
-          showErrorToast(`Unsupported document type. Please upload a .pdf, or .txt file`);
+          showErrorToast(t('chat.interface.unsupportedDocument'));
           setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
           continue;
         }
         
         if (fileType === 'image' && !isValidImageType(file)) {
-          showErrorToast(`Unsupported image type. Please upload a .gif, .jpg,.jpeg, .png, or .webp file.`);
+          showErrorToast(t('chat.interface.unsupportedImage'));
           setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
           continue;
         }
@@ -504,12 +508,12 @@ const ChatInterface: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to upload file:', error);
-        showErrorToast(`Failed to upload ${file.name}. Please try again.`);
+        showErrorToast(t('chat.interface.uploadError', { filename: file.name, tryAgain: t('common.errors.tryAgain') }));
         
         // Update placeholder to show error
         setAttachedFiles(prev => prev.map((f, idx) => 
           idx === placeholderIndex 
-            ? { ...f, uploadStatus: 'error' as const, uploadError: 'Upload failed' }
+            ? { ...f, uploadStatus: 'error' as const, uploadError: t('chat.interface.uploadFailed') }
             : f
         ));
       }
@@ -583,7 +587,7 @@ const ChatInterface: React.FC = () => {
       setAttachedFiles(prev => prev.filter((_, i) => i !== index));
     } catch (error) {
       console.error('Failed to delete file:', error);
-      showErrorToast(`Failed to delete ${file.filename}. Please try again.`);
+      showErrorToast(t('chat.interface.deleteFileError', { filename: file.filename, tryAgain: t('common.errors.tryAgain') }));
     }
   };
   
@@ -595,7 +599,7 @@ const ChatInterface: React.FC = () => {
     // Check if any files are still uploading
     const hasUploadingFiles = attachedFiles.some(f => f.uploadStatus === 'uploading');
     if (hasUploadingFiles) {
-      showErrorToast('Please wait for all files to finish uploading.');
+      showErrorToast(t('chat.interface.waitForUploads'));
       return;
     }
     
@@ -736,7 +740,7 @@ const ChatInterface: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      showErrorToast('Failed to send message. Please try again.');
+      showErrorToast(t('chat.interface.sendError', { tryAgain: t('common.errors.tryAgain') }));
       
       // Remove the placeholder assistant message on error
       setMessages((prev) => prev.filter(m => m.id !== assistantMessageId));
@@ -759,7 +763,7 @@ const ChatInterface: React.FC = () => {
             <button
               onClick={() => navigate(`/projects/${projectId}`)}
               className="p-2 mr-2 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Back to project"
+              title={t('chat.interface.backToProject')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -799,7 +803,7 @@ const ChatInterface: React.FC = () => {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p className="text-sm text-gray-500">Loading conversation...</p>
+              <p className="text-sm text-gray-500">{t('chat.interface.loadingConversation')}</p>
             </div>
           </div>
         )}
@@ -811,8 +815,8 @@ const ChatInterface: React.FC = () => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="text-lg font-medium mb-1">Start a conversation</p>
-              <p className="text-sm">Send a message to begin chatting</p>
+              <p className="text-lg font-medium mb-1">{t('chat.interface.startConversation')}</p>
+              <p className="text-sm">{t('chat.interface.startConversationMessage')}</p>
             </div>
           </div>
         )}
@@ -908,7 +912,7 @@ const ChatInterface: React.FC = () => {
                                     onClick={() => {
                                       const success = downloadRagFile(source);
                                       if (!success) {
-                                        showErrorToast(`Could not download file: ${source}`);
+                                        showErrorToast(t('chat.interface.downloadError', { filename: source }));
                                       }
                                     }}
                                     className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
@@ -949,10 +953,11 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
         
-        {/* Input area */}
-        <div className="border-t border-gray-200 p-4">
-          <div className="max-w-3xl mx-auto">
-          <form onSubmit={handleSubmit} className="flex items-end space-x-2">
+        {/* Input area - Only visible for owner or editor (hidden while loading) */}
+        {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') ? (
+          <div className="border-t border-gray-200 p-4">
+            <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             <div className="flex-1 rounded-lg border border-gray-200 p-2">
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (
@@ -994,16 +999,16 @@ const ChatInterface: React.FC = () => {
                               file.uploadStatus === 'error' ? 'text-red-600' :
                               'text-gray-500'
                             }`}>
-                              {file.uploadStatus === 'uploading' ? 'Uploading...' :
-                               file.uploadStatus === 'error' ? 'Upload failed' :
-                               `${(file.size_bytes / 1024).toFixed(1)} KB`}
+                              {file.uploadStatus === 'uploading' ? t('chat.interface.uploading') :
+                               file.uploadStatus === 'error' ? t('chat.interface.uploadFailed') :
+                               t('chat.interface.fileSize', { size: (file.size_bytes / 1024).toFixed(1) })}
                             </span>
                           </div>
                           <button
                             type="button"
                             onClick={() => removeAttachedFile(index)}
                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg"
-                            title="Remove file"
+                            title={t('chat.interface.removeFile')}
                             disabled={file.uploadStatus === 'uploading'}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -1041,7 +1046,7 @@ const ChatInterface: React.FC = () => {
                     type="button"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="p-1.5 rounded-full hover:bg-gray-200 shrink-0"
-                    title="Add attachments"
+                    title={t('chat.interface.addAttachments')}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -1062,7 +1067,7 @@ const ChatInterface: React.FC = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
                         </svg>
-                        <span>Add Files</span>
+                        <span>{t('chat.interface.addFiles')}</span>
                       </button>
                       <button
                         type="button"
@@ -1075,7 +1080,7 @@ const ChatInterface: React.FC = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                         </svg>
-                        <span>Add Photos</span>
+                        <span>{t('chat.interface.addPhotos')}</span>
                       </button>
                     </div>
                   )}
@@ -1083,7 +1088,7 @@ const ChatInterface: React.FC = () => {
                 <textarea
                   ref={textareaRef}
                   className="w-full bg-transparent resize-none focus:outline-none py-1 max-h-24 overflow-y-auto scrollbar-thin"
-                  placeholder="Type your message..."
+                  placeholder={t('chat.interface.typeMessage')}
                   rows={1}
                   value={input}
                   onChange={handleInputChange}
@@ -1099,7 +1104,7 @@ const ChatInterface: React.FC = () => {
                   type="submit"
                   disabled={(!isStreamingComplete && streamingMessageId !== null) || !input.trim()}
                   className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
-                  title="Send"
+                  title={t('chat.interface.send')}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform -rotate-90" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
@@ -1108,9 +1113,16 @@ const ChatInterface: React.FC = () => {
               </div>
             </div>
             
-          </form>
+            </form>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="border-t border-gray-200 p-4">
+            <div className="max-w-3xl mx-auto text-center text-gray-500 text-sm">
+              <p>{t('chat.interface.noPermission')}</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

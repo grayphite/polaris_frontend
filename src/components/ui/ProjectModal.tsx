@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useProjects } from '../../context/ProjectsContext';
 
 interface ProjectModalProps {
@@ -21,6 +22,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   initialDescription = '',
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const [projectName, setProjectName] = useState(initialName);
   const [projectDescription, setProjectDescription] = useState(initialDescription);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,7 +78,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
       <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-xl mx-4">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">{mode === 'edit' ? 'Edit Project' : 'Create Project'}</h3>
+          <h3 className="text-lg font-medium text-gray-900">{mode === 'edit' ? t('projects.modal.editTitle') : t('projects.modal.createTitle')}</h3>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
@@ -88,19 +90,19 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Project name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('projects.modal.nameLabel')}</label>
           <input
             type="text"
             className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            placeholder="e.g. Marketing Website Redesign"
+            placeholder={t('projects.modal.namePlaceholder')}
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             autoFocus
           />
-          <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">Description (optional)</label>
+          <label className="block text-sm font-medium text-gray-700 mt-4 mb-1">{t('projects.modal.descriptionLabel')} (optional)</label>
           <textarea
             className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm resize-none max-h-40 overflow-y-auto scrollbar-thin"
-            placeholder="Brief description, scope, goals..."
+            placeholder={t('projects.modal.descriptionPlaceholder')}
             rows={4}
             value={projectDescription}
             onChange={(e) => setProjectDescription(e.target.value)}
@@ -112,14 +114,14 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
               onClick={handleClose}
               className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 text-sm rounded-md bg-primary-600 hover:bg-primary-700 text-white"
               disabled={!projectName.trim() || isSubmitting}
             >
-              {isSubmitting ? 'Creating…' : (mode === 'edit' ? 'Save' : 'Create')}
+              {isSubmitting ? t('common.creating') : (mode === 'edit' ? t('projects.modal.editButton') : t('projects.modal.createButton'))}
             </button>
           </div>
         </form>

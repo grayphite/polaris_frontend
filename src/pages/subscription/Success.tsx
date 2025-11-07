@@ -1,74 +1,29 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { getSubscriptionStatus } from '../../services/paymentService';
 import { TeamSubscription } from '../../services/authService';
-import { listTeams, createTeam } from '../../services/teamService';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 
 const Success: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { refreshSubscription, user } = useAuth();
+  const { refreshSubscription } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(true);
-
-  // Helper function to ensure teamId exists (fetch from API or create if missing)
-  const ensureTeamId = async (): Promise<string | null> => {
-    // First, try to get from localStorage
-    let teamId = localStorage.getItem('teamId');
-    
-    if (teamId) {
-      return teamId;
-    }
-
-    // If not in localStorage, try to fetch from API
-    try {
-      const { teams } = await listTeams({ 
-        page: 1, 
-        per_page: 1,
-        teamsFilter: user?.role === 'owner' ? 'own-teams' : 'enrolled-teams'
-      });
-      
-      if (teams && teams.length > 0) {
-        teamId = String(teams[0].id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-
-      // If no teams exist and user is owner, create a new team
-      if (user && user.role === 'owner') {
-        const firstName = user.firstName || 'User';
-        const teamName = `${firstName} Team 1`;
-        
-        const team = await createTeam({ 
-          name: teamName, 
-          description: 'Default team' 
-        });
-        
-        teamId = String(team.id);
-        localStorage.setItem('teamId', teamId);
-        return teamId;
-      }
-    } catch (error) {
-      console.error('Failed to fetch or create team:', error);
-      showErrorToast('Failed to load team information. Please try again.');
-      return null;
-    }
-
-    return null;
-  };
 
   // Refresh subscription data after successful payment
   useEffect(() => {
     const refreshSubscriptionData = async () => {
       try {
-        // Ensure teamId exists before fetching subscription
-        const teamId = await ensureTeamId();
+        const teamId = localStorage.getItem('teamId');
         
         if (!teamId) {
-          console.error('Team ID not found and could not be created');
+          console.error('Team ID not found');
+          showErrorToast(t('subscription.teamInfoError'));
           setIsRefreshing(false);
           return;
         }
@@ -107,7 +62,7 @@ const Success: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to refresh subscription:', error);
-        showErrorToast('Failed to refresh subscription data. You may need to refresh the page.');
+        showErrorToast(t('subscription.success.refreshError'));
       } finally {
         setIsRefreshing(false);
       }
@@ -153,19 +108,19 @@ const Success: React.FC = () => {
 
           {/* Success Message */}
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Subscription Successful!
+            {t('subscription.success.title')}
           </h2>
           <p className="text-gray-600 mb-2">
-            Thank you for subscribing to Polaris.
+            {t('subscription.success.message1')}
           </p>
           <p className="text-gray-600 mb-8">
-            Your subscription is now active and you can start using all the features.
+            {t('subscription.success.message2')}
           </p>
 
           {/* Trial Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
             <p className="text-sm text-blue-800">
-              Your free trial has started! You won't be charged until the trial period ends.
+              {t('subscription.success.trialMessage')}
             </p>
           </div>
 
@@ -176,7 +131,7 @@ const Success: React.FC = () => {
             size="lg"
             onClick={() => navigate('/projects')}
           >
-            Go to Dashboard
+            {t('subscription.success.goToDashboard')}
           </Button>
         </div>
       </motion.div>

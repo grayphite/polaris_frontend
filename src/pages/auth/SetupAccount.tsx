@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -10,6 +11,7 @@ import { showErrorToast, showInfoToast } from '../../utils/toast';
 import { getInvitationByToken, acceptInvitation, InvitationDetailDTO } from '../../services/invitationService';
 
 const SetupAccount: React.FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -43,7 +45,7 @@ const SetupAccount: React.FC = () => {
 
         // Handle different invitation statuses
         if (invitation.status === 'accepted') {
-          showInfoToast('You already accepted the invitation');
+          showInfoToast(t('auth.setupAccount.alreadyAccepted'));
           navigate('/login');
           return;
         }
@@ -53,7 +55,7 @@ const SetupAccount: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to fetch invitation:', error);
-        showErrorToast('Invalid or expired invitation link.');
+        showErrorToast(t('auth.setupAccount.invalidInvitation'));
         navigate('/login');
       } finally {
         setIsLoadingInvitation(false);
@@ -61,7 +63,7 @@ const SetupAccount: React.FC = () => {
     };
 
     fetchInvitation();
-  }, [token, navigate]);
+  }, [token, navigate, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,25 +76,25 @@ const SetupAccount: React.FC = () => {
     const newErrors: { firstName?: string; lastName?: string; password?: string; confirmPassword?: string } = {};
     
     if (!firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = t('validation.required');
       hasErrors = true;
     }
     
     if (!lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = t('validation.required');
       hasErrors = true;
     }
     
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.passwordRequired');
       hasErrors = true;
     } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('validation.passwordMinLength');
       hasErrors = true;
     }
     
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('validation.passwordMismatch');
       hasErrors = true;
     }
     
@@ -112,7 +114,7 @@ const SetupAccount: React.FC = () => {
       navigate('/projects');
     } catch (error) {
       console.error('Setup account error:', error);
-      showErrorToast('Failed to set up account. Please try again.');
+      showErrorToast(t('auth.setupAccount.setupFailed', { tryAgain: t('common.errors.tryAgain') }));
     }
   };
 
@@ -124,7 +126,7 @@ const SetupAccount: React.FC = () => {
         transition={{ duration: 0.5 }}
         className="w-full text-center"
       >
-        <p className="text-gray-600">Loading invitation...</p>
+        <p className="text-gray-600">{t('auth.setupAccount.loadingInvitation')}</p>
       </motion.div>
     );
   }
@@ -151,15 +153,15 @@ const SetupAccount: React.FC = () => {
         className="w-full"
       >
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Set up your account</h2>
-          <p className="mt-2 text-gray-600">Create your password to get started</p>
+          <h2 className="text-3xl font-bold text-gray-900">{t('auth.setupAccount.title')}</h2>
+          <p className="mt-2 text-gray-600">{t('auth.setupAccount.subtitle')}</p>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Email"
+            label={t('common.form.email')}
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('auth.login.emailPlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={true}
@@ -172,9 +174,9 @@ const SetupAccount: React.FC = () => {
           />
           
           <Input
-            label="First Name"
+            label={t('common.form.firstName')}
             type="text"
-            placeholder="John"
+            placeholder={t('auth.register.firstNamePlaceholder')}
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             error={errors.firstName}
@@ -187,9 +189,9 @@ const SetupAccount: React.FC = () => {
           />
           
           <Input
-            label="Last Name"
+            label={t('common.form.lastName')}
             type="text"
-            placeholder="Doe"
+            placeholder={t('auth.register.lastNamePlaceholder')}
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             error={errors.lastName}
@@ -202,9 +204,9 @@ const SetupAccount: React.FC = () => {
           />
           
           <Input
-            label="Password"
+            label={t('common.form.password')}
             type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
+            placeholder={t('auth.login.passwordPlaceholder')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={errors.password}
@@ -232,14 +234,14 @@ const SetupAccount: React.FC = () => {
                 )}
               </button>
             }
-            helperText="Password must be at least 8 characters"
+            helperText={t('validation.passwordMinLength')}
             autoComplete="new-password"
           />
           
           <Input
-            label="Confirm Password"
+            label={t('common.form.confirmPassword')}
             type={showConfirmPassword ? "text" : "password"}
-            placeholder="••••••••"
+            placeholder={t('auth.login.passwordPlaceholder')}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             error={errors.confirmPassword}
@@ -278,7 +280,7 @@ const SetupAccount: React.FC = () => {
               size="lg"
               isLoading={isLoading}
             >
-              Set up account
+              {t('auth.setupAccount.submitButton')}
             </Button>
           </div>
         </form>

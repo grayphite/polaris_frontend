@@ -34,6 +34,27 @@ export interface TeamSubscription {
   plan: TeamSubscriptionPlan;
   price: TeamSubscriptionPrice;
   billing_user_id: number;
+  cancel_at_period_end?: boolean;
+  canceled_at?: string | null;
+}
+
+export interface TeamOwner {
+  id: number;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at?: string;
+  created_by: number;
+  is_deleted: boolean;
+  owner: TeamOwner;
 }
 
 export interface RegisterResponse {
@@ -43,6 +64,7 @@ export interface RegisterResponse {
   token?: string;
   error?: string;
   team_subscriptions?: TeamSubscription[];
+  teams?: Team[];
 }
 
 export interface LoginResponse {
@@ -52,6 +74,7 @@ export interface LoginResponse {
   token?: string;
   error?: string;
   team_subscriptions?: TeamSubscription[];
+  teams?: Team[];
 }
 
 export async function registerUser(userData: RegisterUserData): Promise<RegisterResponse> {

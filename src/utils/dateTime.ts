@@ -4,7 +4,11 @@
  * @param timestamp - Date/time string from backend
  * @returns UTC-formatted ISO string
  */
-const normalizeToUTC = (timestamp: string): string => {
+const normalizeToUTC = (timestamp: string | null | undefined): string | null => {
+  if (!timestamp) {
+    return null;
+  }
+  
   const normalized = timestamp.trim();
   
   // Check if timestamp already has timezone info (Z, +, or - after position 10)
@@ -27,12 +31,25 @@ const normalizeToUTC = (timestamp: string): string => {
 
 /**
  * Formats a date string (UTC from backend) to a localized date format
- * @param date - ISO date string in UTC format
- * @returns Formatted date string in user's local timezone (e.g., "Jan 15, 2024")
+ * @param date - ISO date string in UTC format (can be null or undefined)
+ * @returns Formatted date string in user's local timezone (e.g., "Jan 15, 2024") or "N/A" if date is null/undefined
  */
-export const formatDate = (date: string): string => {
+export const formatDate = (date: string | null | undefined): string => {
+  if (!date) {
+    return 'N/A';
+  }
+  
   const utcTimestamp = normalizeToUTC(date);
+  if (!utcTimestamp) {
+    return 'N/A';
+  }
+  
   const dateObj = new Date(utcTimestamp);
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'N/A';
+  }
   
   return dateObj.toLocaleDateString(undefined, {
     year: 'numeric',
@@ -43,12 +60,25 @@ export const formatDate = (date: string): string => {
 
 /**
  * Formats a time string (UTC from backend) to a localized time format
- * @param time - ISO date string in UTC format
- * @returns Formatted time string in user's local timezone (e.g., "02:30 PM")
+ * @param time - ISO date string in UTC format (can be null or undefined)
+ * @returns Formatted time string in user's local timezone (e.g., "02:30 PM") or "N/A" if time is null/undefined
  */
-export const formatTime = (time: string): string => {
+export const formatTime = (time: string | null | undefined): string => {
+  if (!time) {
+    return 'N/A';
+  }
+  
   const utcTimestamp = normalizeToUTC(time);
+  if (!utcTimestamp) {
+    return 'N/A';
+  }
+  
   const dateObj = new Date(utcTimestamp);
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'N/A';
+  }
   
   return dateObj.toLocaleTimeString(undefined, {
     hour: '2-digit',
