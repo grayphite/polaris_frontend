@@ -136,6 +136,16 @@ export interface CancelSubscriptionResponse {
   };
 }
 
+export interface ResumeSubscriptionResponse {
+  success: boolean;
+  subscription: {
+    status: string;
+    cancel_at_period_end: boolean;
+    current_period_end: string;
+    canceled_at: string | null;
+  };
+}
+
 // API Functions
 export async function getPlans(): Promise<PlansResponse> {
   return makeRequest<PlansResponse>('/plans', {
@@ -178,6 +188,14 @@ export async function cancelSubscription(
   return makeRequest<CancelSubscriptionResponse>(`/subscriptions/${teamId}/cancel`, {
     method: 'POST',
     data: { cancel_at_period_end: cancelAtPeriodEnd },
+  });
+}
+
+export async function resumeSubscription(
+  teamId: string
+): Promise<ResumeSubscriptionResponse> {
+  return makeRequest<ResumeSubscriptionResponse>(`/subscriptions/${teamId}/resume`, {
+    method: 'POST',
   });
 }
 

@@ -12,6 +12,7 @@ import DeleteInvitationModal from '../../components/ui/DeleteInvitationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useInvitations } from '../../context/InvitationsContext';
 import { getBillingSummary, BillingSummaryResponse } from '../../services/paymentService';
+import { formatLineItemDescription } from '../../utils/billing';
 
 type TableRow = {
   id: string;
@@ -261,7 +262,7 @@ const MembersList: React.FC = () => {
                       {/* Plan price (first item) */}
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-700">
-                          {billingData.upcoming_invoice.line_items[0].description}
+                          {formatLineItemDescription(billingData.upcoming_invoice.line_items[0])}
                         </span>
                         <span className="text-sm font-medium text-gray-900">
                           {formatPrice(billingData.upcoming_invoice.line_items[0].amount, billingData.upcoming_invoice.line_items[0].currency)}
@@ -271,7 +272,7 @@ const MembersList: React.FC = () => {
                       {billingData.upcoming_invoice.line_items.slice(1).map((item) => (
                         <div key={item.id} className="flex justify-between items-center">
                           <span className="text-sm text-gray-700">
-                            {item.description}
+                            {formatLineItemDescription(item)}
                           </span>
                           <span className="text-sm font-medium text-gray-900">
                             {formatPrice(item.amount, item.currency)}

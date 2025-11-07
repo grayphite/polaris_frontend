@@ -438,7 +438,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
                 {/* <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/projects')}>Polaris</h1> */}
-                <img src={logo} alt="Polaris" className='w-30 h-12'/>
+                <img src={logo} alt="Polaris" className='w-30 h-12 cursor-pointer' onClick={() => navigate('/projects')} />
                 <button 
                   onClick={onToggle}
                   className="md:hidden text-gray-400 hover:text-white"

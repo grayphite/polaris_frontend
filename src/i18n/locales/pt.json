@@ -467,9 +467,9 @@
     "emailRequired": "Por favor, insira um endereço de e-mail.",
     "inviteFailed": "Falha ao enviar convite. {{tryAgain}}",
     "missingFirstName": "Seu perfil está sem o primeiro nome. Por favor, atualize seu perfil.",
-    "deleteTitle": "Excluir Convite",
-    "deleteMessage": "Tem certeza de que deseja excluir o convite para {{email}}? Esta ação não pode ser desfeita.",
-    "deleteMessageGeneric": "Tem certeza de que deseja excluir este convite? Esta ação não pode ser desfeita."
+    "deleteTitle": "Excluir Membro",
+    "deleteMessage": "Tem certeza de que deseja excluir o membro {{email}}? Esta ação não pode ser desfeita.",
+    "deleteMessageGeneric": "Tem certeza de que deseja excluir este membro? Esta ação não pode ser desfeita."
   },
   "emptyState": {
     "noData": "Nenhum dado disponível",
@@ -549,7 +549,7 @@
     "projectUpdateFailed": "Falha ao atualizar projeto",
     "projectDeleted": "Projeto Excluído com Sucesso!",
     "projectDeleteFailed": "Falha ao excluir projeto",
-    "invitationDeleted": "Convite excluído",
+    "invitationDeleted": "Membro Excluído com Sucesso!",
     "invitationDeleteFailed": "Falha ao excluir convite",
     "loadInvitationsFailed": "Falha ao carregar convites",
     "loadMembersFailed": "Falha ao carregar membros",
@@ -654,6 +654,8 @@
     "hideDetails": "Ocultar Detalhes",
     "cancelSubscription": "Cancelar Assinatura",
     "willCancelAtPeriodEnd": "Será cancelado no final do período",
+    "resumeSubscription": "Retomar Assinatura",
+    "resuming": "Retomando...",
     "confirmCancel": "Confirmar Cancelamento",
     "cancelling": "Cancelando...",
     "completePayment": "Completar Pagamento",
@@ -680,7 +682,12 @@
       "unpaid": "Pagamento falhou — Atualize o pagamento e reative"
     },
     "success": {
-      "cancelled": "Assinatura cancelada com sucesso"
+      "cancelled": "Assinatura cancelada com sucesso",
+      "resumed": "Assinatura retomada com sucesso"
+    },
+    "cancellationNotice": {
+      "title": "Assinatura Agendada para Cancelamento",
+      "message": "Sua assinatura está agendada para ser cancelada no final do período de cobrança atual. Se mudar de ideia, você pode retomá-la a qualquer momento antes do término do período."
     },
     "errors": {
       "noTeamId": "ID da equipe não encontrado",
@@ -694,7 +701,8 @@
       "stripeError": "Erro do Stripe",
       "serverError": "Erro do Servidor",
       "serverErrorDescription": "Ocorreu um erro ao carregar as informações de cobrança. Tente novamente.",
-      "cancelFailed": "Falha ao cancelar assinatura"
+      "cancelFailed": "Falha ao cancelar assinatura",
+      "resumeFailed": "Falha ao retomar assinatura"
     }
   }
 }

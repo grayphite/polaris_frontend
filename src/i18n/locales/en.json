@@ -467,9 +467,9 @@
     "emailRequired": "Please enter an email address.",
     "inviteFailed": "Failed to send invitation. {{tryAgain}}",
     "missingFirstName": "Your profile is missing first name. Please update your profile.",
-    "deleteTitle": "Delete Invitation",
-    "deleteMessage": "Are you sure you want to delete the invitation for {{email}}? This action cannot be undone.",
-    "deleteMessageGeneric": "Are you sure you want to delete this invitation? This action cannot be undone."
+    "deleteTitle": "Delete Member",
+    "deleteMessage": "Are you sure you want to delete the member {{email}}? This action cannot be undone.",
+    "deleteMessageGeneric": "Are you sure you want to delete this member? This action cannot be undone."
   },
   "emptyState": {
     "noData": "No data available",
@@ -549,7 +549,7 @@
     "projectUpdateFailed": "Failed to update project",
     "projectDeleted": "Project Deleted Successfully!",
     "projectDeleteFailed": "Failed to delete project",
-    "invitationDeleted": "Invitation deleted",
+    "invitationDeleted": "Member Deleted Successfully!",
     "invitationDeleteFailed": "Failed to delete invitation",
     "loadInvitationsFailed": "Failed to load invitations",
     "loadMembersFailed": "Failed to load members",
@@ -654,6 +654,8 @@
     "hideDetails": "Hide Details",
     "cancelSubscription": "Cancel Subscription",
     "willCancelAtPeriodEnd": "Will be Cancelled at Period End",
+    "resumeSubscription": "Resume Subscription",
+    "resuming": "Resuming...",
     "confirmCancel": "Confirm Cancellation",
     "cancelling": "Cancelling...",
     "completePayment": "Complete Payment",
@@ -680,7 +682,12 @@
       "unpaid": "Payment failed — Update payment and reactivate"
     },
     "success": {
-      "cancelled": "Subscription cancelled successfully"
+      "cancelled": "Subscription cancelled successfully",
+      "resumed": "Subscription resumed successfully"
+    },
+    "cancellationNotice": {
+      "title": "Subscription Scheduled for Cancellation",
+      "message": "Your subscription is scheduled to cancel at the end of the current billing period. If you change your mind, you can resume it anytime before the period ends."
     },
     "errors": {
       "noTeamId": "Team ID not found",
@@ -694,7 +701,8 @@
       "stripeError": "Stripe Error",
       "serverError": "Server Error",
       "serverErrorDescription": "An error occurred while loading billing information. Please try again.",
-      "cancelFailed": "Failed to cancel subscription"
+      "cancelFailed": "Failed to cancel subscription",
+      "resumeFailed": "Failed to resume subscription"
     }
   }
 }

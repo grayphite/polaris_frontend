@@ -8,18 +8,20 @@ import Loader from '../../components/common/Loader';
 import EmptyState from '../../components/common/EmptyState';
 import Button from '../../components/ui/Button';
 import CancelSubscriptionModal from '../../components/ui/CancelSubscriptionModal';
-import { getBillingSummary, Invoice, BillingSummaryResponse } from '../../services/paymentService';
-import { showErrorToast } from '../../utils/toast';
+import { getBillingSummary, Invoice, BillingSummaryResponse, resumeSubscription } from '../../services/paymentService';
+import { showErrorToast, showSuccessToast } from '../../utils/toast';
 import { formatDate } from '../../utils/dateTime';
+import { formatLineItemDescription } from '../../utils/billing';
 
 const SubscriptionDetails: React.FC = () => {
   const { t } = useTranslation();
-  const { user, subscription } = useAuth();
+  const { user, subscription, refreshSubscription } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [billingData, setBillingData] = useState<BillingSummaryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
 
   // Redirect if not owner
   useEffect(() => {
@@ -144,6 +146,39 @@ const SubscriptionDetails: React.FC = () => {
     // Modal handles redirect if subscription is canceled immediately
   };
 
+  const handleResumeSubscription = async () => {
+    const teamId = localStorage.getItem('teamId');
+    if (!teamId) {
+      showErrorToast(t('billing.errors.noTeamId'));
+      return;
+    }
+
+    setIsResuming(true);
+    try {
+      const response = await resumeSubscription(teamId);
+      
+      // Update subscription status from resume response
+      if (subscription && response.subscription) {
+        const updatedSubscription = {
+          ...subscription,
+          status: response.subscription.status as 'trialing' | 'active' | 'past_due' | 'incomplete' | 'incomplete_expired' | 'canceled' | 'unpaid',
+          current_period_end: response.subscription.current_period_end,
+          cancel_at_period_end: response.subscription.cancel_at_period_end,
+          canceled_at: response.subscription.canceled_at,
+        };
+        refreshSubscription([updatedSubscription]);
+      }
+
+      showSuccessToast(t('billing.success.resumed'));
+      await fetchData();
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || error?.message || t('billing.errors.resumeFailed');
+      showErrorToast(errorMessage);
+    } finally {
+      setIsResuming(false);
+    }
+  };
+
   if (!user || user.role !== 'owner') {
     return null;
   }
@@ -235,7 +270,7 @@ const SubscriptionDetails: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {lineItems.map((item) => (
               <tr key={item.id}>
-                <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">{formatLineItemDescription(item)}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.quantity}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 text-right">
                   {formatPrice(item.amount, item.currency)}
@@ -269,18 +304,29 @@ const SubscriptionDetails: React.FC = () => {
         subtitle={t('billing.subtitle')}
         actions={
           isScheduledForCancellation ? (
-            <Button variant="outline" disabled>
-              {t('billing.willCancelAtPeriodEnd')}
-            </Button>
-          ) : shouldShowCancelButton ? (
-            <Button variant="danger" onClick={() => setCancelModalOpen(true)}>
-              {t('billing.cancelSubscription')}
+            <Button 
+              variant="primary" 
+              onClick={handleResumeSubscription}
+              isLoading={isResuming}
+            >
+              {t('billing.resumeSubscription')}
             </Button>
           ) : null
         }
       />
 
       <div className="space-y-6">
+        {/* Cancellation Notice */}
+        {isScheduledForCancellation && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-900 font-medium mb-1">
+              {t('billing.cancellationNotice.title')}
+            </p>
+            <p className="text-sm text-blue-700">
+              {t('billing.cancellationNotice.message')}
+            </p>
+          </div>
+        )}
         {/* Subscription Status Section */}
         {/* {statusInfo && (
           <Card>
@@ -309,7 +355,7 @@ const SubscriptionDetails: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {current_invoice.line_items[0]?.price?.nickname || current_invoice.line_items[0]?.description || 'N/A'}
+                    {current_invoice.line_items[0] ? formatLineItemDescription(current_invoice.line_items[0]) : 'N/A'}
                   </h3>
                 </div>
                 {current_invoice.status === 'paid' && (
@@ -390,6 +436,19 @@ const SubscriptionDetails: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* Cancel Subscription Button - Bottom of page */}
+      {shouldShowCancelButton && (
+        <div className="mt-8 flex justify-end">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setCancelModalOpen(true)}
+          >
+            {t('billing.cancelSubscription')}
+          </Button>
+        </div>
+      )}
 
       {localStorage.getItem('teamId') && shouldShowCancelButton && (
         <CancelSubscriptionModal
