@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeamSubscription } from '../../services/authService';
+import { useLogout } from '../../utils/auth';
 import Button from './Button';
 
 interface SubscriptionBlockModalProps {
@@ -15,6 +16,7 @@ type SubscriptionStatus = TeamSubscription['status'] | 'unknown';
 const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscription, viewerRole }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const handleLogout = useLogout();
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return 'N/A';
     try {
@@ -181,9 +183,10 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
                   <p>{isOwnerView ? content.message : memberMessage}</p>
                 </div>
 
-              {/* Renew Button - Only for canceled status and owners */}
-              {subscription?.status === 'canceled' && isOwnerView && (
-                <div className="mt-6">
+              {/* Action Buttons */}
+              <div className="mt-6 space-y-3">
+                {/* Renew Button - Only for canceled status and owners */}
+                {subscription?.status === 'canceled' && isOwnerView && (
                   <Button
                     variant="primary"
                     size="lg"
@@ -192,8 +195,18 @@ const SubscriptionBlockModal: React.FC<SubscriptionBlockModalProps> = ({ subscri
                   >
                     {t('subscriptionBlock.canceled.renewButton')}
                   </Button>
-                </div>
-              )}
+                )}
+                
+                {/* Logout Button - Always visible for all users */}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  fullWidth
+                  onClick={handleLogout}
+                >
+                  {t('header.signOut')}
+                </Button>
+              </div>
             </div>
           </motion.div>
         </div>

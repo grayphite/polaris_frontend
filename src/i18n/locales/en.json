@@ -115,7 +115,8 @@
       "passwordRequired": "Password is required",
       "passwordMinLength": "Password must be at least 8 characters",
       "passwordMismatch": "Passwords do not match",
-      "registrationFailed": "Registration failed. {{tryAgain}}"
+      "registrationFailed": "Registration failed. {{tryAgain}}",
+      "emailAlreadyInUse": "This email is already in use. Please try another email."
     },
     "forgotPassword": {
       "title": "Forgot password?",

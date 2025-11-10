@@ -115,7 +115,8 @@
       "passwordRequired": "Senha é obrigatória",
       "passwordMinLength": "A senha deve ter pelo menos 8 caracteres",
       "passwordMismatch": "As senhas não coincidem",
-      "registrationFailed": "Falha no cadastro. {{tryAgain}}"
+      "registrationFailed": "Falha no cadastro. {{tryAgain}}",
+      "emailAlreadyInUse": "Este e-mail já está em uso. Por favor, tente outro e-mail."
     },
     "forgotPassword": {
       "title": "Esqueceu a senha?",

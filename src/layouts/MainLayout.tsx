@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 
 import { useAuth } from '../context/AuthContext';
+import { useLogout } from '../utils/auth';
 import Sidebar from '../components/common/Sidebar';
 import Header from '../components/common/Header';
 import { ProjectsProvider, useProjects } from '../context/ProjectsContext';
@@ -43,19 +44,14 @@ const ChatLoader: React.FC = () => {
 };
 
 const MainLayout: React.FC = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const handleLogout = useLogout();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   // Responsive sidebar behavior

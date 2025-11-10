@@ -90,9 +90,26 @@ const Register: React.FC = () => {
     try {
       await register(formData.firstName, formData.lastName, formData.email, formData.password);
       navigate('/subscription');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      showErrorToast(t('auth.register.registrationFailed', { tryAgain: t('common.errors.tryAgain') }));
+      
+      // Extract error message from various error types
+      const errorMessage = 
+        error?.response?.data?.error || 
+        error?.response?.data?.message || 
+        error?.message || 
+        '';
+      
+      // Check if error is "Email já está em uso" (case-insensitive)
+      const isEmailInUse = errorMessage
+        .toLowerCase()
+        .includes('email já está em uso');
+      
+      if (isEmailInUse) {
+        showErrorToast(t('auth.register.emailAlreadyInUse'));
+      } else {
+        showErrorToast(t('auth.register.registrationFailed', { tryAgain: t('common.errors.tryAgain') }));
+      }
     }
   };
 

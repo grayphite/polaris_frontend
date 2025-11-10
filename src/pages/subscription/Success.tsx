@@ -69,7 +69,7 @@ const Success: React.FC = () => {
     };
 
     refreshSubscriptionData();
-  }, [refreshSubscription]);
+  }, []);
 
   if (isRefreshing) {
     return (
