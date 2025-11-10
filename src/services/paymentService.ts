@@ -11,6 +11,8 @@ export interface PlanPrice {
   interval: string;
   interval_count: number;
   trial_days: number;
+  eligible_trial_days?: number | null;
+  has_trial_available?: boolean;
   stripe_price_id: string;
   per_seat_amount_cents: number;
   per_seat_metric: string;
@@ -147,9 +149,10 @@ export interface ResumeSubscriptionResponse {
 }
 
 // API Functions
-export async function getPlans(): Promise<PlansResponse> {
+export async function getPlans(teamId: string): Promise<PlansResponse> {
   return makeRequest<PlansResponse>('/plans', {
     method: 'GET',
+    params: { team_id: teamId },
   });
 }
 

@@ -184,6 +184,7 @@ const MembersList: React.FC = () => {
       setIsDeleteOpen(false);
       setInvitationToDelete(null);
       await loadInvitations();
+      await loadBillingSummary();
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.response?.data?.error || t('errors.invitationDeleteFailed');
       showErrorToast(msg);
@@ -233,6 +234,7 @@ const MembersList: React.FC = () => {
             {t('members.inviteMember')}
           </Button>
         )}
+
       </div>
       {(owner || (isOwner && billingData?.upcoming_invoice)) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,16 +271,22 @@ const MembersList: React.FC = () => {
                         </span>
                       </div>
                       {/* Overage charges (remaining items) */}
-                      {billingData.upcoming_invoice.line_items.slice(1).map((item) => (
-                        <div key={item.id} className="flex justify-between items-center">
-                          <span className="text-sm text-gray-700">
-                            {formatLineItemDescription(item)}
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {formatPrice(item.amount, item.currency)}
-                          </span>
-                        </div>
-                      ))}
+                      {billingData.upcoming_invoice.line_items.slice(1)
+                        .filter((item) => {
+                          // Hide additional members line item if quantity is 0
+                          const unitAmount = item.price?.unit_amount ?? (item.quantity > 0 ? item.amount / item.quantity : 0);
+                          return !(unitAmount === 5000 && item.quantity === 0);
+                        })
+                        .map((item) => (
+                          <div key={item.id} className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">
+                              {formatLineItemDescription(item)}
+                            </span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatPrice(item.amount, item.currency)}
+                            </span>
+                          </div>
+                        ))}
                       {/* Total */}
                       <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
                         <span className="text-sm font-semibold text-gray-900">{t('members.total')}</span>

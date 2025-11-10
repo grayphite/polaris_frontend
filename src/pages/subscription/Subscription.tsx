@@ -28,8 +28,16 @@ const Subscription: React.FC = () => {
   }, []);
 
   const fetchPlans = async () => {
+    const teamId = localStorage.getItem('teamId');
+
+    if (!teamId) {
+      showErrorToast(t('subscription.teamInfoError'));
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await getPlans();
+      const response = await getPlans(teamId);
       setPlans(response.plans);
     } catch (error) {
       console.error('Failed to fetch plans:', error);
@@ -114,8 +122,13 @@ const Subscription: React.FC = () => {
                   </div>
                 </div>
 
-                {plan.prices.map((price) => (
-                  <div key={price.id} className="mb-6">
+                {plan.prices.map((price) => {
+                  const eligibleTrialDays = price.eligible_trial_days ?? 0;
+                  const hasTrialAvailable = price.has_trial_available ?? eligibleTrialDays > 0;
+                  const showTrialDetails = hasTrialAvailable && eligibleTrialDays > 0;
+
+                  return (
+                    <div key={price.id} className="mb-6">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {price.nickname}
@@ -130,15 +143,17 @@ const Subscription: React.FC = () => {
                         </span>
                       </div>
 
-                      {price.trial_days > 0 && (
+                      {showTrialDetails && (
                         <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-4">
-                          {t('subscription.trialDays', { days: price.trial_days })}
+                          {t('subscription.trialDays', { days: eligibleTrialDays })}
                         </div>
                       )}
 
-                      <p className="text-sm text-gray-600">
-                        {t('subscription.afterTrial', { price: formatPrice(price.amount_cents, price.currency), interval: price.interval })}
-                      </p>
+                      {showTrialDetails && (
+                        <p className="text-sm text-gray-600">
+                          {t('subscription.afterTrial', { price: formatPrice(price.amount_cents, price.currency), interval: price.interval })}
+                        </p>
+                      )}
                     </div>
 
                     {price.per_seat_amount_cents > 0 && (
@@ -158,10 +173,11 @@ const Subscription: React.FC = () => {
                       isLoading={checkoutLoading === price.stripe_price_id}
                       onClick={() => handleSubscribe(price.stripe_price_id)}
                     >
-                      {t('subscription.startFreeTrial')}
+                      {t(hasTrialAvailable ? 'subscription.startFreeTrial' : 'subscription.subscribe')}
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           </motion.div>

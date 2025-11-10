@@ -25,7 +25,7 @@ const LanguageToggle: React.FC = () => {
       {/* Toggle Track */}
       <button
         onClick={toggleLanguage}
-        className="relative w-16 h-8 rounded-full bg-gray-200 shadow-inner transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="relative w-16 h-8 rounded-full bg-gray-200 shadow-inner transition-all duration-300 focus:outline-none"
         aria-label="Toggle language"
       >
         {/* Sliding Button */}

@@ -27,12 +27,9 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
 
   // No subscription or empty array - redirect owners to subscription page (without MainLayout)
   if (!subscription) {
-    if (user.role !== 'owner') {
-      return (
-        <SubscriptionBlockModal subscription={null} viewerRole={user.role} />
-      );
-    }
-    return <Navigate to="/subscription" replace />;
+    return user.role === 'owner'
+      ? <Navigate to="/subscription" replace />
+      : <>{children}</>;
   }
 
   // Valid subscription statuses - allow access

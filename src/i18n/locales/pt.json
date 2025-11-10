@@ -46,7 +46,7 @@
     "layout": {
       "tagline": "Seu assistente inteligente para conversas perfeitas e gerenciamento de projetos.",
       "feature1": "Conversas inteligentes com IA",
-      "feature2": "Organize seus projetos de forma eficiente",
+      "feature2": "Organizar seus projetos de forma eficiente",
       "feature3": "Colabore com sua equipe",
       "feature4": "Pesquisa jurídica e orientação com IA",
       "feature5": "Consultas seguras e privadas"
@@ -428,7 +428,8 @@
     "afterTrial": "Após o trial: {{price}}/{{interval}}",
     "additionalMembers": "Membros adicionais da equipe:",
     "perExtraMember": "{{price}}/{{interval}} por membro extra",
-    "startFreeTrial": "Iniciar Teste Grátis",
+      "startFreeTrial": "Iniciar Teste Grátis",
+      "subscribe": "Assinar",
     "loadPlansError": "Falha ao carregar planos. {{tryAgain}}",
     "teamInfoError": "Não foi possível obter informações da equipe. Por favor, faça login novamente.",
     "checkoutError": "Falha ao iniciar o checkout. {{tryAgain}}",

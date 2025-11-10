@@ -118,11 +118,11 @@ const Success: React.FC = () => {
           </p>
 
           {/* Trial Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+          {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
             <p className="text-sm text-blue-800">
               {t('subscription.success.trialMessage')}
             </p>
-          </div>
+          </div> */}
 
           {/* Action Button */}
           <Button
