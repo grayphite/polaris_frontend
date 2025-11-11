@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import SubscriptionBlockModal from '../ui/SubscriptionBlockModal';
 import Loader from './Loader';
@@ -10,6 +10,7 @@ interface SubscriptionGuardProps {
 
 const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   const { user, subscription, isLoading } = useAuth();
+  const location = useLocation();
 
   // Wait for auth to finish loading
   if (isLoading) {
@@ -35,6 +36,16 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   // Valid subscription statuses - allow access
   if (subscription.status === 'trialing' || subscription.status === 'active') {
     return <>{children}</>;
+  }
+
+  // Invalid subscription status - redirect owners with incomplete status to /subscription
+  if (subscription.status === 'incomplete' && user.role === 'owner') {
+    return <Navigate to="/subscription" replace />;
+  }
+
+  // Invalid subscription status - redirect to /subscription if on /subscription-details, otherwise show modal
+  if (location.pathname === '/subscription-details' && user.role === 'owner') {
+    return <Navigate to="/subscription" replace />;
   }
 
   // Invalid subscription status - block with modal

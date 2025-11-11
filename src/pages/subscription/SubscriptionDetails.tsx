@@ -185,7 +185,7 @@ const SubscriptionDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex w-full items-center justify-center py-16">
         <Loader />
       </div>
     );
@@ -224,7 +224,7 @@ const SubscriptionDetails: React.FC = () => {
 
     const errorContent = getErrorContent();
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         <PageTitle title={t('billing.title')} />
         <Card>
           <EmptyState
@@ -298,7 +298,7 @@ const SubscriptionDetails: React.FC = () => {
   const shouldShowCancelButton = statusInfo?.showCancel && !isScheduledForCancellation;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="mx-auto w-full max-w-5xl">
       <PageTitle
         title={t('billing.title')}
         subtitle={t('billing.subtitle')}
@@ -315,11 +315,10 @@ const SubscriptionDetails: React.FC = () => {
         }
       />
 
-      <div className="space-y-6">
-        {/* Cancellation Notice */}
+      <div className="mt-6 space-y-6">
         {isScheduledForCancellation && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-900 font-medium mb-1">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p className="mb-1 text-sm font-medium text-blue-900">
               {t('billing.cancellationNotice.title')}
             </p>
             <p className="text-sm text-blue-700">
@@ -327,99 +326,79 @@ const SubscriptionDetails: React.FC = () => {
             </p>
           </div>
         )}
-        {/* Subscription Status Section */}
-        {/* {statusInfo && (
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.badge}`}>
-                  {subscription?.status.toUpperCase()}
-                </span>
-                <p className="text-sm text-gray-700">{statusInfo.message}</p>
-              </div>
-              {statusInfo.action && (
-                <Button variant="primary" onClick={statusInfo.action.onClick}>
-                  {statusInfo.action.label}
-                </Button>
-              )}
-            </div>
-          </Card>
-        )} */}
 
         {canShowInvoices && current_invoice && current_invoice.line_items?.[0] && (
           <>
-        {/* Purchased Plan Card */}
-        <Card title={t('billing.purchasedPlan')}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {current_invoice.line_items[0] ? formatLineItemDescription(current_invoice.line_items[0]) : 'N/A'}
-                  </h3>
+            <Card title={t('billing.purchasedPlan')}>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                        {current_invoice.line_items[0] ? formatLineItemDescription(current_invoice.line_items[0]) : 'N/A'}
+                      </h3>
+                    </div>
+                    {current_invoice.status === 'paid' && (
+                      <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-green-100 text-green-800">
+                        PAID
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatPrice(current_invoice.total, current_invoice.currency)}
+                    </p>
+                    <p className="text-sm text-gray-500">{t('billing.monthlyPrice')}</p>
+                  </div>
                 </div>
-                {current_invoice.status === 'paid' && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                    PAID
-                  </span>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatPrice(current_invoice.total, current_invoice.currency)}
-                </p>
-                <p className="text-sm text-gray-500">{t('billing.monthlyPrice')}</p>
-              </div>
-            </div>
 
-            <div className="pt-2 border-t border-gray-200">
-              <div className="text-sm">
-                <div>
-                  <p className="text-gray-500">{t('billing.quantity')}</p>
-                  <p className="font-medium text-gray-900">{current_invoice.line_items[0]?.quantity || 0}</p>
+                <div className="border-t border-gray-200 pt-2">
+                  <div className="text-sm">
+                    <div>
+                      <p className="text-gray-500">{t('billing.quantity')}</p>
+                      <p className="font-medium text-gray-900">{current_invoice.line_items[0]?.quantity || 0}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </Card>
+            </Card>
 
-        {/* Upcoming Invoice Card */}
-        {upcoming_invoice && !isScheduledForCancellation && (
-        <Card title={t('billing.upcomingInvoice')}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                {upcoming_invoice.next_payment_attempt && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    {t('billing.nextPayment')}: {formatDate(upcoming_invoice.next_payment_attempt)}
-                  </p>
-                )}
-                <p className="text-sm text-gray-600">
-                  {t('billing.period')}: {formatDate(upcoming_invoice.period_start)} - {formatDate(upcoming_invoice.period_end)}
-                </p>
-                {upcoming_invoice.has_proration && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-2">
-                    {t('billing.hasProration')}
-                  </span>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatPrice(upcoming_invoice.amount_due, upcoming_invoice.currency)}
-                </p>
-                <p className="text-sm text-gray-500">{t('billing.amountDue')}</p>
-              </div>
-            </div>
+            {upcoming_invoice && !isScheduledForCancellation && (
+              <Card title={t('billing.upcomingInvoice')}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {upcoming_invoice.next_payment_attempt && (
+                        <p className="mb-2 text-sm text-gray-600">
+                          {t('billing.nextPayment')}: {formatDate(upcoming_invoice.next_payment_attempt)}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-600">
+                        {t('billing.period')}: {formatDate(upcoming_invoice.period_start)} - {formatDate(upcoming_invoice.period_end)}
+                      </p>
+                      {upcoming_invoice.has_proration && (
+                        <span className="mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">
+                          {t('billing.hasProration')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-gray-900">
+                        {formatPrice(upcoming_invoice.amount_due, upcoming_invoice.currency)}
+                      </p>
+                      <p className="text-sm text-gray-500">{t('billing.amountDue')}</p>
+                    </div>
+                  </div>
 
-            {upcoming_invoice.line_items.length > 0 && (
-              <div className="pt-4 border-t border-gray-200">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">{t('billing.lineItems')}</h4>
-                {renderLineItems(upcoming_invoice.line_items)}
-              </div>
+                  {upcoming_invoice.line_items.length > 0 && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <h4 className="mb-3 text-sm font-medium text-gray-900">{t('billing.lineItems')}</h4>
+                      {renderLineItems(upcoming_invoice.line_items)}
+                    </div>
+                  )}
+                </div>
+              </Card>
             )}
-          </div>
-        </Card>
-        )}
           </>
         )}
 
@@ -428,16 +407,17 @@ const SubscriptionDetails: React.FC = () => {
             <EmptyState
               title={t('billing.noInvoiceAccess')}
               description={t('billing.noInvoiceAccessDescription')}
-              action={statusInfo?.action ? {
-                label: statusInfo.action.label,
-                onClick: statusInfo.action.onClick,
-              } : undefined}
+              action={statusInfo?.action
+                ? {
+                    label: statusInfo.action.label,
+                    onClick: statusInfo.action.onClick,
+                  }
+                : undefined}
             />
           </Card>
         )}
       </div>
 
-      {/* Cancel Subscription Button - Bottom of page */}
       {shouldShowCancelButton && (
         <div className="mt-8 flex justify-end">
           <Button 

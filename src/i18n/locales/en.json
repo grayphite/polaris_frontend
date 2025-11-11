@@ -593,7 +593,8 @@
     },
     "incomplete": {
       "title": "Payment Incomplete",
-      "message": "Your payment process was not completed. Please complete your payment to access the system."
+      "message": "Your payment process was not completed. Please complete your payment to access the system.",
+      "completeButton": "Complete Subscription"
     },
     "incompleteExpired": {
       "title": "Payment Session Expired",

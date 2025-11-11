@@ -593,7 +593,8 @@
     },
     "incomplete": {
       "title": "Pagamento Incompleto",
-      "message": "Seu processo de pagamento não foi concluído. Por favor, complete seu pagamento para acessar o sistema."
+      "message": "Seu processo de pagamento não foi concluído. Por favor, complete seu pagamento para acessar o sistema.",
+      "completeButton": "Completar Assinatura"
     },
     "incompleteExpired": {
       "title": "Sessão de Pagamento Expirada",

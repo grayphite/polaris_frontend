@@ -192,12 +192,29 @@ const MembersList: React.FC = () => {
     }
   };
   
+  const ownerRow = useMemo(() => {
+    if (!owner) return null;
+    return {
+      id: 'owner',
+      email: owner.email,
+      status: 'active' as TableRow['status'],
+      invitedAt: '',
+    };
+  }, [owner]);
+
+  const tableRows = useMemo(() => {
+    if (ownerRow && (filterStatus === 'all' || filterStatus === 'active')) {
+      return [ownerRow, ...rows];
+    }
+    return rows;
+  }, [ownerRow, rows, filterStatus]);
+
   const filteredRows = useMemo(() => {
-    return rows.filter((row) => {
+    return tableRows.filter((row) => {
       const matchesSearch = row.email.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
-  }, [rows, searchQuery]);
+  }, [tableRows, searchQuery]);
   
   
   const getStatusBadgeClass = (status: string) => {
@@ -236,21 +253,8 @@ const MembersList: React.FC = () => {
         )}
 
       </div>
-      {(owner || (isOwner && billingData?.upcoming_invoice)) && (
+      {isOwner && billingData?.upcoming_invoice && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {owner && (
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">{t('members.teamOwner')}</p>
-                  <p className="text-base font-medium text-gray-900">{owner.first_name} {owner.last_name}</p>
-                  <a href={`mailto:${owner.email}`} className="text-sm text-primary-600 hover:text-primary-700">{owner.email}</a>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {isOwner && billingData?.upcoming_invoice && (
             <div className="bg-white rounded-lg shadow-sm p-4">
               {isLoadingBilling ? (
                 <div className="flex items-center justify-center py-4">
@@ -299,7 +303,6 @@ const MembersList: React.FC = () => {
                 </div>
               )}
             </div>
-          )}
         </div>
       )}
       
@@ -365,42 +368,64 @@ const MembersList: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredRows.map((row) => (
-                    <motion.tr
-                      key={row.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{row.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(row.status)}`}>
-                          {t(`members.status.${row.status}`)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(row.invitedAt)}
-                      </td>
-                      {isOwner && (
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {/* <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button> */}
-                          {row.status !== 'inactive' && (
-                            <button
-                              className="text-red-600 hover:text-red-900"
-                              onClick={() => openDeleteModal(Number(row.id), row.email)}
-                            >
-                              {t('members.delete')}
-                            </button>
-                          )}
-                          {row.status === 'inactive' && (
-                            <button className="text-green-600 hover:text-green-900">{t('members.activate')}</button>
+                  {filteredRows.map((row) => {
+                    const isOwnerRow = row.id === 'owner';
+                    return (
+                      <motion.tr
+                        key={row.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isOwnerRow ? (
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {owner?.first_name} {owner?.last_name}
+                              </div>
+                              <a
+                                href={`mailto:${row.email}`}
+                                className="text-sm text-primary-600 hover:text-primary-700"
+                              >
+                                {row.email}
+                              </a>
+                              <div className="text-xs text-gray-500 mt-1">{t('members.teamOwner')}</div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-900">{row.email}</div>
                           )}
                         </td>
-                      )}
-                    </motion.tr>
-                  ))}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(row.status)}`}>
+                            {t(`members.status.${row.status}`)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {isOwnerRow ? '--' : formatDate(row.invitedAt)}
+                        </td>
+                        {isOwner && (
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {!isOwnerRow && (
+                              <>
+                                {/* <button className="text-primary-600 hover:text-primary-900 mr-4">Edit</button> */}
+                                {row.status !== 'inactive' && (
+                                  <button
+                                    className="text-red-600 hover:text-red-900"
+                                    onClick={() => openDeleteModal(Number(row.id), row.email)}
+                                  >
+                                    {t('members.delete')}
+                                  </button>
+                                )}
+                                {row.status === 'inactive' && (
+                                  <button className="text-green-600 hover:text-green-900">{t('members.activate')}</button>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        )}
+                      </motion.tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
