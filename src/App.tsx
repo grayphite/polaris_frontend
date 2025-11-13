@@ -1,4 +1,5 @@
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import React from 'react';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -19,7 +20,6 @@ import NotFound from './pages/NotFound';
 import Profile from './pages/profile/Profile';
 import ProjectDetail from './pages/projects/ProjectDetail';
 import ProjectsList from './pages/projects/ProjectsList';
-import React from 'react';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import SetupAccount from './pages/auth/SetupAccount';

@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
+import { getPdfPageCount } from '../../utils/fileValidation';
 import MarkdownMessage from '../../components/ui/MarkdownMessage';
 import { formatTime } from '../../utils/dateTime';
 import { downloadRagFile } from '../../utils/fileDownload';
@@ -35,6 +36,8 @@ interface Message {
   file_references?: string[];
   sources?: string[];
 }
+
+const MAX_PDF_PAGES = 100;
 
 const sortMessagesByTimestamp = (messages: Message[]) => {
   return [...messages].sort((a, b) => {
@@ -459,63 +462,84 @@ const ChatInterface: React.FC = () => {
   
   // Reusable function to upload files
   const uploadFiles = async (filesToUpload: File[], fileType: 'document' | 'image') => {
-    // Create placeholder entries with uploading status
-    const placeholders: FileAttachment[] = filesToUpload.map((file) => ({
-      id: `temp-${Date.now()}-${Math.random()}`,
-      filename: file.name,
-      mime_type: file.type,
-      size_bytes: file.size,
-      file_type: fileType,
-      type: 'file',
-      downloadable: false,
-      created_at: new Date().toISOString(),
-      uploadStatus: 'uploading' as const,
-    }));
-    
-    setAttachedFiles(prev => [...prev, ...placeholders]);
-    
-    // Upload files one by one
-    for (let i = 0; i < filesToUpload.length; i++) {
-      const file = filesToUpload[i];
-      const placeholderIndex = attachedFiles.length + i;
-      
+    for (const file of filesToUpload) {
+      // Validate file type based on selection
+      if (fileType === 'document' && !isValidDocumentType(file)) {
+        showErrorToast(t('chat.interface.unsupportedDocument'));
+        continue;
+      }
+
+      if (fileType === 'image' && !isValidImageType(file)) {
+        showErrorToast(t('chat.interface.unsupportedImage'));
+        continue;
+      }
+
+      if (file.type === 'application/pdf') {
+        try {
+          const pageCount = await getPdfPageCount(file);
+
+          if (pageCount > MAX_PDF_PAGES) {
+            showErrorToast(t('chat.interface.pdfTooManyPages', { maxPages: MAX_PDF_PAGES }));
+            continue;
+          }
+        } catch (error) {
+          console.error('Failed to read PDF metadata:', error);
+          showErrorToast(
+            t('chat.interface.pdfValidationError', {
+              filename: file.name,
+              tryAgain: t('common.errors.tryAgain'),
+            })
+          );
+          continue;
+        }
+      }
+
+      const placeholderId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const placeholder: FileAttachment = {
+        id: placeholderId,
+        filename: file.name,
+        mime_type: file.type,
+        size_bytes: file.size,
+        file_type: fileType,
+        type: 'file',
+        downloadable: false,
+        created_at: new Date().toISOString(),
+        uploadStatus: 'uploading',
+      };
+
+      setAttachedFiles((prev) => [...prev, placeholder]);
+
       try {
-        // Validate file type based on selection
-        if (fileType === 'document' && !isValidDocumentType(file)) {
-          showErrorToast(t('chat.interface.unsupportedDocument'));
-          setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
-          continue;
-        }
-        
-        if (fileType === 'image' && !isValidImageType(file)) {
-          showErrorToast(t('chat.interface.unsupportedImage'));
-          setAttachedFiles(prev => prev.filter((_, idx) => idx !== placeholderIndex));
-          continue;
-        }
-        
         // Upload file to backend
         const response = await uploadFile(file);
-        
+
         if (response.success && response.file) {
-          // Replace placeholder with actual file data
-          setAttachedFiles(prev => prev.map((f, idx) => 
-            idx === placeholderIndex 
-              ? { ...response.file, uploadStatus: 'success' as const }
-              : f
-          ));
+          setAttachedFiles((prev) =>
+            prev.map((existing) =>
+              existing.id === placeholderId
+                ? { ...response.file, uploadStatus: 'success' as const }
+                : existing
+            )
+          );
         } else {
           throw new Error('Upload failed');
         }
       } catch (error) {
         console.error('Failed to upload file:', error);
-        showErrorToast(t('chat.interface.uploadError', { filename: file.name, tryAgain: t('common.errors.tryAgain') }));
-        
-        // Update placeholder to show error
-        setAttachedFiles(prev => prev.map((f, idx) => 
-          idx === placeholderIndex 
-            ? { ...f, uploadStatus: 'error' as const, uploadError: t('chat.interface.uploadFailed') }
-            : f
-        ));
+        showErrorToast(
+          t('chat.interface.uploadError', {
+            filename: file.name,
+            tryAgain: t('common.errors.tryAgain'),
+          })
+        );
+
+        setAttachedFiles((prev) =>
+          prev.map((existing) =>
+            existing.id === placeholderId
+              ? { ...existing, uploadStatus: 'error' as const, uploadError: t('chat.interface.uploadFailed') }
+              : existing
+          )
+        );
       }
     }
   };
