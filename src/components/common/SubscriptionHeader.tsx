@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from './LanguageToggle';
 import { useAuth } from '../../context/AuthContext';
-import logo from '../../assets/polaris_logo.png';
+import logo from '../../assets/polaris_logo_black.png';
 
 const SubscriptionHeader: React.FC = () => {
   const { t } = useTranslation();

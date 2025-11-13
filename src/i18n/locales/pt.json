@@ -707,6 +707,92 @@
       "cancelFailed": "Falha ao cancelar assinatura",
       "resumeFailed": "Falha ao retomar assinatura"
     }
+  },
+  "landing": {
+    "header": {
+      "login": "Entrar",
+      "register": "Cadastrar"
+    },
+    "hero": {
+      "headlinePart1": "Seu Assistente de",
+      "headlinePart2": "Planejamento Tributário & Wealth Planning",
+      "description": "Imagine ter um paralegal que nunca dorme, conhece toda a legislação brasileira, americana e do caribe e cria estruturas patrimoniais em minutos. Esse é o POLARIS.",
+      "badge1": "Invisível para clientes",
+      "badge2": "Adaptável ao seu estilo de redação",
+      "feature1": "Aprovado OAB",
+      "feature2": "500+ Escritórios",
+      "feature3": "Suporte 24h",
+      "animationPlaceholder": "[Placeholder GIF - Demonstração da Interface]"
+    },
+    "features": {
+      "title": "Comece simples, evolua no seu ritmo",
+      "subtitle": "Não precisa mudar tudo de uma vez. Use o POLARIS nas suas demandas atuais e vá descobrindo novas possibilidades conforme usa.",
+      "feature1": {
+        "title": "Entende Direito Tributário",
+        "description": "Como um advogado sênior que estudou toda a legislação brasileira, americana e do caribe. Responde perguntas sobre IR, CSLL, PIS/COFINS e muito mais."
+      },
+      "feature2": {
+        "title": "Cria Documentos Sozinho",
+        "description": "Holdings, contratos, pareceres... O que antes levava dias, agora fica pronto em minutos. Você só revisa e assina."
+      },
+      "feature3": {
+        "title": "Sempre Atualizado",
+        "description": "Conectado direto com Receita Federal, CVM e outros órgãos. Nunca mais se preocupe se a lei mudou ontem."
+      }
+    },
+    "statistics": {
+      "title": "Os números falam por si",
+      "subtitle": "Escritórios que usam POLARIS economizam tempo e ganham mais dinheiro",
+      "stat1": {
+        "value": "R$ 2,5B",
+        "label": "Economizados em impostos"
+      },
+      "stat2": {
+        "value": "500+",
+        "label": "Escritórios usando"
+      },
+      "stat3": {
+        "value": "98%",
+        "label": "Aprovação na Receita"
+      },
+      "stat4": {
+        "value": "15min",
+        "label": "Para criar uma holding"
+      }
+    },
+    "integration": {
+      "title": "Funciona. Completamente integrado ao seu dia a dia.",
+      "subtitle": "Não atrapalha seu fluxo. POLARIS trabalha em segundo plano. Você continua usando seus sistemas normalmente.",
+      "feature1": {
+        "title": "Conecta com Tudo",
+        "description": "Seus sistemas atuais continuam funcionando"
+      },
+      "feature2": {
+        "title": "Busca Inteligente",
+        "description": "Encontra qualquer documento ou lei em segundos"
+      },
+      "feature3": {
+        "title": "100% Seguro",
+        "description": "Seus dados ficam protegidos e privados"
+      },
+      "animationPlaceholder": "[Placeholder GIF - Demonstração de Integração]"
+    },
+    "pricing": {
+      "title": "Comece grátis hoje.",
+      "subtitle": "Seja para consultas rápidas, documentos simples ou estruturas complexas, temos o plano ideal para o seu escritório."
+    },
+    "guarantees": {
+      "title": "Garantias que Protegem Você",
+      "subtitle": "Assumimos todos os riscos para que você possa testar POLARIS com total tranquilidade.",
+      "guarantee1": {
+        "title": "30 Dias de Garantia Incondicional",
+        "description": "Se por qualquer motivo você não ficar 100% satisfeito, devolvemos todo o seu dinheiro. Sem perguntas, sem burocracia."
+      },
+      "guarantee2": {
+        "title": "Suporte Vitalício Incluído",
+        "description": "Enquanto você for nosso cliente, terá acesso ao nosso suporte especializado. Sem taxas extras, sem surpresas."
+      }
+    }
   }
 }
 

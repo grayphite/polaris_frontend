@@ -707,6 +707,92 @@
       "cancelFailed": "Failed to cancel subscription",
       "resumeFailed": "Failed to resume subscription"
     }
+  },
+  "landing": {
+    "header": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "hero": {
+      "headlinePart1": "Your Tax Planning & Wealth Planning",
+      "headlinePart2": "Assistant",
+      "description": "Imagine having a paralegal who never sleeps, knows all Brazilian, American, and Caribbean law, and creates asset structures in minutes. That's POLARIS.",
+      "badge1": "Invisible to customers",
+      "badge2": "Adaptable to your writing style",
+      "feature1": "Approved by the Bar Exam",
+      "feature2": "500+ Offices",
+      "feature3": "24/7 support",
+      "animationPlaceholder": "[GIF Placeholder - Interface Demo]"
+    },
+    "features": {
+      "title": "Start simple, evolve at your own pace",
+      "subtitle": "You don't need to change everything at once. Use POLARIS for your current needs and discover new possibilities as you go.",
+      "feature1": {
+        "title": "Understanding Tax Law",
+        "description": "As a senior attorney who has studied all Brazilian, American, and Caribbean legislation, I answer questions about income tax, social contribution on net profit, PIS/COFINS, and much more."
+      },
+      "feature2": {
+        "title": "Create Documents on Your Own",
+        "description": "Holdings, contracts, opinions... What used to take days is now ready in minutes. You just review and sign."
+      },
+      "feature3": {
+        "title": "Always Up-to-Date",
+        "description": "Directly connected to the Internal Revenue Service, the Securities and Exchange Commission of Brazil (CVM), and other agencies. Never again worry about whether the law changed yesterday."
+      }
+    },
+    "statistics": {
+      "title": "The numbers speak for themselves",
+      "subtitle": "Offices using POLARIS save time and make more money",
+      "stat1": {
+        "value": "R$ 2.5B",
+        "label": "Saved in taxes"
+      },
+      "stat2": {
+        "value": "500+",
+        "label": "Offices using"
+      },
+      "stat3": {
+        "value": "98%",
+        "label": "Approval at Revenue"
+      },
+      "stat4": {
+        "value": "15min",
+        "label": "To create a holding"
+      }
+    },
+    "integration": {
+      "title": "It works. Completely integrated into your daily routine.",
+      "subtitle": "It doesn't disrupt your workflow. POLARIS works in the background. You continue using your systems normally.",
+      "feature1": {
+        "title": "Connects with Everything",
+        "description": "Your current systems continue to work"
+      },
+      "feature2": {
+        "title": "Smart Search",
+        "description": "Find any document or law in seconds"
+      },
+      "feature3": {
+        "title": "100% Secure",
+        "description": "Your data stays protected and private"
+      },
+      "animationPlaceholder": "[GIF Placeholder - Integration Demo]"
+    },
+    "pricing": {
+      "title": "Start for free today.",
+      "subtitle": "Whether for quick consultations, simple documents, or complex structures, we have the ideal plan for your office."
+    },
+    "guarantees": {
+      "title": "Guarantees that Protect You",
+      "subtitle": "We assume all risks so you can test POLARIS with complete peace of mind.",
+      "guarantee1": {
+        "title": "30 Days Unconditional Guarantee",
+        "description": "If for any reason you are not 100% satisfied, we will refund all your money. No questions, no bureaucracy."
+      },
+      "guarantee2": {
+        "title": "Lifetime Support Included",
+        "description": "As long as you are our client, you will have access to our specialized support. No extra fees, no surprises."
+      }
+    }
   }
 }
 
