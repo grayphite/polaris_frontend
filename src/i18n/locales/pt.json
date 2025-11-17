@@ -721,8 +721,10 @@
     },
     "hero": {
       "headlinePart1": "Seu Assistente de",
-      "headlinePart2": "Planejamento Tributário & Wealth Planning",
-      "description": "Imagine ter um paralegal que nunca dorme, conhece toda a legislação brasileira, americana e do caribe e cria estruturas patrimoniais em minutos. Esse é o POLARIS.",
+      "headlinePart2": "Planejamento Tributário",
+      "headlinePart3": " e Planejamento Patrimonial",
+      "description": "Imagine ter um paralegal que nunca dorme, conhece toda a legislação brasileira, americana e do caribe e cria estruturas patrimoniais em minutos.",
+      "description2": "Esse é o POLARIS.",
       "badge1": "Invisível para clientes",
       "badge2": "Adaptável ao seu estilo de redação",
       "feature1": "Aprovado OAB",
@@ -732,7 +734,8 @@
     },
     "features": {
       "title": "Comece simples, evolua no seu ritmo",
-      "subtitle": "Não precisa mudar tudo de uma vez. Use o POLARIS nas suas demandas atuais e vá descobrindo novas possibilidades conforme usa.",
+      "subtitle": "Não precisa mudar tudo de uma vez. Use o POLARIS nas suas demandas atuais ",
+      "subtitle2": "e descubra novas possibilidades conforme vai usando.",
       "feature1": {
         "title": "Entende Direito Tributário",
         "description": "Como um advogado sênior que estudou toda a legislação brasileira, americana e do caribe. Responde perguntas sobre IR, CSLL, PIS/COFINS e muito mais."

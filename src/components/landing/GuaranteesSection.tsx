@@ -39,7 +39,7 @@ const GuaranteesSection: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {guarantees.map((guarantee, index) => (
-            <div key={index} className="bg-gray-50 rounded-lg p-6">
+            <div key={index} className="bg-gradient-to-br from-primary-50 via-white to-secondary-50 shadow-card rounded-lg p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">

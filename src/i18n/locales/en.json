@@ -720,9 +720,11 @@
       "register": "Register"
     },
     "hero": {
-      "headlinePart1": "Your Tax Planning & Wealth Planning",
-      "headlinePart2": "Assistant",
-      "description": "Imagine having a paralegal who never sleeps, knows all Brazilian, American, and Caribbean law, and creates asset structures in minutes. That's POLARIS.",
+      "headlinePart1": "Your Tax Planning",
+      "headlinePart2": " & Wealth Planning",
+      "headlinePart3": "Assistant",
+      "description": "Imagine having a paralegal who never sleeps, knows all Brazilian, American, and Caribbean law, and creates asset structures in minutes.",
+      "description2": "That's POLARIS.",
       "badge1": "Invisible to customers",
       "badge2": "Adaptable to your writing style",
       "feature1": "Approved by the Bar Exam",
@@ -732,7 +734,8 @@
     },
     "features": {
       "title": "Start simple, evolve at your own pace",
-      "subtitle": "You don't need to change everything at once. Use POLARIS for your current needs and discover new possibilities as you go.",
+      "subtitle": "You don't need to change everything at once. Use POLARIS for your current needs ",
+      "subtitle2": "and discover new possibilities as you go.",
       "feature1": {
         "title": "Understanding Tax Law",
         "description": "As a senior attorney who has studied all Brazilian, American, and Caribbean legislation, I answer questions about income tax, social contribution on net profit, PIS/COFINS, and much more."
