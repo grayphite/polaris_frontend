@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Button from '../../components/ui/Button';
@@ -40,8 +40,8 @@ const ProjectsList: React.FC = () => {
       id: p.id,
       name: p.name,
       description: p.description || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
       conversationsCount: p.chat_count ?? null,
       members: 1,
       tags: [],

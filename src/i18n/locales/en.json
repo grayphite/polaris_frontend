@@ -451,7 +451,10 @@
       "tryAgain": "Try Again",
       "needHelp": "Need help?",
       "contactSupport": "Contact Support"
-    }
+    },
+    "premiumPlan": "Premium Plan",
+    "premiumPlanDescription": "Basic plan with limited team members",
+    "basicMonthly": "Basic Monthly"
   },
   "inviteModal": {
     "title": "Invite Team Member",
