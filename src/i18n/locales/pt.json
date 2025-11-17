@@ -46,7 +46,7 @@
     "layout": {
       "tagline": "Seu assistente inteligente para conversas perfeitas e gerenciamento de projetos.",
       "feature1": "Conversas inteligentes com IA",
-      "feature2": "Organize seus projetos de forma eficiente",
+      "feature2": "Organizar seus projetos de forma eficiente",
       "feature3": "Colabore com sua equipe",
       "feature4": "Pesquisa jurídica e orientação com IA",
       "feature5": "Consultas seguras e privadas"
@@ -115,7 +115,8 @@
       "passwordRequired": "Senha é obrigatória",
       "passwordMinLength": "A senha deve ter pelo menos 8 caracteres",
       "passwordMismatch": "As senhas não coincidem",
-      "registrationFailed": "Falha no cadastro. {{tryAgain}}"
+      "registrationFailed": "Falha no cadastro. {{tryAgain}}",
+      "emailAlreadyInUse": "Este e-mail já está em uso. Por favor, tente outro e-mail."
     },
     "forgotPassword": {
       "title": "Esqueceu a senha?",
@@ -177,6 +178,7 @@
       "noProjectsTitle": "Nenhum projeto encontrado",
       "noProjectsMessage": "Você ainda não criou nenhum projeto.",
       "noSearchResults": "Nenhum projeto corresponde a \"{{query}}\"",
+      "noDescription": "Descrição do projeto aqui",
       "updated": "Atualizado em {{date}}",
       "members": "{{count}} membros",
       "members_one": "1 membro",
@@ -271,6 +273,8 @@
       "uploadError": "Falha ao enviar {{filename}}. {{tryAgain}}",
       "unsupportedDocument": "Tipo de documento não suportado. Por favor, envie um arquivo .pdf ou .txt",
       "unsupportedImage": "Tipo de imagem não suportado. Por favor, envie um arquivo .gif, .jpg, .jpeg, .png ou .webp.",
+      "pdfTooManyPages": "PDFs devem ter no máximo {{maxPages}} páginas.",
+      "pdfValidationError": "Não foi possível ler {{filename}}. {{tryAgain}}",
       "deleteFileError": "Falha ao excluir {{filename}}. {{tryAgain}}",
       "waitForUploads": "Por favor, aguarde todos os arquivos terminarem de enviar.",
       "sendError": "Falha ao enviar mensagem. {{tryAgain}}",
@@ -428,7 +432,8 @@
     "afterTrial": "Após o trial: {{price}}/{{interval}}",
     "additionalMembers": "Membros adicionais da equipe:",
     "perExtraMember": "{{price}}/{{interval}} por membro extra",
-    "startFreeTrial": "Iniciar Teste Grátis",
+      "startFreeTrial": "Iniciar Teste Grátis",
+      "subscribe": "Assinar",
     "loadPlansError": "Falha ao carregar planos. {{tryAgain}}",
     "teamInfoError": "Não foi possível obter informações da equipe. Por favor, faça login novamente.",
     "checkoutError": "Falha ao iniciar o checkout. {{tryAgain}}",
@@ -467,9 +472,9 @@
     "emailRequired": "Por favor, insira um endereço de e-mail.",
     "inviteFailed": "Falha ao enviar convite. {{tryAgain}}",
     "missingFirstName": "Seu perfil está sem o primeiro nome. Por favor, atualize seu perfil.",
-    "deleteTitle": "Excluir Convite",
-    "deleteMessage": "Tem certeza de que deseja excluir o convite para {{email}}? Esta ação não pode ser desfeita.",
-    "deleteMessageGeneric": "Tem certeza de que deseja excluir este convite? Esta ação não pode ser desfeita."
+    "deleteTitle": "Excluir Membro",
+    "deleteMessage": "Tem certeza de que deseja excluir o membro {{email}}? Esta ação não pode ser desfeita.",
+    "deleteMessageGeneric": "Tem certeza de que deseja excluir este membro? Esta ação não pode ser desfeita."
   },
   "emptyState": {
     "noData": "Nenhum dado disponível",
@@ -549,7 +554,7 @@
     "projectUpdateFailed": "Falha ao atualizar projeto",
     "projectDeleted": "Projeto Excluído com Sucesso!",
     "projectDeleteFailed": "Falha ao excluir projeto",
-    "invitationDeleted": "Convite excluído",
+    "invitationDeleted": "Membro Excluído com Sucesso!",
     "invitationDeleteFailed": "Falha ao excluir convite",
     "loadInvitationsFailed": "Falha ao carregar convites",
     "loadMembersFailed": "Falha ao carregar membros",
@@ -591,7 +596,8 @@
     },
     "incomplete": {
       "title": "Pagamento Incompleto",
-      "message": "Seu processo de pagamento não foi concluído. Por favor, complete seu pagamento para acessar o sistema."
+      "message": "Seu processo de pagamento não foi concluído. Por favor, complete seu pagamento para acessar o sistema.",
+      "completeButton": "Completar Assinatura"
     },
     "incompleteExpired": {
       "title": "Sessão de Pagamento Expirada",
@@ -609,6 +615,19 @@
     "default": {
       "title": "Problema com Assinatura",
       "message": "Há um problema com sua assinatura. Por favor, entre em contato com o suporte para obter assistência."
+    },
+    "statusLabel": "Status da Assinatura",
+    "memberBlocked": "A assinatura da sua equipe está atualmente {{status}}. Entre em contato com o proprietário da equipe para renovar o plano e recuperar o acesso.",
+    "memberCanceled": "O proprietário da sua equipe cancelou a assinatura. Você não tem mais acesso ao sistema. Entre em contato com o proprietário da equipe para discutir a renovação da assinatura.",
+    "status": {
+      "trialing": "Período de teste",
+      "active": "Ativa",
+      "past_due": "Pagamento atrasado",
+      "incomplete": "Incompleta",
+      "incomplete_expired": "Incompleta (expirada)",
+      "canceled": "Cancelada",
+      "unpaid": "Não paga",
+      "unknown": "Desconhecido"
     },
     "plan": "Plano",
     "trialEndDate": "Data de Término do Trial",
@@ -641,6 +660,8 @@
     "hideDetails": "Ocultar Detalhes",
     "cancelSubscription": "Cancelar Assinatura",
     "willCancelAtPeriodEnd": "Será cancelado no final do período",
+    "resumeSubscription": "Retomar Assinatura",
+    "resuming": "Retomando...",
     "confirmCancel": "Confirmar Cancelamento",
     "cancelling": "Cancelando...",
     "completePayment": "Completar Pagamento",
@@ -667,7 +688,12 @@
       "unpaid": "Pagamento falhou — Atualize o pagamento e reative"
     },
     "success": {
-      "cancelled": "Assinatura cancelada com sucesso"
+      "cancelled": "Assinatura cancelada com sucesso",
+      "resumed": "Assinatura retomada com sucesso"
+    },
+    "cancellationNotice": {
+      "title": "Assinatura Agendada para Cancelamento",
+      "message": "Sua assinatura está agendada para ser cancelada no final do período de cobrança atual. Se mudar de ideia, você pode retomá-la a qualquer momento antes do término do período."
     },
     "errors": {
       "noTeamId": "ID da equipe não encontrado",
@@ -681,7 +707,94 @@
       "stripeError": "Erro do Stripe",
       "serverError": "Erro do Servidor",
       "serverErrorDescription": "Ocorreu um erro ao carregar as informações de cobrança. Tente novamente.",
-      "cancelFailed": "Falha ao cancelar assinatura"
+      "cancelFailed": "Falha ao cancelar assinatura",
+      "resumeFailed": "Falha ao retomar assinatura"
+    }
+  },
+  "landing": {
+    "header": {
+      "login": "Entrar",
+      "register": "Cadastrar"
+    },
+    "hero": {
+      "headlinePart1": "Seu Assistente de",
+      "headlinePart2": "Planejamento Tributário & Wealth Planning",
+      "description": "Imagine ter um paralegal que nunca dorme, conhece toda a legislação brasileira, americana e do caribe e cria estruturas patrimoniais em minutos. Esse é o POLARIS.",
+      "badge1": "Invisível para clientes",
+      "badge2": "Adaptável ao seu estilo de redação",
+      "feature1": "Aprovado OAB",
+      "feature2": "500+ Escritórios",
+      "feature3": "Suporte 24h",
+      "animationPlaceholder": "[Placeholder GIF - Demonstração da Interface]"
+    },
+    "features": {
+      "title": "Comece simples, evolua no seu ritmo",
+      "subtitle": "Não precisa mudar tudo de uma vez. Use o POLARIS nas suas demandas atuais e vá descobrindo novas possibilidades conforme usa.",
+      "feature1": {
+        "title": "Entende Direito Tributário",
+        "description": "Como um advogado sênior que estudou toda a legislação brasileira, americana e do caribe. Responde perguntas sobre IR, CSLL, PIS/COFINS e muito mais."
+      },
+      "feature2": {
+        "title": "Cria Documentos Sozinho",
+        "description": "Holdings, contratos, pareceres... O que antes levava dias, agora fica pronto em minutos. Você só revisa e assina."
+      },
+      "feature3": {
+        "title": "Sempre Atualizado",
+        "description": "Conectado direto com Receita Federal, CVM e outros órgãos. Nunca mais se preocupe se a lei mudou ontem."
+      }
+    },
+    "statistics": {
+      "title": "Os números falam por si",
+      "subtitle": "Escritórios que usam POLARIS economizam tempo e ganham mais dinheiro",
+      "stat1": {
+        "value": "R$ 2,5B",
+        "label": "Economizados em impostos"
+      },
+      "stat2": {
+        "value": "500+",
+        "label": "Escritórios usando"
+      },
+      "stat3": {
+        "value": "98%",
+        "label": "Aprovação na Receita"
+      },
+      "stat4": {
+        "value": "15min",
+        "label": "Para criar uma holding"
+      }
+    },
+    "integration": {
+      "title": "Funciona. Completamente integrado ao seu dia a dia.",
+      "subtitle": "Não atrapalha seu fluxo. POLARIS trabalha em segundo plano. Você continua usando seus sistemas normalmente.",
+      "feature1": {
+        "title": "Conecta com Tudo",
+        "description": "Seus sistemas atuais continuam funcionando"
+      },
+      "feature2": {
+        "title": "Busca Inteligente",
+        "description": "Encontra qualquer documento ou lei em segundos"
+      },
+      "feature3": {
+        "title": "100% Seguro",
+        "description": "Seus dados ficam protegidos e privados"
+      },
+      "animationPlaceholder": "[Placeholder GIF - Demonstração de Integração]"
+    },
+    "pricing": {
+      "title": "Comece grátis hoje.",
+      "subtitle": "Seja para consultas rápidas, documentos simples ou estruturas complexas, temos o plano ideal para o seu escritório."
+    },
+    "guarantees": {
+      "title": "Garantias que Protegem Você",
+      "subtitle": "Assumimos todos os riscos para que você possa testar POLARIS com total tranquilidade.",
+      "guarantee1": {
+        "title": "30 Dias de Garantia Incondicional",
+        "description": "Se por qualquer motivo você não ficar 100% satisfeito, devolvemos todo o seu dinheiro. Sem perguntas, sem burocracia."
+      },
+      "guarantee2": {
+        "title": "Suporte Vitalício Incluído",
+        "description": "Enquanto você for nosso cliente, terá acesso ao nosso suporte especializado. Sem taxas extras, sem surpresas."
+      }
     }
   }
 }

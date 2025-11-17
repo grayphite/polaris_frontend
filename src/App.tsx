@@ -1,4 +1,5 @@
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import React from 'react';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -11,6 +12,7 @@ import CompanyProfile from './pages/profile/CompanyProfile';
 import ForgotPassword from './pages/auth/ForgotPassword';
 // Pages
 import Login from './pages/auth/Login';
+import Landing from './pages/Landing';
 // Layouts
 import MainLayout from './layouts/MainLayout';
 import MembersList from './pages/members/MembersList';
@@ -18,7 +20,6 @@ import NotFound from './pages/NotFound';
 import Profile from './pages/profile/Profile';
 import ProjectDetail from './pages/projects/ProjectDetail';
 import ProjectsList from './pages/projects/ProjectsList';
-import React from 'react';
 import Register from './pages/auth/Register';
 import ResetPassword from './pages/auth/ResetPassword';
 import SetupAccount from './pages/auth/SetupAccount';
@@ -38,6 +39,13 @@ function App() {
       <AuthProvider>
         <Router>
         <Routes>
+          {/* Landing page - only accessible to unauthenticated users */}
+          <Route path="/" element={
+            <GuestRoute>
+              <Landing />
+            </GuestRoute>
+          } />
+          
           {/* Auth routes - only accessible to unauthenticated users */}
           <Route element={
             <GuestRoute>
@@ -78,8 +86,6 @@ function App() {
               </SubscriptionGuard>
             </ProtectedRoute>
           }>
-            {/* <Route path="/" element={<Dashboard />} /> */}
-            <Route path="/" element={<Navigate to="/projects" replace />} />
             
             {/* Projects routes */}
             <Route path="/projects" element={<ProjectsList />} />

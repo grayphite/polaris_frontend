@@ -43,19 +43,11 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
         refreshSubscription([updatedSubscription]);
       }
 
-      showSuccessToast(t('billing.success.cancelled'));
+      // showSuccessToast(t('billing.success.cancelled'));
       const isImmediate = !cancelAtPeriodEnd;
       onSuccess(isImmediate);
       onClose();
 
-      // If canceled immediately, redirect to subscription page
-      if (isImmediate) {
-        setTimeout(() => {
-          navigate('/subscription', {
-            state: { message: t('billing.canceledRedirectMessage') }
-          });
-        }, 1000);
-      }
     } catch (error: any) {
       const errorMessage = error?.response?.data?.error || error?.message || t('billing.errors.cancelFailed');
       showErrorToast(errorMessage);

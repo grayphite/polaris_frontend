@@ -115,7 +115,8 @@
       "passwordRequired": "Password is required",
       "passwordMinLength": "Password must be at least 8 characters",
       "passwordMismatch": "Passwords do not match",
-      "registrationFailed": "Registration failed. {{tryAgain}}"
+      "registrationFailed": "Registration failed. {{tryAgain}}",
+      "emailAlreadyInUse": "This email is already in use. Please try another email."
     },
     "forgotPassword": {
       "title": "Forgot password?",
@@ -177,6 +178,7 @@
       "noProjectsTitle": "No projects found",
       "noProjectsMessage": "You haven't created any projects yet.",
       "noSearchResults": "No projects match \"{{query}}\"",
+      "noDescription": "Project description here",
       "updated": "Updated {{date}}",
       "members": "{{count}} members",
       "members_one": "1 member",
@@ -271,6 +273,8 @@
       "uploadError": "Failed to upload {{filename}}. {{tryAgain}}",
       "unsupportedDocument": "Unsupported document type. Please upload a .pdf, or .txt file",
       "unsupportedImage": "Unsupported image type. Please upload a .gif, .jpg,.jpeg, .png, or .webp file.",
+      "pdfTooManyPages": "PDFs must be {{maxPages}} pages or fewer.",
+      "pdfValidationError": "Could not read {{filename}}. {{tryAgain}}",
       "deleteFileError": "Failed to delete {{filename}}. {{tryAgain}}",
       "waitForUploads": "Please wait for all files to finish uploading.",
       "sendError": "Failed to send message. {{tryAgain}}",
@@ -428,7 +432,8 @@
     "afterTrial": "After trial: {{price}}/{{interval}}",
     "additionalMembers": "Additional team members:",
     "perExtraMember": "{{price}}/{{interval}} per extra member",
-    "startFreeTrial": "Start Free Trial",
+      "startFreeTrial": "Start Free Trial",
+      "subscribe": "Subscribe",
     "loadPlansError": "Failed to load plans. {{tryAgain}}",
     "teamInfoError": "Unable to get team information. Please try logging in again.",
     "checkoutError": "Failed to start checkout. {{tryAgain}}",
@@ -467,9 +472,9 @@
     "emailRequired": "Please enter an email address.",
     "inviteFailed": "Failed to send invitation. {{tryAgain}}",
     "missingFirstName": "Your profile is missing first name. Please update your profile.",
-    "deleteTitle": "Delete Invitation",
-    "deleteMessage": "Are you sure you want to delete the invitation for {{email}}? This action cannot be undone.",
-    "deleteMessageGeneric": "Are you sure you want to delete this invitation? This action cannot be undone."
+    "deleteTitle": "Delete Member",
+    "deleteMessage": "Are you sure you want to delete the member {{email}}? This action cannot be undone.",
+    "deleteMessageGeneric": "Are you sure you want to delete this member? This action cannot be undone."
   },
   "emptyState": {
     "noData": "No data available",
@@ -549,7 +554,7 @@
     "projectUpdateFailed": "Failed to update project",
     "projectDeleted": "Project Deleted Successfully!",
     "projectDeleteFailed": "Failed to delete project",
-    "invitationDeleted": "Invitation deleted",
+    "invitationDeleted": "Member Deleted Successfully!",
     "invitationDeleteFailed": "Failed to delete invitation",
     "loadInvitationsFailed": "Failed to load invitations",
     "loadMembersFailed": "Failed to load members",
@@ -591,7 +596,8 @@
     },
     "incomplete": {
       "title": "Payment Incomplete",
-      "message": "Your payment process was not completed. Please complete your payment to access the system."
+      "message": "Your payment process was not completed. Please complete your payment to access the system.",
+      "completeButton": "Complete Subscription"
     },
     "incompleteExpired": {
       "title": "Payment Session Expired",
@@ -609,6 +615,19 @@
     "default": {
       "title": "Subscription Issue",
       "message": "There is an issue with your subscription. Please contact support for assistance."
+    },
+    "statusLabel": "Subscription Status",
+    "memberBlocked": "Your team's subscription is currently {{status}}. Contact your team owner to renew the plan and regain access.",
+    "memberCanceled": "Your team owner has canceled the subscription. You no longer have access to the system. Please contact your team owner to discuss renewing the subscription.",
+    "status": {
+      "trialing": "Trialing",
+      "active": "Active",
+      "past_due": "Past due",
+      "incomplete": "Incomplete",
+      "incomplete_expired": "Incomplete (expired)",
+      "canceled": "Canceled",
+      "unpaid": "Unpaid",
+      "unknown": "Unknown"
     },
     "plan": "Plan",
     "trialEndDate": "Trial End Date",
@@ -641,6 +660,8 @@
     "hideDetails": "Hide Details",
     "cancelSubscription": "Cancel Subscription",
     "willCancelAtPeriodEnd": "Will be Cancelled at Period End",
+    "resumeSubscription": "Resume Subscription",
+    "resuming": "Resuming...",
     "confirmCancel": "Confirm Cancellation",
     "cancelling": "Cancelling...",
     "completePayment": "Complete Payment",
@@ -667,7 +688,12 @@
       "unpaid": "Payment failed — Update payment and reactivate"
     },
     "success": {
-      "cancelled": "Subscription cancelled successfully"
+      "cancelled": "Subscription cancelled successfully",
+      "resumed": "Subscription resumed successfully"
+    },
+    "cancellationNotice": {
+      "title": "Subscription Scheduled for Cancellation",
+      "message": "Your subscription is scheduled to cancel at the end of the current billing period. If you change your mind, you can resume it anytime before the period ends."
     },
     "errors": {
       "noTeamId": "Team ID not found",
@@ -681,7 +707,94 @@
       "stripeError": "Stripe Error",
       "serverError": "Server Error",
       "serverErrorDescription": "An error occurred while loading billing information. Please try again.",
-      "cancelFailed": "Failed to cancel subscription"
+      "cancelFailed": "Failed to cancel subscription",
+      "resumeFailed": "Failed to resume subscription"
+    }
+  },
+  "landing": {
+    "header": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "hero": {
+      "headlinePart1": "Your Tax Planning & Wealth Planning",
+      "headlinePart2": "Assistant",
+      "description": "Imagine having a paralegal who never sleeps, knows all Brazilian, American, and Caribbean law, and creates asset structures in minutes. That's POLARIS.",
+      "badge1": "Invisible to customers",
+      "badge2": "Adaptable to your writing style",
+      "feature1": "Approved by the Bar Exam",
+      "feature2": "500+ Offices",
+      "feature3": "24/7 support",
+      "animationPlaceholder": "[GIF Placeholder - Interface Demo]"
+    },
+    "features": {
+      "title": "Start simple, evolve at your own pace",
+      "subtitle": "You don't need to change everything at once. Use POLARIS for your current needs and discover new possibilities as you go.",
+      "feature1": {
+        "title": "Understanding Tax Law",
+        "description": "As a senior attorney who has studied all Brazilian, American, and Caribbean legislation, I answer questions about income tax, social contribution on net profit, PIS/COFINS, and much more."
+      },
+      "feature2": {
+        "title": "Create Documents on Your Own",
+        "description": "Holdings, contracts, opinions... What used to take days is now ready in minutes. You just review and sign."
+      },
+      "feature3": {
+        "title": "Always Up-to-Date",
+        "description": "Directly connected to the Internal Revenue Service, the Securities and Exchange Commission of Brazil (CVM), and other agencies. Never again worry about whether the law changed yesterday."
+      }
+    },
+    "statistics": {
+      "title": "The numbers speak for themselves",
+      "subtitle": "Offices using POLARIS save time and make more money",
+      "stat1": {
+        "value": "R$ 2.5B",
+        "label": "Saved in taxes"
+      },
+      "stat2": {
+        "value": "500+",
+        "label": "Offices using"
+      },
+      "stat3": {
+        "value": "98%",
+        "label": "Approval at Revenue"
+      },
+      "stat4": {
+        "value": "15min",
+        "label": "To create a holding"
+      }
+    },
+    "integration": {
+      "title": "It works. Completely integrated into your daily routine.",
+      "subtitle": "It doesn't disrupt your workflow. POLARIS works in the background. You continue using your systems normally.",
+      "feature1": {
+        "title": "Connects with Everything",
+        "description": "Your current systems continue to work"
+      },
+      "feature2": {
+        "title": "Smart Search",
+        "description": "Find any document or law in seconds"
+      },
+      "feature3": {
+        "title": "100% Secure",
+        "description": "Your data stays protected and private"
+      },
+      "animationPlaceholder": "[GIF Placeholder - Integration Demo]"
+    },
+    "pricing": {
+      "title": "Start for free today.",
+      "subtitle": "Whether for quick consultations, simple documents, or complex structures, we have the ideal plan for your office."
+    },
+    "guarantees": {
+      "title": "Guarantees that Protect You",
+      "subtitle": "We assume all risks so you can test POLARIS with complete peace of mind.",
+      "guarantee1": {
+        "title": "30 Days Unconditional Guarantee",
+        "description": "If for any reason you are not 100% satisfied, we will refund all your money. No questions, no bureaucracy."
+      },
+      "guarantee2": {
+        "title": "Lifetime Support Included",
+        "description": "As long as you are our client, you will have access to our specialized support. No extra fees, no surprises."
+      }
     }
   }
 }

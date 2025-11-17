@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import SubscriptionBlockModal from '../ui/SubscriptionBlockModal';
 import Loader from './Loader';
@@ -10,6 +10,7 @@ interface SubscriptionGuardProps {
 
 const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   const { user, subscription, isLoading } = useAuth();
+  const location = useLocation();
 
   // Wait for auth to finish loading
   if (isLoading) {
@@ -25,15 +26,11 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
     return null;
   }
 
-  // Members always have access
-  if (user.role === 'member') {
-    return <>{children}</>;
-  }
-
-  // Owners need subscription check
-  // No subscription or empty array - redirect to subscription page (without MainLayout)
+  // No subscription or empty array - redirect owners to subscription page (without MainLayout)
   if (!subscription) {
-    return <Navigate to="/subscription" replace />;
+    return user.role === 'owner'
+      ? <Navigate to="/subscription" replace />
+      : <>{children}</>;
   }
 
   // Valid subscription statuses - allow access
@@ -41,10 +38,20 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
     return <>{children}</>;
   }
 
+  // Invalid subscription status - redirect owners with incomplete status to /subscription
+  if (subscription.status === 'incomplete' && user.role === 'owner') {
+    return <Navigate to="/subscription" replace />;
+  }
+
+  // Invalid subscription status - redirect to /subscription if on /subscription-details, otherwise show modal
+  if (location.pathname === '/subscription-details' && user.role === 'owner') {
+    return <Navigate to="/subscription" replace />;
+  }
+
   // Invalid subscription status - block with modal
   return (
     <>
-      <SubscriptionBlockModal subscription={subscription} />
+      <SubscriptionBlockModal subscription={subscription} viewerRole={user.role} />
     </>
   );
 };

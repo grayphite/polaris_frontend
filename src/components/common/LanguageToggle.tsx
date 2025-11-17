@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import UKFlag from '../../assets/United_Kingdom.png';
+import USFlag from '../../assets/US.png';
 import BrazilFlag from '../../assets/brazil.png';
 
 const LanguageToggle: React.FC = () => {
@@ -19,13 +19,13 @@ const LanguageToggle: React.FC = () => {
     <div className="flex items-center gap-2">
       {/* Language Labels */}
       <span className={`text-sm font-medium transition-colors ${!isPortuguese ? 'text-gray-800' : 'text-gray-400'}`}>
-        EN
+        ENG
       </span>
       
       {/* Toggle Track */}
       <button
         onClick={toggleLanguage}
-        className="relative w-16 h-8 rounded-full bg-gray-200 shadow-inner transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="relative w-16 h-8 rounded-full bg-gray-200 shadow-inner transition-all duration-300 focus:outline-none"
         aria-label="Toggle language"
       >
         {/* Sliding Button */}
@@ -35,7 +35,7 @@ const LanguageToggle: React.FC = () => {
           }`}
         >
           <img 
-            src={isPortuguese ? BrazilFlag : UKFlag} 
+            src={isPortuguese ? BrazilFlag : USFlag} 
             alt={isPortuguese ? 'Brazil flag' : 'UK flag'}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -47,7 +47,7 @@ const LanguageToggle: React.FC = () => {
       
       {/* Language Labels */}
       <span className={`text-sm font-medium transition-colors ${isPortuguese ? 'text-gray-800' : 'text-gray-400'}`}>
-        PT
+        POR
       </span>
     </div>
   );

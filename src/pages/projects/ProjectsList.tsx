@@ -135,7 +135,7 @@ const ProjectsList: React.FC = () => {
                           : t('projects.list.conversations_zero')}
                       </span>
                     </div>
-                    <p title={project.description} className="mt-2 text-sm text-gray-500 line-clamp-2">{project.description}</p>
+                    <p title={project.description} className="mt-2 text-sm text-gray-500 line-clamp-2">{project.description || t('projects.list.noDescription')}</p>
                   </div>
                   
                   <div className="mt-4 flex flex-wrap gap-2">

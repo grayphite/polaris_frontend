@@ -54,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({
             </svg>
           </button>
           <h2 className="ml-1 sm:ml-2 text-base sm:text-lg font-medium truncate">
-            {location.pathname === '/projects' ? t('header.projects') : location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
+            {location.pathname === '/projects' ? t('header.projects') : location.pathname !== '/subscription-details' && location.pathname.split('/')[1].charAt(0).toUpperCase() + location.pathname.split('/')[1].slice(1)}
           </h2>
         </div>
         

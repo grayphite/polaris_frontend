@@ -8,6 +8,7 @@ import { getSubscriptionStatus } from '../../services/paymentService';
 import { TeamSubscription } from '../../services/authService';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
+import SubscriptionLayout from '../../layouts/SubscriptionLayout';
 
 const Success: React.FC = () => {
   const { t } = useTranslation();
@@ -69,27 +70,28 @@ const Success: React.FC = () => {
     };
 
     refreshSubscriptionData();
-  }, [refreshSubscription]);
+  }, []);
 
   if (isRefreshing) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader />
-      </div>
+      <SubscriptionLayout centered contentClassName="w-full max-w-md">
+        <div className="flex w-full items-center justify-center">
+          <Loader />
+        </div>
+      </SubscriptionLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <SubscriptionLayout centered contentClassName="w-full max-w-md">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="max-w-md w-full"
+        className="w-full"
       >
         <div className="bg-white rounded-lg shadow-card p-8 text-center">
-          {/* Success Icon */}
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <svg
               className="h-10 w-10 text-green-600"
               xmlns="http://www.w3.org/2000/svg"
@@ -106,7 +108,6 @@ const Success: React.FC = () => {
             </svg>
           </div>
 
-          {/* Success Message */}
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
             {t('subscription.success.title')}
           </h2>
@@ -117,14 +118,6 @@ const Success: React.FC = () => {
             {t('subscription.success.message2')}
           </p>
 
-          {/* Trial Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-            <p className="text-sm text-blue-800">
-              {t('subscription.success.trialMessage')}
-            </p>
-          </div>
-
-          {/* Action Button */}
           <Button
             variant="primary"
             fullWidth
@@ -135,7 +128,7 @@ const Success: React.FC = () => {
           </Button>
         </div>
       </motion.div>
-    </div>
+    </SubscriptionLayout>
   );
 };
 

@@ -11,6 +11,8 @@ export interface PlanPrice {
   interval: string;
   interval_count: number;
   trial_days: number;
+  eligible_trial_days?: number | null;
+  has_trial_available?: boolean;
   stripe_price_id: string;
   per_seat_amount_cents: number;
   per_seat_metric: string;
@@ -136,10 +138,21 @@ export interface CancelSubscriptionResponse {
   };
 }
 
+export interface ResumeSubscriptionResponse {
+  success: boolean;
+  subscription: {
+    status: string;
+    cancel_at_period_end: boolean;
+    current_period_end: string;
+    canceled_at: string | null;
+  };
+}
+
 // API Functions
-export async function getPlans(): Promise<PlansResponse> {
+export async function getPlans(teamId: string): Promise<PlansResponse> {
   return makeRequest<PlansResponse>('/plans', {
     method: 'GET',
+    params: { team_id: teamId },
   });
 }
 
@@ -178,6 +191,14 @@ export async function cancelSubscription(
   return makeRequest<CancelSubscriptionResponse>(`/subscriptions/${teamId}/cancel`, {
     method: 'POST',
     data: { cancel_at_period_end: cancelAtPeriodEnd },
+  });
+}
+
+export async function resumeSubscription(
+  teamId: string
+): Promise<ResumeSubscriptionResponse> {
+  return makeRequest<ResumeSubscriptionResponse>(`/subscriptions/${teamId}/resume`, {
+    method: 'POST',
   });
 }
 

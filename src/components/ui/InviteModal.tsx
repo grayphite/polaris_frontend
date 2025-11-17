@@ -111,7 +111,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
         
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
-            {invitationCount >= 2 && (
+            {invitationCount >= 1 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                 <p className="text-sm text-yellow-800">
                   {t('inviteModal.additionalUserWarning')}
