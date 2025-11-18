@@ -10,6 +10,7 @@ export type ProjectDTO = {
   is_deleted: boolean;
   chat_count?: number;
   chats?: Array<{ id: string; title: string; details?: string }>; // optional embedded chats
+  user_role?: 'owner' | 'editor' | 'viewer';
 };
 
 export type ProjectsResponse = {

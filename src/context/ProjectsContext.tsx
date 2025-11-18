@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useChats } from './ChatContext';
 import { createProjectApi, deleteProjectApi, fetchProjectById, fetchProjects, updateProjectApi } from '../services/projectService';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
+import { ProjectRole } from '../utils/permissions';
 
-export type Project = { id: string; name: string; description?: string; created_at?: string; updated_at?: string; chat_count?: number };
+export type Project = { id: string; name: string; description?: string; created_at?: string; updated_at?: string; chat_count?: number; user_role?: ProjectRole | null };
 export type Conversation = { id: string; title: string };
 
 type ProjectsContextValue = {
@@ -83,7 +84,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         description: r.description,
         created_at: r.created_at,
         updated_at: r.updated_at,
-        chat_count: r.chat_count
+        chat_count: r.chat_count,
+        user_role: r.user_role ?? null
       })));
       setPagination(response.pagination);
       
@@ -118,7 +120,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         description: r.description,
         created_at: r.created_at,
         updated_at: r.updated_at,
-        chat_count: r.chat_count
+        chat_count: r.chat_count,
+        user_role: r.user_role ?? null
       }));
       
       // Prevent duplicates by filtering out projects that already exist in sidebar
@@ -179,7 +182,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           description: r.description,
           created_at: r.created_at,
           updated_at: r.updated_at,
-          chat_count: r.chat_count
+          chat_count: r.chat_count,
+          user_role: r.user_role ?? null
         }));
         
         setSidebarProjects(newProjects);
@@ -225,7 +229,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: data.description,
                 created_at: data.created_at,
                 updated_at: data.updated_at,
-                chat_count: (data as any).chat_count
+                chat_count: (data as any).chat_count,
+                user_role: (data as any).user_role ?? null
               }, ...prev];
             });
             
@@ -269,14 +274,16 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               description: data.description || p.description,
               created_at: data.created_at,
               updated_at: data.updated_at,
-              chat_count: (data as any).chat_count ?? p.chat_count
+              chat_count: (data as any).chat_count ?? p.chat_count,
+              user_role: (data as any).user_role ?? p.user_role ?? null
             } : p)) : [{ 
               id: data.id.toString(), 
               name: data.name || 'Project',
               description: data.description,
               created_at: data.created_at,
               updated_at: data.updated_at,
-              chat_count: (data as any).chat_count
+              chat_count: (data as any).chat_count,
+              user_role: (data as any).user_role ?? null
             }, ...prev];
             return next;
           });
@@ -311,7 +318,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           description: created.description || description,
           created_at: created.created_at,
           updated_at: created.updated_at,
-          chat_count: created.chat_count ?? 0
+          chat_count: created.chat_count ?? 0,
+          user_role: created.user_role ?? 'owner'
         };
         // Add the real project to state
         setProjects(prev => [realProject, ...prev]);
@@ -339,7 +347,8 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       description, 
       created_at: existingProject?.created_at, 
       updated_at: existingProject?.updated_at,
-      chat_count: existingProject?.chat_count
+      chat_count: existingProject?.chat_count,
+      user_role: existingProject?.user_role ?? null
     };
     setProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p)));
     setSidebarProjects(prev => prev.map(p => (p.id === projectId ? updatedProject : p))); // Also update sidebar
@@ -348,7 +357,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const response = await updateProjectApi(projectId, name, description);
         // Update with the new updated_at from backend response
         if (response?.updated_at) {
-          const finalProject = { ...updatedProject, updated_at: response.updated_at, chat_count: existingProject?.chat_count };
+          const finalProject = { ...updatedProject, updated_at: response.updated_at, chat_count: existingProject?.chat_count, user_role: existingProject?.user_role ?? null };
           setProjects(prev => prev.map(p => (p.id === projectId ? finalProject : p)));
           setSidebarProjects(prev => prev.map(p => (p.id === projectId ? finalProject : p)));
         }

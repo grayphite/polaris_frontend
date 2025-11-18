@@ -1,9 +1,9 @@
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
-import { useProjectRole } from '../../hooks/useProjectRole';
+import { useProjects } from '../../context/ProjectsContext';
 import { sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
@@ -87,8 +87,13 @@ const ChatInterface: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   const { chatsByProject, updateChat, deleteChat } = useChats();
-  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
+  const { projects, sidebarProjects } = useProjects();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
+  const projectRole = useMemo(() => {
+    if (!projectId) return null;
+    const project = projects.find(p => p.id === projectId) || sidebarProjects.find(p => p.id === projectId);
+    return project?.user_role ?? null;
+  }, [projects, sidebarProjects, projectId]);
   const navigate = useNavigate();
   
   // Resolve title for the current chat
@@ -974,8 +979,8 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
         
-        {/* Input area - Only visible for owner or editor (hidden while loading) */}
-        {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') ? (
+        {/* Input area - Only visible for owner or editor */}
+        {(projectRole === 'owner' || projectRole === 'editor') ? (
           <div className="border-t border-gray-200 p-4">
             <div className="max-w-3xl mx-auto">
             <form onSubmit={handleSubmit} className="flex items-end space-x-2">

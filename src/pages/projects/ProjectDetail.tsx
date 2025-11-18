@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useProjects } from '../../context/ProjectsContext';
 import { useChats } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useProjectRole } from '../../hooks/useProjectRole';
 import { listProjectMembers, ProjectMemberDTO } from '../../services/projectMemberService';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/ui/Button';
@@ -47,7 +46,6 @@ const ProjectDetail: React.FC = () => {
     has_prev: boolean;
   } | null>(null);
   const [currentMemberPage, setCurrentMemberPage] = useState(1);
-  const [isProjectOwner, setIsProjectOwner] = useState(false);
   
   // Modal state
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -67,18 +65,18 @@ const ProjectDetail: React.FC = () => {
     createChat
   } = useChats();
 
-  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
-  
-  const project = useMemo(() => {
-    const ctxProject = (projects || []).find(p => p.id === projectId);
-    return {
-      id: projectId,
-      name: ctxProject?.name || 'Project',
-      description: ctxProject?.description || '',
-      createdAt: ctxProject?.created_at,
-      updatedAt: ctxProject?.updated_at,
-    };
+  const ctxProject = useMemo(() => {
+    return (projects || []).find(p => p.id === projectId) || null;
   }, [projectId, projects]);
+  const projectRole = ctxProject?.user_role ?? null;
+  const project = {
+    id: projectId,
+    name: ctxProject?.name || 'Project',
+    description: ctxProject?.description || '',
+    createdAt: ctxProject?.created_at,
+    updatedAt: ctxProject?.updated_at,
+  };
+  const isProjectOwner = projectRole === 'owner';
 
   // Load chats when component mounts or projectId changes
   useEffect(() => {
@@ -141,18 +139,12 @@ const ProjectDetail: React.FC = () => {
       const response = await listProjectMembers(projectId, currentMemberPage, 10);
       setMembers(response.members);
       setMembersPagination(response.pagination);
-      
-      // Determine if current user is project owner
-      const ownerMember = response.members.find(m => m.role === 'owner');
-      if (ownerMember && user) {
-        setIsProjectOwner(ownerMember.user_id === Number(user.id));
-      }
     } catch (err: any) {
       showErrorToast(err?.response?.data?.error || t('errors.loadMembersFailed'));
     } finally {
       setMembersLoading(false);
     }
-  }, [projectId, currentMemberPage, user]);
+  }, [projectId, currentMemberPage, t]);
 
   useEffect(() => {
     if (activeTab === 'members' && projectId) {
@@ -184,8 +176,8 @@ const ProjectDetail: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* New Conversation button - hidden while loading, only show for owner/editor */}
-            {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') && (
+            {/* New Conversation button - only show for owner/editor */}
+            {(projectRole === 'owner' || projectRole === 'editor') && (
               <Button
                 variant="primary"
                 isLoading={isCreatingChat}
@@ -628,8 +620,8 @@ const ProjectDetail: React.FC = () => {
             </div>
           )}
           
-          {/* Settings tab - Only for project owners (hidden while loading) */}
-          {activeTab === 'settings' && !projectRoleLoading && projectRole === 'owner' && (
+          {/* Settings tab - Only for project owners */}
+          {activeTab === 'settings' && projectRole === 'owner' && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">{t('projects.detail.settings.title')}</h2>

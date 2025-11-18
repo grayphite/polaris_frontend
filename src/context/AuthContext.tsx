@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI, TeamSubscription } from '../services/authService';
 import { createTeam } from '../services/teamService';
 import { showErrorToast } from '../utils/toast';
-import { clearProjectRoleCache } from '../hooks/useProjectRole';
 
 interface User {
   id: string;
@@ -248,10 +247,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(TEAM_OWNER_STORAGE_KEY);
     setUser(null);
     setSubscription(null);
-    
-    // Clear project role cache when user logs out
-    // This prevents cached roles from being used by the next user
-    clearProjectRoleCache();
   };
 
   const refreshSubscription = (subscriptions: TeamSubscription[] | undefined) => {

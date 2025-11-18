@@ -1,11 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProjects } from '../../context/ProjectsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
-import { useProjectRole } from '../../hooks/useProjectRole';
+import { ProjectRole, canCreateProjectChats, canManageProject } from '../../utils/permissions';
 import EditChatModal from '../ui/EditChatModal';
 import ProjectModal from '../ui/ProjectModal';
 import DeleteProjectModal from '../ui/DeleteProjectModal';
@@ -28,6 +28,7 @@ interface ProjectMenuDropdownProps {
   onEdit: () => void;
   onDelete: () => void;
   menuTriggerId: string;
+  projectRole?: ProjectRole | null;
 }
 
 // Component for project menu button that conditionally shows based on permissions
@@ -40,6 +41,7 @@ interface ProjectMenuButtonProps {
   calculateMenuDirection: (el: HTMLElement) => 'up' | 'down';
   menuContainerRef: React.RefObject<HTMLDivElement | null>;
   menuTriggerRef: React.RefObject<HTMLButtonElement | null>;
+  projectRole?: ProjectRole | null;
 }
 
 const ProjectMenuButton: React.FC<ProjectMenuButtonProps & { children?: React.ReactNode }> = ({
@@ -51,13 +53,11 @@ const ProjectMenuButton: React.FC<ProjectMenuButtonProps & { children?: React.Re
   calculateMenuDirection,
   menuContainerRef,
   menuTriggerRef,
+  projectRole,
   children,
 }) => {
   const { t } = useTranslation();
-  const { role, isLoading } = useProjectRole(projectId);
-
-  // Safe default: don't show button until role is loaded, and only show for project owners
-  if (isLoading || role !== 'owner') return null;
+  if (!canManageProject(projectRole)) return null;
 
   return (
     <div className="relative flex-shrink-0" ref={menuContainerRef}>
@@ -94,12 +94,10 @@ const ProjectMenuDropdown: React.FC<ProjectMenuDropdownProps> = ({
   onEdit,
   onDelete,
   menuTriggerId,
+  projectRole,
 }) => {
   const { t } = useTranslation();
-  const { role, isLoading } = useProjectRole(projectId);
-
-  // Safe default: don't show menu until role is loaded, and only show for owners
-  if (isLoading || role !== 'owner') return null;
+  if (!canManageProject(projectRole)) return null;
 
   return (
     <div
@@ -154,7 +152,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     const match = location.pathname.match(/^\/projects\/([^\/]+)/);
     return match ? match[1] : null;
   })();
-  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(selectedProjectId);
   const [localSidebarSearch, setLocalSidebarSearch] = React.useState('');
   const [sidebarSearchDidMount, setSidebarSearchDidMount] = React.useState(false);
   const [localProjectSearch, setLocalProjectSearch] = React.useState('');
@@ -200,6 +197,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
 
   const conversations = selectedProjectId ? (sidebarChatsByProject[selectedProjectId] || []) : [];
+  const selectedProject = useMemo(() => {
+    if (!selectedProjectId) return null;
+    return projects.find(p => p.id === selectedProjectId) || sidebarProjects.find(p => p.id === selectedProjectId) || null;
+  }, [selectedProjectId, projects, sidebarProjects]);
+  const projectRole = selectedProject?.user_role ?? null;
 
   // Initialize local project search from context once to avoid initial no-op debounce
   useEffect(() => {
@@ -504,6 +506,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         calculateMenuDirection={calculateMenuDirection}
                         menuContainerRef={menuContainerRef}
                         menuTriggerRef={menuTriggerRef}
+                        projectRole={p.user_role ?? null}
                       >
                         {menuOpenForProject === p.id && (
                           <ProjectMenuDropdown
@@ -515,6 +518,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             onEdit={() => { openEdit(p.id); setMenuOpenForProject(null); }}
                             onDelete={() => { setDeleteProjectId(p.id); setMenuOpenForProject(null); }}
                             menuTriggerId={`project-menu-trigger-${p.id}`}
+                            projectRole={p.user_role ?? null}
                           />
                         )}
                       </ProjectMenuButton>
@@ -539,8 +543,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                             />
                           </div>
                           
-                          {/* New Chat button - only for owner or editor (hidden while loading) */}
-                          {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') && (
+                          {/* New Chat button - only for owner or editor */}
+                          {canCreateProjectChats(projectRole) && (
                             <button
                               className="w-full px-3 py-2 text-sm text-gray-200 font-medium hover:text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                               disabled={isSubmittingChat}
@@ -598,7 +602,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     {c.title}
                                   </NavLink>
                                   {/* Chat menu - only show if role is loaded and user has permissions */}
-                                  {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') && (
+                                  {canCreateProjectChats(projectRole) && (
                                     <div className="relative" data-chat-menu>
                                       <button
                                         className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-200"
@@ -628,7 +632,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             {t('common.edit')}
                                           </button>
                                         )}
-                                        {projectRole === 'owner' && (
+                                        {canManageProject(projectRole) && (
                                           <button
                                             type="button"
                                             className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-primary-200 hover:text-red-700"
