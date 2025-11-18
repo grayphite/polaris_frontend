@@ -154,9 +154,9 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [currentPage, searchQuery]);
 
   // Load initial sidebar projects on mount
-  useEffect(() => {
-    loadMoreSidebarProjects();
-  }, []);
+  // useEffect(() => {
+  //   loadMoreSidebarProjects();
+  // }, []);
 
   // Reload sidebar projects when search query changes
   useEffect(() => {
