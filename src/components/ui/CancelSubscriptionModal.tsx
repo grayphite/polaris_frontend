@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import Button from './Button';
 import { cancelSubscription } from '../../services/paymentService';
 import { useAuth } from '../../context/AuthContext';
-import { showErrorToast, showSuccessToast } from '../../utils/toast';
+import { showErrorToast } from '../../utils/toast';
 
 interface CancelSubscriptionModalProps {
   isOpen: boolean;
@@ -20,7 +19,6 @@ const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { subscription, refreshSubscription } = useAuth();
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedOption, setSelectedOption] = useState<'period_end' | 'immediate'>('period_end');

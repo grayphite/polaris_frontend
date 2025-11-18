@@ -34,10 +34,10 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized globally
     const status = error?.response?.status;
       // Check if user is currently on an auth page
-      const isOnAuthPage = window.location.pathname == '/login' ||
-                           window.location.pathname == '/register' ||
-                           window.location.pathname == '/forgot-password' ||
-                           window.location.pathname == '/reset-password' ||
+      const isOnAuthPage = window.location.pathname === '/login' ||
+                           window.location.pathname === '/register' ||
+                           window.location.pathname === '/forgot-password' ||
+                           window.location.pathname === '/reset-password' ||
                            window.location.pathname.startsWith('/invitation/setup-account');
 
       if (status === 401 && !isOnAuthPage) {

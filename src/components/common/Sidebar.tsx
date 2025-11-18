@@ -182,21 +182,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     sidebarProjectSearchQuery,
     setSidebarProjectSearchQuery,
     loadMoreSidebarProjects,
-    conversationsByProject,
-    createProject,
-    updateProject,
     deleteProject,
     beginEditProject,
-    editProjectId,
-    endEditProject,
   } = useProjects();
-  const { 
-    chatsByProject, 
+  const {
     sidebarChatsByProject,
-    loadingProjects,
     loadingSidebarProjects, 
-    createChat, 
-    updateChat, 
+    createChat,
     deleteChat, 
     sidebarSearchQuery, 
     setSidebarSearchQuery, 
@@ -204,7 +196,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     sidebarChatsHasMore,
     loadMoreSidebarChats,
     setSidebarCurrentPage,
-    setSidebarChatsHasMore
   } = useChats();
   const navigate = useNavigate();
 

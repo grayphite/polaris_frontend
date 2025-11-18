@@ -16,12 +16,15 @@ const HeroSection: React.FC = () => {
         <div className="text-center">
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-            <span className="text-primary-600">
+            <span className="text-primary-500">
               {t('landing.hero.headlinePart1')}
             </span>
-            {t('landing.hero.headlinePart2') && (
+            <span className="text-primary-600">
+              {t('landing.hero.headlinePart2')}
+            </span>
+            {t('landing.hero.headlinePart3') && (
               <span className="text-gray-900">
-                {' '}{t('landing.hero.headlinePart2')}
+                {' '}{t('landing.hero.headlinePart3')}
               </span>
             )}
           </h1>
@@ -29,6 +32,8 @@ const HeroSection: React.FC = () => {
           {/* Description */}
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-8">
             {t('landing.hero.description')}
+            <br />
+            {t('landing.hero.description2')}
           </p>
 
           {/* Value Proposition Badges */}

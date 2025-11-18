@@ -10,7 +10,7 @@ interface FeatureCardProps {
 
 const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
   return (
-    <div className="bg-white rounded-lg shadow-card p-6 h-full">
+    <div className="bg-gradient-to-br from-primary-50 via-white to-secondary-50 rounded-lg shadow-card p-6 h-full">
       <div className="flex justify-center mb-4">
         <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center">
           {icon}
@@ -51,7 +51,8 @@ const FeaturesSection: React.FC = () => {
     {
       icon: (
         <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.6 9h16.8M3.6 15h16.8M12 3.6c2.4 2.4 3.6 5.4 3.6 8.4 0 3-1.2 6-3.6 8.4m0-16.8c-2.4 2.4-3.6 5.4-3.6 8.4 0 3 1.2 6 3.6 8.4" />
         </svg>
       ),
       title: t('landing.features.feature3.title'),
@@ -68,6 +69,7 @@ const FeaturesSection: React.FC = () => {
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             {t('landing.features.subtitle')}
+            <span className="font-bold">{t('landing.features.subtitle2')}</span>
           </p>
         </div>
 
@@ -81,8 +83,8 @@ const FeaturesSection: React.FC = () => {
             />
           ))}
         </div>
-        <div className="shadow-card flex flex-col gap-6 rounded-xl relative p-8 backdrop-blur-sm">
-            <video src={video} className="w-full h-auto object-contain max-w-full rounded-lg" autoPlay loop playsInline style={{ imageRendering: 'auto' }}></video>
+        <div className="shadow-card flex flex-col gap-6 rounded-xl relative p-8 backdrop-blur-sm bg-gradient-to-br from-primary-50 to-secondary-50">
+            <video src={video} className="w-full h-auto object-contain max-w-full rounded-lg" autoPlay muted loop playsInline style={{ imageRendering: 'auto' }}></video>
         </div>
       </div>
     </section>

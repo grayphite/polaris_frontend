@@ -70,16 +70,16 @@ const Profile: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [name]: checked,
-      },
-    }));
-  };
+  // const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const { name, checked } = e.target;
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     notifications: {
+  //       ...prev.notifications,
+  //       [name]: checked,
+  //     },
+  //   }));
+  // };
   
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -96,7 +96,7 @@ const Profile: React.FC = () => {
         return;
       }
 
-      const response = await updateProfile(
+      await updateProfile(
         user.id,
         formData.firstName,
         formData.lastName
@@ -161,7 +161,7 @@ const Profile: React.FC = () => {
     setIsSaving(true);
     
     try {
-      const response = await changePassword(
+      await changePassword(
         passwordData.currentPassword,
         passwordData.newPassword
       );

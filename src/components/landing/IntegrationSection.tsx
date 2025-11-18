@@ -48,7 +48,7 @@ const IntegrationSection: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           {integrations.map((integration, index) => (
-            <div key={index} className="text-center">
+            <div key={index} className="bg-gradient-to-br from-primary-50 via-white to-secondary-50 rounded-lg shadow-card p-6 h-full text-center">
               <div className="flex justify-center mb-4">
                 <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center">
                   {integration.icon}

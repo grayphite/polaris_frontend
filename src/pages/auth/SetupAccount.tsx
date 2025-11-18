@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,7 +8,7 @@ import InvitationStatusModal from '../../components/ui/InvitationStatusModal';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { showErrorToast, showInfoToast } from '../../utils/toast';
-import { getInvitationByToken, acceptInvitation, InvitationDetailDTO } from '../../services/invitationService';
+import { getInvitationByToken, InvitationDetailDTO } from '../../services/invitationService';
 
 const SetupAccount: React.FC = () => {
   const { t } = useTranslation();

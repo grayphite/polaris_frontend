@@ -5,7 +5,6 @@ import { useProjects } from '../../context/ProjectsContext';
 import { useChats } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useProjectRole } from '../../hooks/useProjectRole';
-import { fetchProjectById } from '../../services/projectService';
 import { listProjectMembers, ProjectMemberDTO } from '../../services/projectMemberService';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/ui/Button';
@@ -76,8 +75,8 @@ const ProjectDetail: React.FC = () => {
       id: projectId,
       name: ctxProject?.name || 'Project',
       description: ctxProject?.description || '',
-      createdAt: ctxProject?.created_at || new Date().toISOString(),
-      updatedAt: ctxProject?.updated_at || new Date().toISOString(),
+      createdAt: ctxProject?.created_at,
+      updatedAt: ctxProject?.updated_at,
     };
   }, [projectId, projects]);
 

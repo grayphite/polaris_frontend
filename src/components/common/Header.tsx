@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from './LanguageToggle';
-import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -92,13 +91,6 @@ const Header: React.FC<HeaderProps> = ({
               >
                 {t('header.manageTeam')}
               </NavLink>
-              {/* <NavLink
-                to="/company-profile"
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setUserMenuOpen(false)}
-              >
-                Company Profile
-              </NavLink> */}
               {user?.role === 'owner' && <NavLink
                 to="/subscription-details"
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

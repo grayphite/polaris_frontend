@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { listProjectMembers, ProjectMemberDTO } from '../services/projectMemberService';
+import { listProjectMembers } from '../services/projectMemberService';
 import { getUserProjectRole, ProjectRole } from '../utils/permissions';
 
 /**
