@@ -2,10 +2,8 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
 import { useProjectRole } from '../../hooks/useProjectRole';
-import { fetchChatById, sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
+import { sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
 import React, { useEffect, useRef, useState } from 'react';
-
-import Button from '../../components/ui/Button';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
@@ -62,7 +60,6 @@ const ChatInterface: React.FC = () => {
   const { projectId, chatId } = useParams<{ projectId: string; chatId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
@@ -89,7 +86,7 @@ const ChatInterface: React.FC = () => {
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, hydrateProjectChats, updateChat, deleteChat } = useChats();
+  const { chatsByProject, updateChat, deleteChat } = useChats();
   const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const navigate = useNavigate();

@@ -29,7 +29,6 @@ const MembersList: React.FC = () => {
   const [rows, setRows] = useState<TableRow[]>([]);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [total, setTotal] = useState(0);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [invitationToDelete, setInvitationToDelete] = useState<{ id: number; email?: string } | null>(null);
@@ -89,7 +88,6 @@ const MembersList: React.FC = () => {
         setTeamId(null);
         setOwner(null);
         setRows([]);
-        setTotal(0);
         setInvitationsResponse(null);
       }
     };
@@ -100,7 +98,6 @@ const MembersList: React.FC = () => {
   const loadInvitations = useCallback(async () => {
     if (!teamId) {
       setRows([]);
-      setTotal(0);
       return;
     }
     
@@ -129,7 +126,6 @@ const MembersList: React.FC = () => {
       }));
       
       setRows(mapped);
-      setTotal(res.pagination.total);
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.response?.data?.error || t('errors.loadInvitationsFailed');
       showErrorToast(msg);

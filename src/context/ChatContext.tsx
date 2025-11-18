@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo, useState, useCallback, useRef } from 'react';
-import { showErrorToast, showSuccessToast } from '../utils/toast';
-import { createChatApi, deleteChatApi, fetchChats, updateChatApi, ChatsResponse } from '../services/chatService';
+import { showErrorToast } from '../utils/toast';
+import { createChatApi, deleteChatApi, fetchChats, updateChatApi } from '../services/chatService';
 
 export type Chat = { 
   id: string; 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI, TeamSubscription } from '../services/authService';
 import { createTeam } from '../services/teamService';
-import { showErrorToast, showSuccessToast } from '../utils/toast';
+import { showErrorToast } from '../utils/toast';
 import { clearProjectRoleCache } from '../hooks/useProjectRole';
 
 interface User {
