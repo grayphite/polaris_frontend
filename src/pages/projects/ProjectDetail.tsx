@@ -78,15 +78,6 @@ const ProjectDetail: React.FC = () => {
   };
   const isProjectOwner = projectRole === 'owner';
 
-  // Load chats when component mounts or projectId changes
-  useEffect(() => {
-    if (projectId) {
-      setIsLoadingConversations(true);
-      ensureInitialChatsLoaded(projectId)
-        .finally(() => setIsLoadingConversations(false));
-    }
-  }, [projectId]); // Removed ensureInitialChatsLoaded from dependencies
-
   // Initialize local input from context once to avoid initial no-op debounce
   useEffect(() => {
     if (!didMount) {
