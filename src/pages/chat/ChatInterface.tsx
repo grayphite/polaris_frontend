@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
 import { useProjects } from '../../context/ProjectsContext';
 import { sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
+import ChatReferencePicker, { ChatReferenceOption } from '../../components/chat/ChatReferencePicker';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
@@ -33,6 +34,7 @@ interface Message {
   attachments?: FileAttachment[];
   file_references?: string[];
   sources?: string[];
+  chat_references?: ChatReferenceOption[];
 }
 
 const MAX_PDF_PAGES = 100;
@@ -67,6 +69,39 @@ const ChatInterface: React.FC = () => {
   const [displayedContent, setDisplayedContent] = useState<string>(''); // Animated display
   const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
   const [isStreamingComplete, setIsStreamingComplete] = useState(false); // Track if streaming is complete
+  const [chatReferences, setChatReferences] = useState<ChatReferenceOption[]>([]);
+  const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
+  const [pickerAnchorRect, setPickerAnchorRect] = useState<DOMRect | null>(null);
+  const [inlineTrigger, setInlineTrigger] = useState<{ start: number; end: number; keyword: string } | null>(null);
+  const [pickerPlacement, setPickerPlacement] = useState<'above' | 'below'>('above');
+
+  const buildChatReferences = (aiChat: any): ChatReferenceOption[] | undefined => {
+    const detailRefs = aiChat?.chat_reference_details?.length
+      ? aiChat.chat_reference_details
+          .map((ref: any) => ({
+            id: ref.id ? ref.id.toString() : '',
+            title: ref.name || ref.title || 'Referenced chat',
+            details: ref.description || ref.details || '',
+          }))
+          .filter((ref: { id: string }) => Boolean(ref.id)) as ChatReferenceOption[]
+      : undefined;
+
+    if (detailRefs && detailRefs.length > 0) {
+      return detailRefs;
+    }
+
+    if (aiChat?.referenced_chat && aiChat?.referenced_chat_id) {
+      return [
+        {
+          id: aiChat.referenced_chat_id.toString(),
+          title: aiChat.referenced_chat.name || 'Referenced chat',
+          details: aiChat.referenced_chat.description || '',
+        },
+      ];
+    }
+
+    return undefined;
+  };
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,12 +116,13 @@ const ChatInterface: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const referenceButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, updateChat, deleteChat } = useChats();
+  const { chatsByProject, updateChat, deleteChat, ensureProjectChatsLoaded } = useChats();
   const { projects, sidebarProjects } = useProjects();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const projectRole = useMemo(() => {
@@ -187,6 +223,7 @@ const ChatInterface: React.FC = () => {
               : undefined;
             
             const fileIds = aiChat.file_references || [];
+            const chatRefDetails = buildChatReferences(aiChat);
             
             // Add user message
             loadedMessages.push({
@@ -196,6 +233,7 @@ const ChatInterface: React.FC = () => {
               timestamp: aiChat.created_at,
               attachments: attachments,
               file_references: fileIds.length > 0 ? fileIds : undefined,
+            chat_references: chatRefDetails,
             });
             
             // Add assistant message
@@ -228,6 +266,12 @@ const ChatInterface: React.FC = () => {
     
     loadMessages();
   }, [chatId, projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      ensureProjectChatsLoaded(projectId);
+    }
+  }, [projectId, ensureProjectChatsLoaded]);
   
   // Track empty "New Chat" for auto-deletion on unmount
   useEffect(() => {
@@ -385,6 +429,7 @@ const ChatInterface: React.FC = () => {
             : undefined;
           
           const fileIds = aiChat.file_references || [];
+          const chatRefDetails = buildChatReferences(aiChat);
           
           olderMessages.push({
             id: `user-${aiChat.id}`,
@@ -393,6 +438,7 @@ const ChatInterface: React.FC = () => {
             timestamp: aiChat.created_at,
             attachments: attachments,
             file_references: fileIds.length > 0 ? fileIds : undefined,
+            chat_references: chatRefDetails,
           });
           
           olderMessages.push({
@@ -437,6 +483,74 @@ const ChatInterface: React.FC = () => {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
+  };
+
+  const updateInlineTrigger = () => {
+    if (!textareaRef.current) return;
+    const cursor = textareaRef.current.selectionStart ?? 0;
+    const text = textareaRef.current.value.slice(0, cursor);
+    const match = text.match(/@([\w\s-]*)$/);
+    if (match) {
+      const start = cursor - match[0].length;
+      setInlineTrigger({
+        start,
+        end: cursor,
+        keyword: match[1] || '',
+      });
+      setPickerAnchorRect(textareaRef.current.getBoundingClientRect());
+      setPickerPlacement('above');
+      setIsReferencePickerOpen(true);
+    } else if (inlineTrigger) {
+      setInlineTrigger(null);
+      setIsReferencePickerOpen(false);
+    }
+  };
+
+  const handleTextareaKeyUp = () => {
+    updateInlineTrigger();
+  };
+
+  const handleReferencePickerClose = () => {
+    setIsReferencePickerOpen(false);
+    setInlineTrigger(null);
+  };
+
+  const handleReferenceSelect = (chat: ChatReferenceOption) => {
+    setChatReferences((prev) => {
+      const current = prev[0];
+      if (current && current.id === chat.id) {
+        return [];
+      }
+      return [chat];
+    });
+
+    if (inlineTrigger && textareaRef.current) {
+      const nextValue =
+        input.slice(0, inlineTrigger.start) + input.slice(inlineTrigger.end, input.length);
+      setInput(nextValue);
+      const cursorPos = inlineTrigger.start;
+      requestAnimationFrame(() => {
+        textareaRef.current?.setSelectionRange(cursorPos, cursorPos);
+      });
+    }
+
+    setInlineTrigger(null);
+    setIsReferencePickerOpen(false);
+  };
+
+  const removeChatReference = () => {
+    setChatReferences([]);
+  };
+
+  const handleReferenceButtonClick = () => {
+    const rect =
+      referenceButtonRef.current?.getBoundingClientRect() ||
+      textareaRef.current?.getBoundingClientRect() ||
+      null;
+    setPickerAnchorRect(rect);
+    setPickerPlacement('above');
+    setInlineTrigger(null);
+    setIsReferencePickerOpen((prev) => !prev);
   };
   
   
@@ -631,6 +745,7 @@ const ChatInterface: React.FC = () => {
     
     // Filter out failed uploads
     const successfulFiles = attachedFiles.filter(f => f.uploadStatus === 'success' || !f.uploadStatus);
+    const referencedChatId = chatReferences[0]?.id;
     
     // Capture if this is the first message before state updates
     const isFirstMessage = messages.length === 0;
@@ -657,6 +772,7 @@ const ChatInterface: React.FC = () => {
       timestamp: new Date().toISOString(),
       attachments: successfulFiles.length > 0 ? [...successfulFiles] : undefined,
       file_references: fileIds.length > 0 ? fileIds : undefined,
+      chat_references: chatReferences.length > 0 ? [...chatReferences] : undefined,
     };
     
     // Add assistant message placeholder
@@ -673,6 +789,7 @@ const ChatInterface: React.FC = () => {
     const currentAttachments = [...successfulFiles];
     setInput('');
     setAttachedFiles([]);
+    setChatReferences([]);
     
     // Scroll to bottom - padding makes latest message appear at top (ChatGPT-style)
     setTimeout(() => {
@@ -702,6 +819,7 @@ const ChatInterface: React.FC = () => {
         currentInput, 
         fileIds.length > 0 ? fileIds : undefined,
         fileDetails,
+        referencedChatId,
         (streamedText) => {
           // Update streaming content as chunks arrive
           setStreamingContent(streamedText);
@@ -717,6 +835,7 @@ const ChatInterface: React.FC = () => {
       );
       
       if (response.success && response.ai_chat) {
+        const responseChatRefs = buildChatReferences(response.ai_chat);
         // Auto-rename chat IMMEDIATELY based on first message response
         if (response.ai_chat.chat_name && response.ai_chat.chat_name !== "" && projectId) {
           updateChat(projectId, chatId, response.ai_chat.chat_name, '');
@@ -758,6 +877,7 @@ const ChatInterface: React.FC = () => {
                 id: `user-${response.ai_chat.id}`,
                 // timestamp: response.ai_chat.created_at,
                 file_references: response.ai_chat.file_references,
+                chat_references: responseChatRefs || m.chat_references,
               };
             }
             return m;
@@ -780,7 +900,8 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex overflow-hidden">
+    <>
+      <div className="h-full flex overflow-hidden">
       {/* Chat interface */}
       <div className="flex-1 flex flex-col bg-light-200">
         {/* Chat header */}
@@ -961,6 +1082,29 @@ const ChatInterface: React.FC = () => {
                       )
                     )}
                   </div>
+                  {message.chat_references && message.chat_references.length > 0 && (
+                    <div
+                      className={`mt-2 flex flex-wrap gap-1 text-xs ${
+                        message.role === 'user' ? 'self-end' : 'self-start'
+                      }`}
+                    >
+                      {message.chat_references.map((ref) => (
+                        <span
+                          key={ref.id}
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${
+                            message.role === 'user'
+                              ? 'bg-primary-100 text-primary-800'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="max-w-[140px] truncate">{ref.title}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {/* Timestamp below message container, visible on hover */}
                   <div
                     className={`${
@@ -985,6 +1129,26 @@ const ChatInterface: React.FC = () => {
             <div className="max-w-3xl mx-auto">
             <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             <div className="flex-1 rounded-lg border border-gray-200 p-2">
+              {chatReferences.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {chatReferences.map((ref) => (
+                    <div key={ref.id} className="flex items-center gap-2 rounded-full bg-[#bae6fd] px-3 py-1 text-sm text-primary-600">
+                      <span className="max-w-[200px] truncate" title={ref.title}>{ref.title}</span>
+                      <button
+                        type="button"
+                        onClick={removeChatReference}
+                        className="text-primary-600 hover:text-primary-800"
+                        aria-label="Remove reference"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="mb-3 text-xs text-gray-500">
+                You can reference only one previous chat at a time.
+              </p>
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -1111,6 +1275,17 @@ const ChatInterface: React.FC = () => {
                     </div>
                   )}
                 </div>
+                <button
+                  type="button"
+                  ref={referenceButtonRef}
+                  onClick={handleReferenceButtonClick}
+                  className="p-1.5 rounded-full hover:bg-gray-200 shrink-0"
+                  title="Reference previous chats"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600">
+                    @
+                  </span>
+                </button>
                 <textarea
                   ref={textareaRef}
                   className="w-full bg-transparent resize-none focus:outline-none py-1 max-h-24 overflow-y-auto scrollbar-thin"
@@ -1119,6 +1294,8 @@ const ChatInterface: React.FC = () => {
                   value={input}
                   onChange={handleInputChange}
                   onPaste={handlePaste}
+                  onKeyUp={handleTextareaKeyUp}
+                  onClick={handleTextareaKeyUp}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -1150,7 +1327,19 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+      <ChatReferencePicker
+        projectId={projectId}
+        isOpen={isReferencePickerOpen}
+        anchorRect={pickerAnchorRect}
+        placement={pickerPlacement}
+        excludeChatId={chatId}
+        selectedChatIds={chatReferences.map(ref => ref.id)}
+        searchTerm={inlineTrigger?.keyword}
+        onSelect={handleReferenceSelect}
+        onClose={handleReferencePickerClose}
+      />
+    </>
   );
 };
 

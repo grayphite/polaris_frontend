@@ -85,6 +85,24 @@ export type AIChatMessageDTO = {
   chat_name?: string; // Add optional chat_name field for auto-naming
   file_references?: string[]; // Array of file IDs
   file_reference_details?: FileMetadata[]; // Array of file objects from backend
+  chat_reference_details?: {
+    id: number;
+    name?: string;
+    title?: string;
+    description?: string;
+    details?: string;
+  }[];
+  referenced_chat_id?: number;
+  referenced_chat?: {
+    id: number;
+    name?: string;
+    description?: string;
+    project_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    is_deleted?: boolean;
+  };
   context_metadata: {
     api_version: string;
     model_used: string;
@@ -138,6 +156,7 @@ export async function sendMessageApi(
   userQuestion: string,
   fileReferences?: string[],
   fileReferenceDetails?: FileMetadata[],
+  referencedChatId?: string,
   onStreamChunk?: (text: string) => void,
   onStreamComplete?: (data: any) => void
 ): Promise<SendMessageResponse> {
@@ -155,6 +174,13 @@ export async function sendMessageApi(
   // Add file reference details to payload if provided
   if (fileReferenceDetails && fileReferenceDetails.length > 0) {
     payload.file_reference_details = fileReferenceDetails;
+  }
+
+  if (referencedChatId) {
+    const parsedId = parseInt(referencedChatId, 10);
+    if (!Number.isNaN(parsedId)) {
+      payload.referenced_chat_id = parsedId;
+    }
   }
   
   let accumulatedText = '';
