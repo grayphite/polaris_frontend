@@ -25,12 +25,6 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   if (!user) {
     return null;
   }
-  const bypassEmails = ['snow@yopmail.com'];
-  const isBypassUser = (user?.email || '').toLowerCase();
-  
-  if (bypassEmails.includes(isBypassUser)) {
-    return <>{children}</>;
-  }
   // No subscription or empty array - redirect owners to subscription page (without MainLayout)
   if (!subscription) {
     return user.role === 'owner'
