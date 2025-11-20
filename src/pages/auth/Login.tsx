@@ -73,6 +73,13 @@ const Login: React.FC = () => {
 
       // Only check if we have valid user data with role
       if (userData && userData.role === 'owner') {
+        const normalizedEmail = (userData?.email || '').toLowerCase();
+        const isBypassUser = normalizedEmail === 'snow@yopmail.com';
+
+        if (isBypassUser) {
+          navigate('/projects'); // or wherever you want them to land
+          return;
+        }
         // If owner has no subscriptions or empty array, redirect to subscription page
         if (!subscriptions || !Array.isArray(subscriptions) || subscriptions.length === 0) {
           navigate('/subscription');

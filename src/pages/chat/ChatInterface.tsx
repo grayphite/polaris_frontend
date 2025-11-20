@@ -2,9 +2,9 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
 import { useProjects } from '../../context/ProjectsContext';
-import { sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
+import { sendMessageApi, getChatMessages, deleteChatApi, getChatReferencesMapping } from '../../services/chatService';
 import ChatReferencePicker, { ChatReferenceOption } from '../../components/chat/ChatReferencePicker';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
@@ -70,38 +70,11 @@ const ChatInterface: React.FC = () => {
   const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
   const [isStreamingComplete, setIsStreamingComplete] = useState(false); // Track if streaming is complete
   const [chatReferences, setChatReferences] = useState<ChatReferenceOption[]>([]);
+  const [persistedReferenceIds, setPersistedReferenceIds] = useState<string[]>([]);
   const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
   const [pickerAnchorRect, setPickerAnchorRect] = useState<DOMRect | null>(null);
   const [inlineTrigger, setInlineTrigger] = useState<{ start: number; end: number; keyword: string } | null>(null);
   const [pickerPlacement, setPickerPlacement] = useState<'above' | 'below'>('above');
-
-  const buildChatReferences = (aiChat: any): ChatReferenceOption[] | undefined => {
-    const detailRefs = aiChat?.chat_reference_details?.length
-      ? aiChat.chat_reference_details
-          .map((ref: any) => ({
-            id: ref.id ? ref.id.toString() : '',
-            title: ref.name || ref.title || 'Referenced chat',
-            details: ref.description || ref.details || '',
-          }))
-          .filter((ref: { id: string }) => Boolean(ref.id)) as ChatReferenceOption[]
-      : undefined;
-
-    if (detailRefs && detailRefs.length > 0) {
-      return detailRefs;
-    }
-
-    if (aiChat?.referenced_chat && aiChat?.referenced_chat_id) {
-      return [
-        {
-          id: aiChat.referenced_chat_id.toString(),
-          title: aiChat.referenced_chat.name || 'Referenced chat',
-          details: aiChat.referenced_chat.description || '',
-        },
-      ];
-    }
-
-    return undefined;
-  };
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -131,6 +104,108 @@ const ChatInterface: React.FC = () => {
     return project?.user_role ?? null;
   }, [projects, sidebarProjects, projectId]);
   const navigate = useNavigate();
+
+  const chatsMetadataById = useMemo(() => {
+    if (!projectId) return {};
+    const list = chatsByProject[projectId] || [];
+    return list.reduce((acc, chat) => {
+      if (chat?.id) {
+        acc[chat.id.toString()] = {
+          title: chat.title,
+          details: chat.details || '',
+        };
+      }
+      return acc;
+    }, {} as Record<string, { title: string; details: string }>);
+  }, [projectId, chatsByProject]);
+
+  const getChatMetadata = useCallback(
+    (id: string | number | null | undefined) => {
+      if (id === null || id === undefined) return null;
+      const key = id.toString();
+      return chatsMetadataById[key] || null;
+    },
+    [chatsMetadataById]
+  );
+
+  const buildChatReferences = (aiChat: any): ChatReferenceOption[] | undefined => {
+    const detailRefs = aiChat?.chat_reference_details?.length
+      ? aiChat.chat_reference_details
+          .map((ref: any) => ({
+            id: ref.id ? ref.id.toString() : '',
+            title: ref.name || ref.title || 'Referenced chat',
+            details: ref.description || ref.details || '',
+          }))
+          .filter((ref: { id: string }) => Boolean(ref.id)) as ChatReferenceOption[]
+      : undefined;
+
+    if (detailRefs && detailRefs.length > 0) {
+      return detailRefs;
+    }
+
+    const buildFromObject = (chat: any) => {
+      const chatId = chat?.id ?? chat?.chat_id;
+      if (!chatId && chatId !== 0) return null;
+      const meta = getChatMetadata(chatId);
+      return {
+        id: chatId.toString(),
+        title: chat?.name || chat?.title || meta?.title || `Chat #${chatId}`,
+        details: chat?.description || chat?.details || meta?.details || '',
+      };
+    };
+
+    if (Array.isArray(aiChat?.referenced_chats) && aiChat.referenced_chats.length > 0) {
+      const refs = aiChat.referenced_chats
+        .map((chat: any) => buildFromObject(chat))
+        .filter(Boolean) as ChatReferenceOption[];
+      if (refs.length > 0) {
+        return refs;
+      }
+    }
+
+    const mapIdsToRefs = (ids: number[] | string[]) =>
+      ids
+        .map((id) => {
+          const parsedId = typeof id === 'string' ? id : id?.toString();
+          if (!parsedId) return null;
+          const meta = getChatMetadata(parsedId);
+          return {
+            id: parsedId,
+            title: meta?.title || `Chat #${parsedId}`,
+            details: meta?.details || '',
+          };
+        })
+        .filter(Boolean) as ChatReferenceOption[];
+
+    if (Array.isArray(aiChat?.referenced_chat) && aiChat.referenced_chat.length > 0) {
+      const refs = mapIdsToRefs(aiChat.referenced_chat);
+      if (refs.length > 0) {
+        return refs;
+      }
+    }
+
+    if (Array.isArray(aiChat?.referenced_chat_ids) && aiChat.referenced_chat_ids.length > 0) {
+      const refs = mapIdsToRefs(aiChat.referenced_chat_ids);
+      if (refs.length > 0) {
+        return refs;
+      }
+    }
+
+    if (aiChat?.referenced_chat && aiChat?.referenced_chat_id) {
+      const ref = buildFromObject({
+        id: aiChat.referenced_chat_id,
+        name: aiChat.referenced_chat.name,
+        description: aiChat.referenced_chat.description,
+        details: aiChat.referenced_chat.details,
+        title: aiChat.referenced_chat.title,
+      });
+      if (ref) {
+        return [ref];
+      }
+    }
+
+    return undefined;
+  };
   
   // Resolve title for the current chat
   const isNewChatId = chatId ? /^\d{13,}$/.test(chatId) : false;
@@ -272,6 +347,105 @@ const ChatInterface: React.FC = () => {
       ensureProjectChatsLoaded(projectId);
     }
   }, [projectId, ensureProjectChatsLoaded]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (!chatId) {
+      setPersistedReferenceIds([]);
+      setChatReferences([]);
+      return;
+    }
+
+    setPersistedReferenceIds([]);
+    setChatReferences([]);
+
+    const loadChatReferences = async () => {
+      try {
+        const response = await getChatReferencesMapping(chatId);
+        if (isCancelled) return;
+
+        const ids = (() => {
+          const normalized = new Set<string>();
+
+          if (response?.references && typeof response.references === 'object') {
+            // Get all message IDs (keys) and find the last one
+            const messageIds = Object.keys(response.references);
+            if (messageIds.length > 0) {
+              // Sort message IDs numerically and get the last (highest) one
+              const sortedIds = messageIds.map(id => parseInt(id, 10)).sort((a, b) => a - b);
+              const lastMessageId = sortedIds[sortedIds.length - 1].toString();
+              
+              // Only process references from the last message
+              const lastMessageRefs = response.references[lastMessageId];
+              if (Array.isArray(lastMessageRefs)) {
+                lastMessageRefs.forEach((value) => {
+                  if (value === null || value === undefined) return;
+                  normalized.add(value.toString());
+                });
+              }
+            }
+          }
+
+          if (normalized.size === 0 && Array.isArray(response?.referenced_chat_ids)) {
+            response.referenced_chat_ids.forEach((value) => {
+              if (value === null || value === undefined) return;
+              normalized.add(value.toString());
+            });
+          }
+
+          return Array.from(normalized);
+        })();
+
+        setPersistedReferenceIds(ids);
+      } catch (error) {
+        console.error('Failed to load chat references mapping:', error);
+        if (!isCancelled) {
+          setPersistedReferenceIds([]);
+        }
+      }
+    };
+
+    loadChatReferences();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [chatId]);
+
+  useEffect(() => {
+    setChatReferences((prev) => {
+      const persistedSet = new Set(persistedReferenceIds);
+      const manualRefs = prev.filter((ref) => !persistedSet.has(ref.id));
+
+      if (persistedReferenceIds.length === 0) {
+        return manualRefs.length === prev.length ? prev : [...manualRefs];
+      }
+
+      const persistedRefs = persistedReferenceIds.map((id) => {
+        const meta = getChatMetadata(id);
+        const existing = prev.find((ref) => ref.id === id);
+        return {
+          id,
+          title: meta?.title || existing?.title || `Chat #${id}`,
+          details: meta?.details || existing?.details || '',
+        };
+      });
+
+      const next = [...persistedRefs, ...manualRefs];
+      const isSameLength = next.length === prev.length;
+      const isSame =
+        isSameLength &&
+        next.every(
+          (ref, index) =>
+            ref.id === prev[index]?.id &&
+            ref.title === prev[index]?.title &&
+            ref.details === prev[index]?.details
+        );
+
+      return isSame ? prev : next;
+    });
+  }, [persistedReferenceIds, getChatMetadata]);
   
   // Track empty "New Chat" for auto-deletion on unmount
   useEffect(() => {
@@ -515,16 +689,11 @@ const ChatInterface: React.FC = () => {
     setInlineTrigger(null);
   };
 
-  const handleReferenceSelect = (chat: ChatReferenceOption) => {
-    setChatReferences((prev) => {
-      const current = prev[0];
-      if (current && current.id === chat.id) {
-        return [];
-      }
-      return [chat];
-    });
+  const handleReferenceSelectionChange = (selected: ChatReferenceOption[]) => {
+    const hadReferences = chatReferences.length > 0;
+    setChatReferences(selected);
 
-    if (inlineTrigger && textareaRef.current) {
+    if (!hadReferences && selected.length > 0 && inlineTrigger && textareaRef.current) {
       const nextValue =
         input.slice(0, inlineTrigger.start) + input.slice(inlineTrigger.end, input.length);
       setInput(nextValue);
@@ -534,12 +703,13 @@ const ChatInterface: React.FC = () => {
       });
     }
 
-    setInlineTrigger(null);
-    setIsReferencePickerOpen(false);
+    if (selected.length === 0) {
+      setInlineTrigger(null);
+    }
   };
 
-  const removeChatReference = () => {
-    setChatReferences([]);
+  const removeChatReference = (chatId: string) => {
+    setChatReferences((prev) => prev.filter((ref) => ref.id !== chatId));
   };
 
   const handleReferenceButtonClick = () => {
@@ -745,7 +915,7 @@ const ChatInterface: React.FC = () => {
     
     // Filter out failed uploads
     const successfulFiles = attachedFiles.filter(f => f.uploadStatus === 'success' || !f.uploadStatus);
-    const referencedChatId = chatReferences[0]?.id;
+    const referencedChatIds = chatReferences.map(ref => ref.id);
     
     // Capture if this is the first message before state updates
     const isFirstMessage = messages.length === 0;
@@ -789,7 +959,6 @@ const ChatInterface: React.FC = () => {
     const currentAttachments = [...successfulFiles];
     setInput('');
     setAttachedFiles([]);
-    setChatReferences([]);
     
     // Scroll to bottom - padding makes latest message appear at top (ChatGPT-style)
     setTimeout(() => {
@@ -819,7 +988,7 @@ const ChatInterface: React.FC = () => {
         currentInput, 
         fileIds.length > 0 ? fileIds : undefined,
         fileDetails,
-        referencedChatId,
+        referencedChatIds,
         (streamedText) => {
           // Update streaming content as chunks arrive
           setStreamingContent(streamedText);
@@ -883,6 +1052,15 @@ const ChatInterface: React.FC = () => {
             return m;
           });
         });
+
+        const responseReferencedIds = Array.isArray(response.ai_chat.referenced_chat_ids)
+          ? response.ai_chat.referenced_chat_ids
+              .map((id) => (id !== null && id !== undefined ? id.toString() : null))
+              .filter((id): id is string => Boolean(id))
+          : [];
+
+        setPersistedReferenceIds(responseReferencedIds);
+        setChatReferences(responseChatRefs ?? []);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -1136,7 +1314,7 @@ const ChatInterface: React.FC = () => {
                       <span className="max-w-[200px] truncate" title={ref.title}>{ref.title}</span>
                       <button
                         type="button"
-                        onClick={removeChatReference}
+                        onClick={() => removeChatReference(ref.id)}
                         className="text-primary-600 hover:text-primary-800"
                         aria-label="Remove reference"
                       >
@@ -1146,9 +1324,6 @@ const ChatInterface: React.FC = () => {
                   ))}
                 </div>
               )}
-              <p className="mb-3 text-xs text-gray-500">
-                You can reference only one previous chat at a time.
-              </p>
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -1334,9 +1509,9 @@ const ChatInterface: React.FC = () => {
         anchorRect={pickerAnchorRect}
         placement={pickerPlacement}
         excludeChatId={chatId}
-        selectedChatIds={chatReferences.map(ref => ref.id)}
+        selectedChats={chatReferences}
         searchTerm={inlineTrigger?.keyword}
-        onSelect={handleReferenceSelect}
+        onSelectionChange={handleReferenceSelectionChange}
         onClose={handleReferencePickerClose}
       />
     </>

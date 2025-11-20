@@ -93,6 +93,7 @@ export type AIChatMessageDTO = {
     details?: string;
   }[];
   referenced_chat_id?: number;
+  referenced_chat_ids?: number[];
   referenced_chat?: {
     id: number;
     name?: string;
@@ -102,7 +103,19 @@ export type AIChatMessageDTO = {
     updated_at?: string;
     created_by?: number;
     is_deleted?: boolean;
-  };
+  } | number[];
+  referenced_chats?: {
+    id: number;
+    name?: string;
+    description?: string;
+    title?: string;
+    details?: string;
+    project_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    is_deleted?: boolean;
+  }[];
   context_metadata: {
     api_version: string;
     model_used: string;
@@ -156,7 +169,7 @@ export async function sendMessageApi(
   userQuestion: string,
   fileReferences?: string[],
   fileReferenceDetails?: FileMetadata[],
-  referencedChatId?: string,
+  referencedChatIds?: string[],
   onStreamChunk?: (text: string) => void,
   onStreamComplete?: (data: any) => void
 ): Promise<SendMessageResponse> {
@@ -176,10 +189,12 @@ export async function sendMessageApi(
     payload.file_reference_details = fileReferenceDetails;
   }
 
-  if (referencedChatId) {
-    const parsedId = parseInt(referencedChatId, 10);
-    if (!Number.isNaN(parsedId)) {
-      payload.referenced_chat_id = parsedId;
+  if (referencedChatIds && referencedChatIds.length > 0) {
+    const parsedIds = referencedChatIds
+      .map((id) => parseInt(id, 10))
+      .filter((value) => !Number.isNaN(value));
+    if (parsedIds.length > 0) {
+      payload.referenced_chat_ids = parsedIds;
     }
   }
   
@@ -224,6 +239,38 @@ export async function sendMessageApi(
 }
 
 // Get messages for a chat
+export interface ChatReferencesMappingResponse {
+  chat_id: number;
+  references?: Record<string, number[]>;
+  referenced_chat_ids?: number[];
+}
+
+export async function getChatReferencesMapping(
+  chatId: string
+): Promise<ChatReferencesMappingResponse> {
+  const params = new URLSearchParams({
+    chat_id: chatId,
+  });
+
+  return makeRequest<ChatReferencesMappingResponse>(
+    `/ai-chats/chat-references-mapping?${params.toString()}`,
+    { method: 'GET' }
+  );
+}
+
+export async function refreshChatSummary(
+  referencedChatId: string | number
+): Promise<{ success: boolean }> {
+  const payload = {
+    referenced_chat_id: typeof referencedChatId === 'string' ? parseInt(referencedChatId, 10) : referencedChatId,
+  };
+
+  return makeRequest<{ success: boolean }>(`/ai-chats/refresh-chat-summary`, {
+    method: 'POST',
+    data: payload,
+  });
+}
+
 export async function getChatMessages(
   chatId: string,
   page: number = 1,
