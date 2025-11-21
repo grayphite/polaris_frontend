@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useChats, Chat } from '../../context/ChatContext';
-import { refreshChatSummary, fetchChats } from '../../services/chatService';
+import { Chat } from '../../context/ChatContext';
+import { refreshChatSummary, fetchChats, ChatDTO } from '../../services/chatService';
 
 type ChatReference = Pick<Chat, 'id' | 'title' | 'details'>;
 
@@ -30,13 +30,16 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
   onSelectionChange,
   onClose,
 }) => {
-  const { chatsByProject } = useChats();
   const [localSearch, setLocalSearch] = useState('');
   const [localSelection, setLocalSelection] = useState<ChatReference[]>(selectedChats);
   const [refreshingIds, setRefreshingIds] = useState<Record<string, boolean>>({});
   const [searchResults, setSearchResults] = useState<ChatReference[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [paginatedChats, setPaginatedChats] = useState<ChatReference[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreChats, setHasMoreChats] = useState(true);
+  const [isLoadingPage, setIsLoadingPage] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -50,6 +53,10 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
       setDebouncedSearch('');
       setSearchResults([]);
       setIsSearching(false);
+      setPaginatedChats([]);
+      setCurrentPage(1);
+      setHasMoreChats(true);
+      setIsLoadingPage(false);
     }
   }, [isOpen]);
 
@@ -58,6 +65,15 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
       setLocalSearch(searchTerm);
     }
   }, [searchTerm]);
+
+  const mapChats = (chats: ChatDTO[]) =>
+    chats
+      .filter((chat) => chat.id.toString() !== excludeChatId)
+      .map((chat) => ({
+        id: chat.id.toString(),
+        title: chat.name,
+        details: chat.description,
+      }));
 
   // Debounce search input
   useEffect(() => {
@@ -100,13 +116,7 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
         if (cancelled) return;
 
         if (response && response.chats) {
-          const mappedChats: ChatReference[] = response.chats
-            .filter(chat => chat.id.toString() !== excludeChatId)
-            .map(chat => ({
-              id: chat.id.toString(),
-              title: chat.name,
-              details: chat.description,
-            }));
+          const mappedChats = mapChats(response.chats);
           setSearchResults(mappedChats);
         } else {
           setSearchResults([]);
@@ -130,6 +140,75 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
     };
   }, [projectId, debouncedSearch, isOpen, excludeChatId]);
 
+  // Initial paginated load (non-search)
+  useEffect(() => {
+    if (!isOpen || !projectId || debouncedSearch) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingPage(true);
+
+    const loadInitial = async () => {
+      try {
+        const response = await fetchChats(projectId, 1, 10);
+        if (cancelled) return;
+
+        const mappedChats = response?.chats ? mapChats(response.chats) : [];
+        setPaginatedChats(mappedChats);
+        setCurrentPage(1);
+        setHasMoreChats(Boolean(response?.chats && response.chats.length === 10));
+      } catch (error) {
+        console.error('Failed to load chats:', error);
+        if (!cancelled) {
+          setPaginatedChats([]);
+          setHasMoreChats(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPage(false);
+        }
+      }
+    };
+
+    loadInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, projectId, debouncedSearch, excludeChatId]);
+
+  const loadMoreChats = async () => {
+    if (!isOpen || !projectId || debouncedSearch || isLoadingPage || !hasMoreChats) {
+      return;
+    }
+
+    setIsLoadingPage(true);
+    const nextPage = currentPage + 1;
+    const activeProjectId = projectId;
+
+    try {
+      const response = await fetchChats(activeProjectId, nextPage, 10);
+      const mappedChats = response?.chats ? mapChats(response.chats) : [];
+
+      if (!isOpen || !projectId || projectId !== activeProjectId || debouncedSearch) {
+        return;
+      }
+
+      setPaginatedChats((prev) => {
+        const existingIds = new Set(prev.map((chat) => chat.id));
+        const deduped = mappedChats.filter((chat) => !existingIds.has(chat.id));
+        return [...prev, ...deduped];
+      });
+      setCurrentPage(nextPage);
+      setHasMoreChats(Boolean(response?.chats && response.chats.length === 10));
+    } catch (error) {
+      console.error('Failed to load more chats:', error);
+    } finally {
+      setIsLoadingPage(false);
+    }
+  };
+
   useEffect(() => {
     const handler = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -148,7 +227,14 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
 
   const selectedIds = useMemo(() => new Set(localSelection.map(chat => chat.id)), [localSelection]);
 
-  // Get available chats: use search results when searching, otherwise use initial 4 chats from context
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 16) {
+      loadMoreChats();
+    }
+  };
+
+  // Get available chats: use search results when searching, otherwise use paginated list
   const availableChats = useMemo(() => {
     if (!projectId) return [];
     
@@ -158,18 +244,9 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
       return searchResults.filter(chat => !selectedIds.has(chat.id));
     }
     
-    // When not searching, use initial 4 chats from context
-    const initialChats = (chatsByProject[projectId] || [])
-      .filter(chat => chat.id !== excludeChatId)
-      .map(chat => ({
-        id: chat.id,
-        title: chat.title,
-        details: chat.details || '',
-      }));
-    
-    // Filter out already selected chats
-    return initialChats.filter(chat => !selectedIds.has(chat.id));
-  }, [projectId, chatsByProject, debouncedSearch, searchResults, excludeChatId, selectedIds]);
+    // When not searching, use paginated chats
+    return paginatedChats.filter(chat => !selectedIds.has(chat.id));
+  }, [projectId, debouncedSearch, searchResults, paginatedChats, selectedIds]);
 
   if (!isOpen || !fallbackContainer) {
     return null;
@@ -232,10 +309,10 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
   return createPortal(
     <div
       ref={containerRef}
-      className="absolute z-50 w-72 max-h-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+      className="absolute z-50 w-72 max-h-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg flex flex-col"
       style={{ top, left, transform }}
     >
-      <div className="p-2 border-b border-gray-100">
+      <div className="p-2 border-b border-gray-100 flex-shrink-0">
         <input
           autoFocus
           type="text"
@@ -283,13 +360,6 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
                         </svg>
                       )}
                     </button>
-                    <svg className="h-3.5 w-3.5 text-primary-600" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L8.5 11.086l6.543-6.543a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -311,8 +381,8 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
           </div>
         )}
       </div>
-      <div className="max-h-64 overflow-y-auto">
-        {isSearching ? (
+      <div className="flex-1 min-h-0 overflow-y-auto" onScroll={handleScroll}>
+        {isSearching || (isLoadingPage && paginatedChats.length === 0) ? (
           <div className="flex items-center justify-center py-4">
             <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
@@ -342,6 +412,9 @@ const ChatReferencePicker: React.FC<ChatReferencePickerProps> = ({
               </div>
             );
           })
+        )}
+        {!isSearching && paginatedChats.length > 0 && isLoadingPage && (
+          <div className="flex items-center justify-center py-2 text-xs text-gray-500">Loading more...</div>
         )}
       </div>
     </div>,

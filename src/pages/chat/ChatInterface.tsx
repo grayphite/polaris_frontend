@@ -2,6 +2,7 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
 import { useProjects } from '../../context/ProjectsContext';
+import { useAuth } from '../../context/AuthContext';
 import { sendMessageApi, getChatMessages, deleteChatApi, getChatReferencesMapping } from '../../services/chatService';
 import ChatReferencePicker, { ChatReferenceOption } from '../../components/chat/ChatReferencePicker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,6 +13,7 @@ import { getPdfPageCount } from '../../utils/fileValidation';
 import MarkdownMessage from '../../components/ui/MarkdownMessage';
 import { formatTime } from '../../utils/dateTime';
 import { downloadRagFile } from '../../utils/fileDownload';
+import { getAvatarColor, getInitials } from '../../utils/avatarColor';
 
 interface FileAttachment {
   id: string;
@@ -26,6 +28,15 @@ interface FileAttachment {
   uploadError?: string;
 }
 
+interface UserInfo {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  username?: string;
+  role?: string;
+}
+
 interface Message {
   id: string;
   content: string;
@@ -35,7 +46,33 @@ interface Message {
   file_references?: string[];
   sources?: string[];
   chat_references?: ChatReferenceOption[];
+  user_info?: UserInfo;
 }
+
+type PersistedReference = {
+  id: string;
+  title?: string;
+};
+
+const normalizeReferenceValue = (
+  entry:
+    | number
+    | string
+    | { id?: number | string; chat_id?: number | string; name?: string; title?: string }
+    | null
+    | undefined
+): PersistedReference | null => {
+  if (entry === null || entry === undefined) return null;
+  if (typeof entry === 'object') {
+    const idValue = entry.id ?? entry.chat_id;
+    if (idValue === null || idValue === undefined) return null;
+    return {
+      id: idValue.toString(),
+      title: entry.name || entry.title,
+    };
+  }
+  return { id: entry.toString() };
+};
 
 const MAX_PDF_PAGES = 100;
 
@@ -70,7 +107,7 @@ const ChatInterface: React.FC = () => {
   const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
   const [isStreamingComplete, setIsStreamingComplete] = useState(false); // Track if streaming is complete
   const [chatReferences, setChatReferences] = useState<ChatReferenceOption[]>([]);
-  const [persistedReferenceIds, setPersistedReferenceIds] = useState<string[]>([]);
+  const [persistedReferenceIds, setPersistedReferenceIds] = useState<PersistedReference[]>([]);
   const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
   const [pickerAnchorRect, setPickerAnchorRect] = useState<DOMRect | null>(null);
   const [inlineTrigger, setInlineTrigger] = useState<{ start: number; end: number; keyword: string } | null>(null);
@@ -95,8 +132,9 @@ const ChatInterface: React.FC = () => {
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, updateChat, deleteChat, ensureProjectChatsLoaded } = useChats();
+  const { chatsByProject, sidebarChatsByProject, updateChat, deleteChat, ensureProjectChatsLoaded } = useChats();
   const { projects, sidebarProjects } = useProjects();
+  const { user } = useAuth();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
   const projectRole = useMemo(() => {
     if (!projectId) return null;
@@ -163,15 +201,17 @@ const ChatInterface: React.FC = () => {
       }
     }
 
-    const mapIdsToRefs = (ids: number[] | string[]) =>
+    const mapIdsToRefs = (
+      ids: Array<number | string | { id?: number | string; chat_id?: number | string; name?: string; title?: string }>
+    ) =>
       ids
-        .map((id) => {
-          const parsedId = typeof id === 'string' ? id : id?.toString();
-          if (!parsedId) return null;
-          const meta = getChatMetadata(parsedId);
+        .map((entry) => {
+          const normalized = normalizeReferenceValue(entry);
+          if (!normalized) return null;
+          const meta = getChatMetadata(normalized.id);
           return {
-            id: parsedId,
-            title: meta?.title || `Chat #${parsedId}`,
+            id: normalized.id,
+            title: normalized.title || meta?.title || `Chat #${normalized.id}`,
             details: meta?.details || '',
           };
         })
@@ -233,24 +273,28 @@ const ChatInterface: React.FC = () => {
   })();
 
   // Get conversation data from context
-  const conversation = {
-    id: chatId,
-    title: (() => {
-      if (!chatId) return '';
-      const list = projectId ? (chatsByProject[projectId] || []) : [];
-      const fromContext = list.find(c => c.id === chatId)?.title;
-      if (fromContext) return fromContext;
-      if (isNewChatId) return resolvedNewChatTitle ?? '';
-      return '';
-    })(),
-    createdAt: '',
-    details: (() => {
-      if (!chatId) return '';
-      const list = projectId ? (chatsByProject[projectId] || []) : [];
-      const chat = list.find(c => c.id === chatId);
-      return chat?.details || '';
-    })(),
-  } as const;
+  const conversation = useMemo(() => {
+    if (!chatId || !projectId) {
+      return {
+        id: chatId,
+        title: '',
+        createdAt: '',
+        details: '',
+      } as const;
+    }
+    
+    // Check chatsByProject first, then fall back to sidebarChatsByProject
+    const chatsList = chatsByProject[projectId] || [];
+    const sidebarList = sidebarChatsByProject[projectId] || [];
+    const chat = chatsList.find(c => c.id === chatId) || sidebarList.find(c => c.id === chatId);
+    
+    return {
+      id: chatId,
+      title: chat?.title || (isNewChatId ? resolvedNewChatTitle ?? '' : ''),
+      createdAt: '',
+      details: chat?.details || '',
+    } as const;
+  }, [chatId, projectId, chatsByProject, sidebarChatsByProject, isNewChatId, resolvedNewChatTitle]);
   // Commented out fetchChatById - we already have chat data from project chats API
   // useEffect(() => {
   //   (async () => {
@@ -287,6 +331,15 @@ const ChatInterface: React.FC = () => {
       try {
         const response = await getChatMessages(chatId, 1, 10);
         if (response.success && response.ai_chats) {
+          // Store the first (latest) message ID as fallback
+          if (response.ai_chats.length > 0 && response.ai_chats[0].id) {
+            try {
+              window.localStorage.setItem('lastMessageId', response.ai_chats[0].id.toString());
+            } catch (e) {
+              // Silently fail if localStorage is not available
+            }
+          }
+          
           // Convert API messages to UI message format
           const loadedMessages: Message[] = [];
           
@@ -308,7 +361,15 @@ const ChatInterface: React.FC = () => {
               timestamp: aiChat.created_at,
               attachments: attachments,
               file_references: fileIds.length > 0 ? fileIds : undefined,
-            chat_references: chatRefDetails,
+              chat_references: chatRefDetails,
+              user_info: aiChat.user_info ? {
+                id: aiChat.user_info.id,
+                first_name: aiChat.user_info.first_name,
+                last_name: aiChat.user_info.last_name,
+                email: aiChat.user_info.email,
+                username: aiChat.user_info.username,
+                role: aiChat.user_info.role,
+              } : undefined,
             });
             
             // Add assistant message
@@ -365,36 +426,78 @@ const ChatInterface: React.FC = () => {
         const response = await getChatReferencesMapping(chatId);
         if (isCancelled) return;
 
+        // Get stored last message ID from localStorage
+        let storedLastMessageId: number | null = null;
+        try {
+          const stored = window.localStorage.getItem('lastMessageId');
+          if (stored) {
+            storedLastMessageId = parseInt(stored, 10);
+            if (Number.isNaN(storedLastMessageId)) {
+              storedLastMessageId = null;
+            }
+          }
+        } catch (e) {
+          // Silently fail if localStorage is not available
+        }
+
         const ids = (() => {
-          const normalized = new Set<string>();
+          const normalized = new Map<string, PersistedReference>();
+
+          const addFromArray = (
+            values?:
+              | Array<number | string | { id?: number | string; chat_id?: number | string; name?: string; title?: string }>
+              | null
+          ) => {
+            if (!Array.isArray(values)) return;
+            values.forEach((value) => {
+              const entry = normalizeReferenceValue(value);
+              if (!entry) return;
+              const existing = normalized.get(entry.id);
+              if (!existing || (!existing.title && entry.title)) {
+                normalized.set(entry.id, entry);
+              }
+            });
+          };
 
           if (response?.references && typeof response.references === 'object') {
             // Get all message IDs (keys) and find the last one
             const messageIds = Object.keys(response.references);
             if (messageIds.length > 0) {
               // Sort message IDs numerically and get the last (highest) one
-              const sortedIds = messageIds.map(id => parseInt(id, 10)).sort((a, b) => a - b);
-              const lastMessageId = sortedIds[sortedIds.length - 1].toString();
-              
-              // Only process references from the last message
-              const lastMessageRefs = response.references[lastMessageId];
-              if (Array.isArray(lastMessageRefs)) {
-                lastMessageRefs.forEach((value) => {
-                  if (value === null || value === undefined) return;
-                  normalized.add(value.toString());
-                });
+              const sortedIds = messageIds
+                .map((id) => parseInt(id, 10))
+                .filter((num) => !Number.isNaN(num))
+                .sort((a, b) => a - b);
+              const lastMessageId = sortedIds[sortedIds.length - 1];
+
+              if (lastMessageId !== undefined) {
+                // Validate: compare with stored last message ID
+                if (storedLastMessageId !== null && lastMessageId !== storedLastMessageId) {
+                  // IDs don't match, return empty array
+                  return [];
+                }
+
+                const lastMessageKey = lastMessageId.toString();
+                // Only process references from the last message
+                const lastMessageRefs = response.references[lastMessageKey];
+                if (Array.isArray(lastMessageRefs)) {
+                  addFromArray(lastMessageRefs);
+                } else if (lastMessageRefs) {
+                  addFromArray(lastMessageRefs.referenced_chats);
+                  addFromArray(lastMessageRefs.referenced_chat_ids);
+                }
               }
             }
           }
 
-          if (normalized.size === 0 && Array.isArray(response?.referenced_chat_ids)) {
-            response.referenced_chat_ids.forEach((value) => {
-              if (value === null || value === undefined) return;
-              normalized.add(value.toString());
-            });
+          // Only fallback to top-level references if we didn't find any in references object
+          // and we don't have a stored ID to validate against
+          if (normalized.size === 0 && storedLastMessageId === null) {
+            addFromArray(response?.referenced_chats);
+            addFromArray(response?.referenced_chat_ids);
           }
 
-          return Array.from(normalized);
+          return Array.from(normalized.values());
         })();
 
         setPersistedReferenceIds(ids);
@@ -415,19 +518,19 @@ const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     setChatReferences((prev) => {
-      const persistedSet = new Set(persistedReferenceIds);
+      const persistedSet = new Set(persistedReferenceIds.map((ref) => ref.id));
       const manualRefs = prev.filter((ref) => !persistedSet.has(ref.id));
 
       if (persistedReferenceIds.length === 0) {
-        return manualRefs.length === prev.length ? prev : [...manualRefs];
+        return prev.length === 0 ? prev : [];
       }
 
-      const persistedRefs = persistedReferenceIds.map((id) => {
+      const persistedRefs = persistedReferenceIds.map(({ id, title }) => {
         const meta = getChatMetadata(id);
         const existing = prev.find((ref) => ref.id === id);
         return {
           id,
-          title: meta?.title || existing?.title || `Chat #${id}`,
+          title: title || meta?.title || existing?.title || `Chat #${id}`,
           details: meta?.details || existing?.details || '',
         };
       });
@@ -613,6 +716,14 @@ const ChatInterface: React.FC = () => {
             attachments: attachments,
             file_references: fileIds.length > 0 ? fileIds : undefined,
             chat_references: chatRefDetails,
+            user_info: aiChat.user_info ? {
+              id: aiChat.user_info.id,
+              first_name: aiChat.user_info.first_name,
+              last_name: aiChat.user_info.last_name,
+              email: aiChat.user_info.email,
+              username: aiChat.user_info.username,
+              role: aiChat.user_info.role,
+            } : undefined,
           });
           
           olderMessages.push({
@@ -943,6 +1054,14 @@ const ChatInterface: React.FC = () => {
       attachments: successfulFiles.length > 0 ? [...successfulFiles] : undefined,
       file_references: fileIds.length > 0 ? fileIds : undefined,
       chat_references: chatReferences.length > 0 ? [...chatReferences] : undefined,
+      user_info: user ? {
+        id: parseInt(user.id),
+        first_name: user.firstName,
+        last_name: user.lastName,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      } : undefined,
     };
     
     // Add assistant message placeholder
@@ -1000,6 +1119,15 @@ const ChatInterface: React.FC = () => {
           }
           // Enable send button immediately when stream completes
           setIsStreamingComplete(true);
+          
+          // Store last message ID in localStorage
+          if (streamCompleteData.ai_chat?.id) {
+            try {
+              window.localStorage.setItem('lastMessageId', streamCompleteData.ai_chat.id.toString());
+            } catch (e) {
+              // Silently fail if localStorage is not available
+            }
+          }
         }
       );
       
@@ -1047,6 +1175,14 @@ const ChatInterface: React.FC = () => {
                 // timestamp: response.ai_chat.created_at,
                 file_references: response.ai_chat.file_references,
                 chat_references: responseChatRefs || m.chat_references,
+                user_info: response.ai_chat.user_info ? {
+                  id: response.ai_chat.user_info.id,
+                  first_name: response.ai_chat.user_info.first_name,
+                  last_name: response.ai_chat.user_info.last_name,
+                  email: response.ai_chat.user_info.email,
+                  username: response.ai_chat.user_info.username,
+                  role: response.ai_chat.user_info.role,
+                } : m.user_info,
               };
             }
             return m;
@@ -1055,8 +1191,8 @@ const ChatInterface: React.FC = () => {
 
         const responseReferencedIds = Array.isArray(response.ai_chat.referenced_chat_ids)
           ? response.ai_chat.referenced_chat_ids
-              .map((id) => (id !== null && id !== undefined ? id.toString() : null))
-              .filter((id): id is string => Boolean(id))
+              .map((id) => normalizeReferenceValue(id))
+              .filter((value): value is PersistedReference => Boolean(value))
           : [];
 
         setPersistedReferenceIds(responseReferencedIds);
@@ -1260,25 +1396,50 @@ const ChatInterface: React.FC = () => {
                       )
                     )}
                   </div>
-                  {message.chat_references && message.chat_references.length > 0 && (
-                    <div
-                      className={`mt-2 flex flex-wrap gap-1 text-xs ${
-                        message.role === 'user' ? 'self-end' : 'self-start'
-                      }`}
-                    >
+                  {/* Author info and chat references for user messages */}
+                  {message.role === 'user' && (message.user_info || (message.chat_references && message.chat_references.length > 0)) && (
+                    <div className="mt-1.5 flex flex-col gap-1.5 justify-end max-w-[85%]">
+                      {/* Chat references */}
+                      {message.chat_references && message.chat_references.length > 0 && (
+                        <div className="flex flex-wrap gap-1 text-xs">
+                          {message.chat_references.map((ref) => (
+                            <span
+                              key={ref.id}
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-primary-50 text-primary-800"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
+                              </svg>
+                              <span className="max-w-[140px] truncate" title={ref.title}>{ref.title}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Author info */}
+                      {message.user_info && (
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <div className={`h-5 w-5 rounded-full flex items-center justify-center text-white text-[9px] font-semibold ${getAvatarColor(message.user_info.id)}`}>
+                            {getInitials(message.user_info.first_name, message.user_info.last_name)}
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {message.user_info.first_name} {message.user_info.last_name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Chat references for assistant messages (keep existing behavior) */}
+                  {message.role === 'assistant' && message.chat_references && message.chat_references.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1 text-xs self-start">
                       {message.chat_references.map((ref) => (
                         <span
                           key={ref.id}
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${
-                            message.role === 'user'
-                              ? 'bg-primary-100 text-primary-800'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-gray-100 text-gray-600"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
                           </svg>
-                          <span className="max-w-[140px] truncate">{ref.title}</span>
+                          <span className="max-w-[140px] truncate" title={ref.title}>{ref.title}</span>
                         </span>
                       ))}
                     </div>
@@ -1308,21 +1469,7 @@ const ChatInterface: React.FC = () => {
             <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             <div className="flex-1 rounded-lg border border-gray-200 p-2">
               {chatReferences.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {chatReferences.map((ref) => (
-                    <div key={ref.id} className="flex items-center gap-2 rounded-full bg-[#bae6fd] px-3 py-1 text-sm text-primary-600">
-                      <span className="max-w-[200px] truncate" title={ref.title}>{ref.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeChatReference(ref.id)}
-                        className="text-primary-600 hover:text-primary-800"
-                        aria-label="Remove reference"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <p className='text-sm text-gray-500 mb-2'>{chatReferences.length > 1 ? `${chatReferences.length} chat references attached.` : `${chatReferences.length} chat reference attached.`}</p>
               )}
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (

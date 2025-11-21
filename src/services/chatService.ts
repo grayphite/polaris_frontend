@@ -73,6 +73,14 @@ export async function deleteChatApi(chatId: string): Promise<{ success: boolean 
 }
 
 // AI Chat Message Types
+type ReferencedChatId =
+  | number
+  | {
+      id: number;
+      name?: string;
+      title?: string;
+    };
+
 export type AIChatMessageDTO = {
   id: number;
   chat_id: number;
@@ -93,7 +101,7 @@ export type AIChatMessageDTO = {
     details?: string;
   }[];
   referenced_chat_id?: number;
-  referenced_chat_ids?: number[];
+  referenced_chat_ids?: ReferencedChatId[];
   referenced_chat?: {
     id: number;
     name?: string;
@@ -116,6 +124,17 @@ export type AIChatMessageDTO = {
     created_by?: number;
     is_deleted?: boolean;
   }[];
+  user_info?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    username?: string;
+    role?: string;
+    created_at?: string;
+    updated_at?: string;
+    is_active?: boolean;
+  };
   context_metadata: {
     api_version: string;
     model_used: string;
@@ -241,8 +260,12 @@ export async function sendMessageApi(
 // Get messages for a chat
 export interface ChatReferencesMappingResponse {
   chat_id: number;
-  references?: Record<string, number[]>;
-  referenced_chat_ids?: number[];
+  references?: Record<
+    string,
+    number[] | { referenced_chat_ids?: ReferencedChatId[]; referenced_chats?: { id: number; name?: string; title?: string }[] }
+  >;
+  referenced_chat_ids?: ReferencedChatId[];
+  referenced_chats?: { id: number; name?: string; title?: string }[];
 }
 
 export async function getChatReferencesMapping(

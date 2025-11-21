@@ -17,7 +17,7 @@ const Profile: React.FC = () => {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    jobTitle: 'Product Manager',
+    jobTitle: (user?.role ? user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1).toLowerCase() : '') || '',
     phone: '+1 (555) 123-4567',
     timezone: 'America/New_York',
     bio: 'Product manager with 5+ years of experience in SaaS products.',
