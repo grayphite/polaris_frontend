@@ -243,6 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('teamId');
+    localStorage.removeItem('lastMessageId');
     localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
     localStorage.removeItem(TEAM_OWNER_STORAGE_KEY);
     setUser(null);
