@@ -1307,12 +1307,8 @@ const ChatInterface: React.FC = () => {
                   className={`group flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   {/* Attachments above the bubble */}
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className={`${
-                      message.role === 'user'
-                        ? 'self-end w-fit max-w-[85%]'
-                        : 'self-start w-full max-w-[85%]'
-                    } flex flex-wrap gap-2 mb-1`}>
+                  {message.role !== 'user' && message.attachments && message.attachments.length > 0 && (
+                    <div className="self-start w-full max-w-[85%] flex flex-wrap gap-2 mb-1">
                       {message.attachments.map((file, index) => {
                         const isImage = file.mime_type.startsWith('image/');
                         
@@ -1320,9 +1316,7 @@ const ChatInterface: React.FC = () => {
                           /* Unified chip for both documents and images */
                           <div
                             key={file.id || index}
-                            className={`inline-flex items-center gap-2 rounded-md px-3 py-2 max-w-full ${
-                              message.role === 'user' ? 'bg-primary-700 text-white' : 'bg-gray-100 text-gray-800'
-                            }`}
+                            className="inline-flex items-center gap-2 rounded-md px-3 py-2 max-w-full bg-gray-100 text-gray-800"
                           >
                             {isImage ? (
                               /* Image icon */
@@ -1347,87 +1341,133 @@ const ChatInterface: React.FC = () => {
                     </div>
                   )}
                   {/* Message bubble */}
-                  <div
-                    className={`${message.role === 'user' ? 'w-fit max-w-[85%] rounded-2xl px-3 py-2 bg-primary-600 text-white' : 'w-full'}`}
-                  >
-                    {message.role === 'assistant' ? (
-                      <div className="leading-6">
-                        {streamingMessageId === message.id && displayedContent === '' ? (
-                          // Show blue pulsating dot when streaming starts but no content yet
-                          <div className="flex space-x-2 py-2">
-                            <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse"></div>
-                            <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                          </div>
-                        ) : (
+                  <div className="flex items-center justify-end gap-2">
+                    <div
+                      className={`${
+                        message.role === 'user'
+                          ? 'w-full flex justify-end'
+                          : 'w-full'
+                      }`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <div className="leading-6">
+                          {streamingMessageId === message.id && displayedContent === '' ? (
+                            // Show blue pulsating dot when streaming starts but no content yet
+                            <div className="flex space-x-2 py-2">
+                              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse"></div>
+                              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                            </div>
+                          ) : (
+                            <>
+                              <MarkdownMessage
+                                content={streamingMessageId === message.id ? displayedContent : message.content}
+                              />
+                              {/* Sources chips - always display if available */}
+                              {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
+                                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => {
+                                        const success = downloadRagFile(source);
+                                        if (!success) {
+                                          showErrorToast(t('chat.interface.downloadError', { filename: source }));
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
+                                      title={`Click to download: ${source}`}
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                      </svg>
+                                      <span className="truncate max-w-[80px]">{source}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        message.content && (
                           <>
-                            <MarkdownMessage 
-                              content={streamingMessageId === message.id ? displayedContent : message.content} 
-                            />
-                            {/* Sources chips - always display if available */}
-                            {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
-                              <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
-                                {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => {
-                                      const success = downloadRagFile(source);
-                                      if (!success) {
-                                        showErrorToast(t('chat.interface.downloadError', { filename: source }));
-                                      }
-                                    }}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
-                                    title={`Click to download: ${source}`}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                                    </svg>
-                                    <span className="truncate max-w-[80px]">{source}</span>
-                                  </button>
-                                ))}
+                            <div className="flex max-w-[75%] flex-col items-end gap-1 self-stretch">
+                              {message.attachments && message.attachments.length > 0 && (
+                                <div className="flex w-fit max-w-full flex-wrap justify-end gap-2">
+                                  {message.attachments.map((file, index) => {
+                                    const isImage = file.mime_type.startsWith('image/');
+                                    return (
+                                      <div
+                                        key={file.id || index}
+                                        className="inline-flex items-center gap-2 rounded-md bg-primary-700 px-3 py-2 text-white max-w-full"
+                                      >
+                                        {isImage ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                          </svg>
+                                        ) : (
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                          </svg>
+                                        )}
+                                        <div className="min-w-0">
+                                          <div className="text-sm truncate">{file.filename}</div>
+                                          <div className="text-xs opacity-80 truncate">
+                                            {(file.size_bytes / 1024).toFixed(1)} KB{file.file_type && ` • ${file.file_type}`}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <div className="w-fit max-w-full rounded-2xl bg-primary-600 px-3 py-2 text-white whitespace-pre-wrap leading-6">
+                                {message.content}
+                              </div>
+                              {message.chat_references && message.chat_references.length > 0 && (
+                                <div className="flex w-fit max-w-full flex-wrap justify-end gap-1 text-xs self-end">
+                                  {message.chat_references.map((ref) => (
+                                    <span
+                                      key={ref.id}
+                                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-primary-50 text-primary-800"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
+                                      </svg>
+                                      <span className="max-w-[140px] truncate" title={ref.title}>
+                                        {ref.title}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="self-end text-xs text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {formatTime(message.timestamp)}
+                              </div>
+                            </div>
+                            {message.user_info && (
+                              <div className="flex w-16 flex-col items-center self-start">
+                                <div
+                                  className={`flex h-10 w-10 items-center justify-center rounded-full text-white text-xs font-semibold ${getAvatarColor(
+                                    message.user_info.id
+                                  )}`}
+                                >
+                                  {getInitials(message.user_info.first_name, message.user_info.last_name)}
+                                </div>
+                                <span
+                                  className="mt-1 w-full truncate text-center text-xs text-gray-500"
+                                  title={`${message.user_info.first_name} ${message.user_info.last_name}`}
+                                >
+                                  {message.user_info.first_name} {message.user_info.last_name}
+                                </span>
                               </div>
                             )}
                           </>
-                        )}
-                      </div>
-                    ) : (
-                      message.content && (
-                        <div className="whitespace-pre-wrap leading-6">{message.content}</div>
-                      )
-                    )}
-                  </div>
-                  {/* Author info and chat references for user messages */}
-                  {message.role === 'user' && (message.user_info || (message.chat_references && message.chat_references.length > 0)) && (
-                    <div className="mt-1.5 flex flex-col gap-1.5 justify-end max-w-[85%]">
-                      {/* Chat references */}
-                      {message.chat_references && message.chat_references.length > 0 && (
-                        <div className="flex flex-wrap gap-1 text-xs">
-                          {message.chat_references.map((ref) => (
-                            <span
-                              key={ref.id}
-                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-primary-50 text-primary-800"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
-                              </svg>
-                              <span className="max-w-[140px] truncate" title={ref.title}>{ref.title}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {/* Author info */}
-                      {message.user_info && (
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <div className={`h-5 w-5 rounded-full flex items-center justify-center text-white text-[9px] font-semibold ${getAvatarColor(message.user_info.id)}`}>
-                            {getInitials(message.user_info.first_name, message.user_info.last_name)}
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {message.user_info.first_name} {message.user_info.last_name}
-                          </span>
-                        </div>
+                        )
                       )}
                     </div>
-                  )}
+                  </div>
                   {/* Chat references for assistant messages (keep existing behavior) */}
                   {message.role === 'assistant' && message.chat_references && message.chat_references.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1 text-xs self-start">
@@ -1445,15 +1485,11 @@ const ChatInterface: React.FC = () => {
                     </div>
                   )}
                   {/* Timestamp below message container, visible on hover */}
-                  <div
-                    className={`${
-                      message.role === 'user'
-                        ? 'self-end max-w-[85%] text-right text-primary-400'
-                        : 'self-start w-full text-left text-gray-500'
-                    } text-xs mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}
-                  >
-                    {formatTime(message.timestamp)}
-                  </div>
+                  {message.role === 'assistant' && (
+                    <div className="self-start w-full text-left text-gray-500 text-xs mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {formatTime(message.timestamp)}
+                    </div>
+                  )}
                 </div>
               ))}
               
@@ -1469,7 +1505,7 @@ const ChatInterface: React.FC = () => {
             <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             <div className="flex-1 rounded-lg border border-gray-200 p-2">
               {chatReferences.length > 0 && (
-                <p className='text-sm text-gray-500 mb-2'>{chatReferences.length > 1 ? `${chatReferences.length} chat references attached.` : `${chatReferences.length} chat reference attached.`}</p>
+                <p className='text-xs text-gray-500 mb-2 mt-[-4px] cursor-pointer' onClick={handleReferenceButtonClick}>{chatReferences.length > 1 ? `${chatReferences.length} chats referenced.` : `${chatReferences.length} chat referenced.`}</p>
               )}
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (
@@ -1601,10 +1637,10 @@ const ChatInterface: React.FC = () => {
                   type="button"
                   ref={referenceButtonRef}
                   onClick={handleReferenceButtonClick}
-                  className="p-1.5 rounded-full hover:bg-gray-200 shrink-0"
+                  className={`p-1.5 rounded-full ${isReferencePickerOpen ? 'bg-gray-200' : ''} shrink-0`}
                   title="Reference previous chats"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600">
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600 ${isReferencePickerOpen ? 'bg-gray-200' : ''}`}>
                     @
                   </span>
                 </button>
