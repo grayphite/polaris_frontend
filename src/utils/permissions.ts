@@ -115,3 +115,6 @@ export const getUserProjectRole = (
   // Legacy: treat 'member' as 'viewer' by default
   return 'viewer';
 };
+
+export const canManageProject = (role?: ProjectRole | null): boolean => role === 'owner';
+export const canCreateProjectChats = (role?: ProjectRole | null): boolean => role === 'owner' || role === 'editor';

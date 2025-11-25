@@ -78,7 +78,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   sidebarSearchQueryRef.current = sidebarSearchQuery;
 
 
-  const hydrateProjectChats = (projectId: string, chats: Array<{ 
+  const hydrateProjectChats = useCallback((projectId: string, chats: Array<{ 
     id: string; 
     title: string; 
     details?: string;
@@ -119,7 +119,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...prev, [projectId]: Object.values(byId) };
       }
     });
-  };
+  }, [conversationsSearchQuery]);
 
   const hydrateSidebarChats = useCallback((projectId: string, chats: Array<{ 
     id: string; 
@@ -180,12 +180,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, [sidebarSearchQuery]);
 
-  const ensureProjectChatsLoaded = async (projectId: string) => {
+  const ensureProjectChatsLoaded = useCallback(async (projectId: string) => {
+    if (!projectId) return;
     
-    // Check if already loading
-    if (loadingProjects.has(projectId)) return;
+    let shouldFetch = true;
+    setLoadingProjects(prev => {
+      if (prev.has(projectId)) {
+        shouldFetch = false;
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(projectId);
+      return next;
+    });
     
-    setLoadingProjects(prev => new Set(prev).add(projectId));
+    if (!shouldFetch) return;
     
     try {
       const response = await fetchChats(projectId, currentPage, 4, conversationsSearchQuery);
@@ -211,19 +220,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPagination(null);
     } finally {
       setLoadingProjects(prev => {
+        if (!prev.has(projectId)) return prev;
         const newSet = new Set(prev);
         newSet.delete(projectId);
         return newSet;
       });
     }
-  };
+  }, [currentPage, conversationsSearchQuery, hydrateProjectChats]);
 
-  const ensureInitialChatsLoaded = async (projectId: string) => {
-    // Load initial chats for both sidebar and conversations tab
-    // Check if already loading
-    if (loadingProjects.has(projectId)) return;
+  const ensureInitialChatsLoaded = useCallback(async (projectId: string) => {
+    if (!projectId) return;
     
-    setLoadingProjects(prev => new Set(prev).add(projectId));
+    let shouldFetch = true;
+    setLoadingProjects(prev => {
+      if (prev.has(projectId)) {
+        shouldFetch = false;
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(projectId);
+      return next;
+    });
+    
+    if (!shouldFetch) return;
     
     try {
       // Load initial 4 chats without search for initial load
@@ -260,19 +279,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPagination(null);
     } finally {
       setLoadingProjects(prev => {
+        if (!prev.has(projectId)) return prev;
         const newSet = new Set(prev);
         newSet.delete(projectId);
         return newSet;
       });
     }
-  };
+  }, [hydrateProjectChats, hydrateSidebarChats]);
 
   const ensureSidebarChatsLoaded = useCallback(async (projectId: string) => {
+    if (!projectId) return;
     
-    // Check if already loading
-    if (loadingSidebarProjects.has(projectId)) return;
+    let shouldFetch = true;
+    setLoadingSidebarProjects(prev => {
+      if (prev.has(projectId)) {
+        shouldFetch = false;
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(projectId);
+      return next;
+    });
     
-    setLoadingSidebarProjects(prev => new Set(prev).add(projectId));
+    if (!shouldFetch) return;
     
     try {
       const response = await fetchChats(projectId, 1, 4, sidebarSearchQueryRef.current); // Use page 1 and limit 4 for sidebar
@@ -301,12 +330,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSidebarChatsHasMore(false);
     } finally {
       setLoadingSidebarProjects(prev => {
+        if (!prev.has(projectId)) return prev;
         const newSet = new Set(prev);
         newSet.delete(projectId);
         return newSet;
       });
     }
-  }, [loadingSidebarProjects, hydrateSidebarChats, setSidebarCurrentPage, setSidebarChatsHasMore]);
+  }, [hydrateSidebarChats, setSidebarCurrentPage, setSidebarChatsHasMore]);
 
   const loadMoreSidebarChats = async (projectId: string) => {
     if (!sidebarChatsHasMore || loadingSidebarProjects.has(projectId)) return;

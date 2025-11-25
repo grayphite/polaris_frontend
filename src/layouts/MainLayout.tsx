@@ -5,43 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useLogout } from '../utils/auth';
 import Sidebar from '../components/common/Sidebar';
 import Header from '../components/common/Header';
-import { ProjectsProvider, useProjects } from '../context/ProjectsContext';
-import { ChatProvider, useChats } from '../context/ChatContext';
+import { ProjectsProvider } from '../context/ProjectsContext';
+import { ChatProvider } from '../context/ChatContext';
 import { InvitationsProvider } from '../context/InvitationsContext';
 import InviteModal from '../components/ui/InviteModal';
-
-
-// Component to load chats for first project
-const ChatLoader: React.FC = () => {
-  const { projects } = useProjects();
-  const { ensureInitialChatsLoaded } = useChats();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Check if we're on a project page
-    const match = location.pathname.match(/^\/projects\/([^\/]+)/);
-    const selectedProjectId = match ? match[1] : null;
-    
-    if (selectedProjectId) {
-      // Fetch initial chats for both sidebar and conversations tab
-      ensureInitialChatsLoaded(selectedProjectId);
-    } else if (location.pathname === '/') {
-      // Handle root path navigation
-      if (projects && projects.length > 0) {
-        // If projects exist, redirect to first project
-        const firstProjectId = projects[0].id;
-        navigate(`/projects/${firstProjectId}`, { replace: true });
-      } else {
-        // If no projects exist, redirect to projects list
-        navigate('/projects', { replace: true });
-      }
-    }
-    // If we're on /projects, don't redirect - let the user stay on the projects list page
-  }, [projects, location.pathname]);
-
-  return null;
-};
 
 const MainLayout: React.FC = () => {
   const { user } = useAuth();
@@ -99,7 +66,6 @@ const MainLayout: React.FC = () => {
     <ProjectsProvider>
       <ChatProvider>
         <InvitationsProvider>
-          <ChatLoader />
           <div className="h-screen bg-light-200 flex">
           <Sidebar
             open={sidebarOpen}

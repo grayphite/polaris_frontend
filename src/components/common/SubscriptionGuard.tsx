@@ -25,7 +25,6 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
   if (!user) {
     return null;
   }
-
   // No subscription or empty array - redirect owners to subscription page (without MainLayout)
   if (!subscription) {
     return user.role === 'owner'

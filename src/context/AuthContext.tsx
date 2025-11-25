@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { registerUser, loginUser, forgotPassword as forgotPasswordAPI, resetPassword as resetPasswordAPI, TeamSubscription } from '../services/authService';
 import { createTeam } from '../services/teamService';
 import { showErrorToast } from '../utils/toast';
-import { clearProjectRoleCache } from '../hooks/useProjectRole';
 
 interface User {
   id: string;
@@ -32,6 +31,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUBSCRIPTION_STORAGE_KEY = 'team_subscriptions';
 const TEAM_OWNER_STORAGE_KEY = 'teamOwner';
+
+const createMemberCanceledSubscription = (billingUserId?: string | number): TeamSubscription => {
+  const now = new Date().toISOString();
+
+  return {
+    id: -1,
+    status: 'canceled',
+    trial_end: null,
+    current_period_start: now,
+    current_period_end: now,
+    quantity: 0,
+    plan: {
+      id: -1,
+      code: 'unknown',
+      display_name: 'Canceled Subscription',
+      max_team_members_per_team: 0,
+    },
+    price: {
+      id: -1,
+      nickname: 'unknown',
+      amount_cents: 0,
+      currency: 'usd',
+      trial_days: 0,
+      per_seat_amount_cents: 0,
+    },
+    billing_user_id: typeof billingUserId === 'number' ? billingUserId : parseInt(String(billingUserId || 0), 10) || 0,
+    cancel_at_period_end: false,
+    canceled_at: now,
+  };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -137,8 +166,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
 
-        // Store subscription data
-        storeSubscription(response.team_subscriptions);
+        // Store subscription data (members with empty subscriptions are treated as canceled)
+        const memberHasNoSubscription = userData.role === 'member' &&
+          (!response.team_subscriptions || response.team_subscriptions.length === 0);
+        const normalizedSubscriptions = memberHasNoSubscription
+          ? [createMemberCanceledSubscription(userData.id)]
+          : response.team_subscriptions;
+
+        storeSubscription(normalizedSubscriptions);
         const storedSub = getStoredSubscription();
         setSubscription(storedSub);
 
@@ -184,7 +219,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userData);
 
         // Store subscription data
-        storeSubscription(response.team_subscriptions);
+        const memberHasNoSubscription = userData.role === 'member' &&
+          (!response.team_subscriptions || response.team_subscriptions.length === 0);
+        const normalizedSubscriptions = memberHasNoSubscription
+          ? [createMemberCanceledSubscription(userData.id)]
+          : response.team_subscriptions;
+        storeSubscription(normalizedSubscriptions);
         const storedSub = getStoredSubscription();
         setSubscription(storedSub);
 
@@ -244,14 +284,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('teamId');
+    localStorage.removeItem('lastMessageId');
     localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
     localStorage.removeItem(TEAM_OWNER_STORAGE_KEY);
     setUser(null);
     setSubscription(null);
-    
-    // Clear project role cache when user logs out
-    // This prevents cached roles from being used by the next user
-    clearProjectRoleCache();
   };
 
   const refreshSubscription = (subscriptions: TeamSubscription[] | undefined) => {

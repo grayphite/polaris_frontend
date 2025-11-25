@@ -73,6 +73,14 @@ export async function deleteChatApi(chatId: string): Promise<{ success: boolean 
 }
 
 // AI Chat Message Types
+type ReferencedChatId =
+  | number
+  | {
+      id: number;
+      name?: string;
+      title?: string;
+    };
+
 export type AIChatMessageDTO = {
   id: number;
   chat_id: number;
@@ -85,6 +93,48 @@ export type AIChatMessageDTO = {
   chat_name?: string; // Add optional chat_name field for auto-naming
   file_references?: string[]; // Array of file IDs
   file_reference_details?: FileMetadata[]; // Array of file objects from backend
+  chat_reference_details?: {
+    id: number;
+    name?: string;
+    title?: string;
+    description?: string;
+    details?: string;
+  }[];
+  referenced_chat_id?: number;
+  referenced_chat_ids?: ReferencedChatId[];
+  referenced_chat?: {
+    id: number;
+    name?: string;
+    description?: string;
+    project_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    is_deleted?: boolean;
+  } | number[];
+  referenced_chats?: {
+    id: number;
+    name?: string;
+    description?: string;
+    title?: string;
+    details?: string;
+    project_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    is_deleted?: boolean;
+  }[];
+  user_info?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    username?: string;
+    role?: string;
+    created_at?: string;
+    updated_at?: string;
+    is_active?: boolean;
+  };
   context_metadata: {
     api_version: string;
     model_used: string;
@@ -138,6 +188,7 @@ export async function sendMessageApi(
   userQuestion: string,
   fileReferences?: string[],
   fileReferenceDetails?: FileMetadata[],
+  referencedChatIds?: string[],
   onStreamChunk?: (text: string) => void,
   onStreamComplete?: (data: any) => void
 ): Promise<SendMessageResponse> {
@@ -155,6 +206,15 @@ export async function sendMessageApi(
   // Add file reference details to payload if provided
   if (fileReferenceDetails && fileReferenceDetails.length > 0) {
     payload.file_reference_details = fileReferenceDetails;
+  }
+
+  if (referencedChatIds && referencedChatIds.length > 0) {
+    const parsedIds = referencedChatIds
+      .map((id) => parseInt(id, 10))
+      .filter((value) => !Number.isNaN(value));
+    if (parsedIds.length > 0) {
+      payload.referenced_chat_ids = parsedIds;
+    }
   }
   
   let accumulatedText = '';
@@ -198,6 +258,42 @@ export async function sendMessageApi(
 }
 
 // Get messages for a chat
+export interface ChatReferencesMappingResponse {
+  chat_id: number;
+  references?: Record<
+    string,
+    number[] | { referenced_chat_ids?: ReferencedChatId[]; referenced_chats?: { id: number; name?: string; title?: string }[] }
+  >;
+  referenced_chat_ids?: ReferencedChatId[];
+  referenced_chats?: { id: number; name?: string; title?: string }[];
+}
+
+export async function getChatReferencesMapping(
+  chatId: string
+): Promise<ChatReferencesMappingResponse> {
+  const params = new URLSearchParams({
+    chat_id: chatId,
+  });
+
+  return makeRequest<ChatReferencesMappingResponse>(
+    `/ai-chats/chat-references-mapping?${params.toString()}`,
+    { method: 'GET' }
+  );
+}
+
+export async function refreshChatSummary(
+  referencedChatId: string | number
+): Promise<{ success: boolean }> {
+  const payload = {
+    referenced_chat_id: typeof referencedChatId === 'string' ? parseInt(referencedChatId, 10) : referencedChatId,
+  };
+
+  return makeRequest<{ success: boolean }>(`/ai-chats/refresh-chat-summary`, {
+    method: 'POST',
+    data: payload,
+  });
+}
+
 export async function getChatMessages(
   chatId: string,
   page: number = 1,

@@ -1,9 +1,11 @@
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useChats } from '../../context/ChatContext';
-import { useProjectRole } from '../../hooks/useProjectRole';
-import { sendMessageApi, getChatMessages, deleteChatApi } from '../../services/chatService';
-import React, { useEffect, useRef, useState } from 'react';
+import { useProjects } from '../../context/ProjectsContext';
+import { useAuth } from '../../context/AuthContext';
+import { sendMessageApi, getChatMessages, deleteChatApi, getChatReferencesMapping } from '../../services/chatService';
+import ChatReferencePicker, { ChatReferenceOption } from '../../components/chat/ChatReferencePicker';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Loader from '../../components/common/Loader';
 import { showErrorToast } from '../../utils/toast';
 import { uploadFile, deleteFile } from '../../services/fileService';
@@ -11,6 +13,7 @@ import { getPdfPageCount } from '../../utils/fileValidation';
 import MarkdownMessage from '../../components/ui/MarkdownMessage';
 import { formatTime } from '../../utils/dateTime';
 import { downloadRagFile } from '../../utils/fileDownload';
+import { getAvatarColor, getInitials } from '../../utils/avatarColor';
 
 interface FileAttachment {
   id: string;
@@ -25,6 +28,15 @@ interface FileAttachment {
   uploadError?: string;
 }
 
+interface UserInfo {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  username?: string;
+  role?: string;
+}
+
 interface Message {
   id: string;
   content: string;
@@ -33,7 +45,34 @@ interface Message {
   attachments?: FileAttachment[];
   file_references?: string[];
   sources?: string[];
+  chat_references?: ChatReferenceOption[];
+  user_info?: UserInfo;
 }
+
+type PersistedReference = {
+  id: string;
+  title?: string;
+};
+
+const normalizeReferenceValue = (
+  entry:
+    | number
+    | string
+    | { id?: number | string; chat_id?: number | string; name?: string; title?: string }
+    | null
+    | undefined
+): PersistedReference | null => {
+  if (entry === null || entry === undefined) return null;
+  if (typeof entry === 'object') {
+    const idValue = entry.id ?? entry.chat_id;
+    if (idValue === null || idValue === undefined) return null;
+    return {
+      id: idValue.toString(),
+      title: entry.name || entry.title,
+    };
+  }
+  return { id: entry.toString() };
+};
 
 const MAX_PDF_PAGES = 100;
 
@@ -67,6 +106,12 @@ const ChatInterface: React.FC = () => {
   const [displayedContent, setDisplayedContent] = useState<string>(''); // Animated display
   const [streamingSources, setStreamingSources] = useState<string[]>([]); // Sources during streaming
   const [isStreamingComplete, setIsStreamingComplete] = useState(false); // Track if streaming is complete
+  const [chatReferences, setChatReferences] = useState<ChatReferenceOption[]>([]);
+  const [persistedReferenceIds, setPersistedReferenceIds] = useState<PersistedReference[]>([]);
+  const [isReferencePickerOpen, setIsReferencePickerOpen] = useState(false);
+  const [pickerAnchorRect, setPickerAnchorRect] = useState<DOMRect | null>(null);
+  const [inlineTrigger, setInlineTrigger] = useState<{ start: number; end: number; keyword: string } | null>(null);
+  const [pickerPlacement, setPickerPlacement] = useState<'above' | 'below'>('above');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,15 +126,126 @@ const ChatInterface: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const referenceButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  const { chatsByProject, updateChat, deleteChat } = useChats();
-  const { role: projectRole, isLoading: projectRoleLoading } = useProjectRole(projectId);
+  const { chatsByProject, sidebarChatsByProject, updateChat, deleteChat, ensureProjectChatsLoaded } = useChats();
+  const { projects, sidebarProjects } = useProjects();
+  const { user } = useAuth();
   const [isMetaLoading, setIsMetaLoading] = useState(false);
+  const projectRole = useMemo(() => {
+    if (!projectId) return null;
+    const project = projects.find(p => p.id === projectId) || sidebarProjects.find(p => p.id === projectId);
+    return project?.user_role ?? null;
+  }, [projects, sidebarProjects, projectId]);
   const navigate = useNavigate();
+
+  const chatsMetadataById = useMemo(() => {
+    if (!projectId) return {};
+    const list = chatsByProject[projectId] || [];
+    return list.reduce((acc, chat) => {
+      if (chat?.id) {
+        acc[chat.id.toString()] = {
+          title: chat.title,
+          details: chat.details || '',
+        };
+      }
+      return acc;
+    }, {} as Record<string, { title: string; details: string }>);
+  }, [projectId, chatsByProject]);
+
+  const getChatMetadata = useCallback(
+    (id: string | number | null | undefined) => {
+      if (id === null || id === undefined) return null;
+      const key = id.toString();
+      return chatsMetadataById[key] || null;
+    },
+    [chatsMetadataById]
+  );
+
+  const buildChatReferences = (aiChat: any): ChatReferenceOption[] | undefined => {
+    const detailRefs = aiChat?.chat_reference_details?.length
+      ? aiChat.chat_reference_details
+          .map((ref: any) => ({
+            id: ref.id ? ref.id.toString() : '',
+            title: ref.name || ref.title || 'Referenced chat',
+            details: ref.description || ref.details || '',
+          }))
+          .filter((ref: { id: string }) => Boolean(ref.id)) as ChatReferenceOption[]
+      : undefined;
+
+    if (detailRefs && detailRefs.length > 0) {
+      return detailRefs;
+    }
+
+    const buildFromObject = (chat: any) => {
+      const chatId = chat?.id ?? chat?.chat_id;
+      if (!chatId && chatId !== 0) return null;
+      const meta = getChatMetadata(chatId);
+      return {
+        id: chatId.toString(),
+        title: chat?.name || chat?.title || meta?.title || `Chat #${chatId}`,
+        details: chat?.description || chat?.details || meta?.details || '',
+      };
+    };
+
+    if (Array.isArray(aiChat?.referenced_chats) && aiChat.referenced_chats.length > 0) {
+      const refs = aiChat.referenced_chats
+        .map((chat: any) => buildFromObject(chat))
+        .filter(Boolean) as ChatReferenceOption[];
+      if (refs.length > 0) {
+        return refs;
+      }
+    }
+
+    const mapIdsToRefs = (
+      ids: Array<number | string | { id?: number | string; chat_id?: number | string; name?: string; title?: string }>
+    ) =>
+      ids
+        .map((entry) => {
+          const normalized = normalizeReferenceValue(entry);
+          if (!normalized) return null;
+          const meta = getChatMetadata(normalized.id);
+          return {
+            id: normalized.id,
+            title: normalized.title || meta?.title || `Chat #${normalized.id}`,
+            details: meta?.details || '',
+          };
+        })
+        .filter(Boolean) as ChatReferenceOption[];
+
+    if (Array.isArray(aiChat?.referenced_chat) && aiChat.referenced_chat.length > 0) {
+      const refs = mapIdsToRefs(aiChat.referenced_chat);
+      if (refs.length > 0) {
+        return refs;
+      }
+    }
+
+    if (Array.isArray(aiChat?.referenced_chat_ids) && aiChat.referenced_chat_ids.length > 0) {
+      const refs = mapIdsToRefs(aiChat.referenced_chat_ids);
+      if (refs.length > 0) {
+        return refs;
+      }
+    }
+
+    if (aiChat?.referenced_chat && aiChat?.referenced_chat_id) {
+      const ref = buildFromObject({
+        id: aiChat.referenced_chat_id,
+        name: aiChat.referenced_chat.name,
+        description: aiChat.referenced_chat.description,
+        details: aiChat.referenced_chat.details,
+        title: aiChat.referenced_chat.title,
+      });
+      if (ref) {
+        return [ref];
+      }
+    }
+
+    return undefined;
+  };
   
   // Resolve title for the current chat
   const isNewChatId = chatId ? /^\d{13,}$/.test(chatId) : false;
@@ -117,24 +273,28 @@ const ChatInterface: React.FC = () => {
   })();
 
   // Get conversation data from context
-  const conversation = {
-    id: chatId,
-    title: (() => {
-      if (!chatId) return '';
-      const list = projectId ? (chatsByProject[projectId] || []) : [];
-      const fromContext = list.find(c => c.id === chatId)?.title;
-      if (fromContext) return fromContext;
-      if (isNewChatId) return resolvedNewChatTitle ?? '';
-      return '';
-    })(),
-    createdAt: '',
-    details: (() => {
-      if (!chatId) return '';
-      const list = projectId ? (chatsByProject[projectId] || []) : [];
-      const chat = list.find(c => c.id === chatId);
-      return chat?.details || '';
-    })(),
-  } as const;
+  const conversation = useMemo(() => {
+    if (!chatId || !projectId) {
+      return {
+        id: chatId,
+        title: '',
+        createdAt: '',
+        details: '',
+      } as const;
+    }
+    
+    // Check chatsByProject first, then fall back to sidebarChatsByProject
+    const chatsList = chatsByProject[projectId] || [];
+    const sidebarList = sidebarChatsByProject[projectId] || [];
+    const chat = chatsList.find(c => c.id === chatId) || sidebarList.find(c => c.id === chatId);
+    
+    return {
+      id: chatId,
+      title: chat?.title || (isNewChatId ? resolvedNewChatTitle ?? '' : ''),
+      createdAt: '',
+      details: chat?.details || '',
+    } as const;
+  }, [chatId, projectId, chatsByProject, sidebarChatsByProject, isNewChatId, resolvedNewChatTitle]);
   // Commented out fetchChatById - we already have chat data from project chats API
   // useEffect(() => {
   //   (async () => {
@@ -171,6 +331,15 @@ const ChatInterface: React.FC = () => {
       try {
         const response = await getChatMessages(chatId, 1, 10);
         if (response.success && response.ai_chats) {
+          // Store the first (latest) message ID as fallback
+          if (response.ai_chats.length > 0 && response.ai_chats[0].id) {
+            try {
+              window.localStorage.setItem('lastMessageId', response.ai_chats[0].id.toString());
+            } catch (e) {
+              // Silently fail if localStorage is not available
+            }
+          }
+          
           // Convert API messages to UI message format
           const loadedMessages: Message[] = [];
           
@@ -182,6 +351,7 @@ const ChatInterface: React.FC = () => {
               : undefined;
             
             const fileIds = aiChat.file_references || [];
+            const chatRefDetails = buildChatReferences(aiChat);
             
             // Add user message
             loadedMessages.push({
@@ -191,6 +361,15 @@ const ChatInterface: React.FC = () => {
               timestamp: aiChat.created_at,
               attachments: attachments,
               file_references: fileIds.length > 0 ? fileIds : undefined,
+              chat_references: chatRefDetails,
+              user_info: aiChat.user_info ? {
+                id: aiChat.user_info.id,
+                first_name: aiChat.user_info.first_name,
+                last_name: aiChat.user_info.last_name,
+                email: aiChat.user_info.email,
+                username: aiChat.user_info.username,
+                role: aiChat.user_info.role,
+              } : undefined,
             });
             
             // Add assistant message
@@ -223,6 +402,153 @@ const ChatInterface: React.FC = () => {
     
     loadMessages();
   }, [chatId, projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      ensureProjectChatsLoaded(projectId);
+    }
+  }, [projectId, ensureProjectChatsLoaded]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (!chatId) {
+      setPersistedReferenceIds([]);
+      setChatReferences([]);
+      return;
+    }
+
+    setPersistedReferenceIds([]);
+    setChatReferences([]);
+
+    const loadChatReferences = async () => {
+      try {
+        const response = await getChatReferencesMapping(chatId);
+        if (isCancelled) return;
+
+        // Get stored last message ID from localStorage
+        let storedLastMessageId: number | null = null;
+        try {
+          const stored = window.localStorage.getItem('lastMessageId');
+          if (stored) {
+            storedLastMessageId = parseInt(stored, 10);
+            if (Number.isNaN(storedLastMessageId)) {
+              storedLastMessageId = null;
+            }
+          }
+        } catch (e) {
+          // Silently fail if localStorage is not available
+        }
+
+        const ids = (() => {
+          const normalized = new Map<string, PersistedReference>();
+
+          const addFromArray = (
+            values?:
+              | Array<number | string | { id?: number | string; chat_id?: number | string; name?: string; title?: string }>
+              | null
+          ) => {
+            if (!Array.isArray(values)) return;
+            values.forEach((value) => {
+              const entry = normalizeReferenceValue(value);
+              if (!entry) return;
+              const existing = normalized.get(entry.id);
+              if (!existing || (!existing.title && entry.title)) {
+                normalized.set(entry.id, entry);
+              }
+            });
+          };
+
+          if (response?.references && typeof response.references === 'object') {
+            // Get all message IDs (keys) and find the last one
+            const messageIds = Object.keys(response.references);
+            if (messageIds.length > 0) {
+              // Sort message IDs numerically and get the last (highest) one
+              const sortedIds = messageIds
+                .map((id) => parseInt(id, 10))
+                .filter((num) => !Number.isNaN(num))
+                .sort((a, b) => a - b);
+              const lastMessageId = sortedIds[sortedIds.length - 1];
+
+              if (lastMessageId !== undefined) {
+                // Validate: compare with stored last message ID
+                if (storedLastMessageId !== null && lastMessageId !== storedLastMessageId) {
+                  // IDs don't match, return empty array
+                  return [];
+                }
+
+                const lastMessageKey = lastMessageId.toString();
+                // Only process references from the last message
+                const lastMessageRefs = response.references[lastMessageKey];
+                if (Array.isArray(lastMessageRefs)) {
+                  addFromArray(lastMessageRefs);
+                } else if (lastMessageRefs) {
+                  addFromArray(lastMessageRefs.referenced_chats);
+                  addFromArray(lastMessageRefs.referenced_chat_ids);
+                }
+              }
+            }
+          }
+
+          // Only fallback to top-level references if we didn't find any in references object
+          // and we don't have a stored ID to validate against
+          if (normalized.size === 0 && storedLastMessageId === null) {
+            addFromArray(response?.referenced_chats);
+            addFromArray(response?.referenced_chat_ids);
+          }
+
+          return Array.from(normalized.values());
+        })();
+
+        setPersistedReferenceIds(ids);
+      } catch (error) {
+        console.error('Failed to load chat references mapping:', error);
+        if (!isCancelled) {
+          setPersistedReferenceIds([]);
+        }
+      }
+    };
+
+    loadChatReferences();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [chatId]);
+
+  useEffect(() => {
+    setChatReferences((prev) => {
+      const persistedSet = new Set(persistedReferenceIds.map((ref) => ref.id));
+      const manualRefs = prev.filter((ref) => !persistedSet.has(ref.id));
+
+      if (persistedReferenceIds.length === 0) {
+        return prev.length === 0 ? prev : [];
+      }
+
+      const persistedRefs = persistedReferenceIds.map(({ id, title }) => {
+        const meta = getChatMetadata(id);
+        const existing = prev.find((ref) => ref.id === id);
+        return {
+          id,
+          title: title || meta?.title || existing?.title || `Chat #${id}`,
+          details: meta?.details || existing?.details || '',
+        };
+      });
+
+      const next = [...persistedRefs, ...manualRefs];
+      const isSameLength = next.length === prev.length;
+      const isSame =
+        isSameLength &&
+        next.every(
+          (ref, index) =>
+            ref.id === prev[index]?.id &&
+            ref.title === prev[index]?.title &&
+            ref.details === prev[index]?.details
+        );
+
+      return isSame ? prev : next;
+    });
+  }, [persistedReferenceIds, getChatMetadata]);
   
   // Track empty "New Chat" for auto-deletion on unmount
   useEffect(() => {
@@ -380,6 +706,7 @@ const ChatInterface: React.FC = () => {
             : undefined;
           
           const fileIds = aiChat.file_references || [];
+          const chatRefDetails = buildChatReferences(aiChat);
           
           olderMessages.push({
             id: `user-${aiChat.id}`,
@@ -388,6 +715,15 @@ const ChatInterface: React.FC = () => {
             timestamp: aiChat.created_at,
             attachments: attachments,
             file_references: fileIds.length > 0 ? fileIds : undefined,
+            chat_references: chatRefDetails,
+            user_info: aiChat.user_info ? {
+              id: aiChat.user_info.id,
+              first_name: aiChat.user_info.first_name,
+              last_name: aiChat.user_info.last_name,
+              email: aiChat.user_info.email,
+              username: aiChat.user_info.username,
+              role: aiChat.user_info.role,
+            } : undefined,
           });
           
           olderMessages.push({
@@ -432,6 +768,70 @@ const ChatInterface: React.FC = () => {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
+  };
+
+  const updateInlineTrigger = () => {
+    if (!textareaRef.current) return;
+    const cursor = textareaRef.current.selectionStart ?? 0;
+    const text = textareaRef.current.value.slice(0, cursor);
+    const match = text.match(/@([\w\s-]*)$/);
+    if (match) {
+      const start = cursor - match[0].length;
+      setInlineTrigger({
+        start,
+        end: cursor,
+        keyword: match[1] || '',
+      });
+      setPickerAnchorRect(textareaRef.current.getBoundingClientRect());
+      setPickerPlacement('above');
+      setIsReferencePickerOpen(true);
+    } else if (inlineTrigger) {
+      setInlineTrigger(null);
+      setIsReferencePickerOpen(false);
+    }
+  };
+
+  const handleTextareaKeyUp = () => {
+    updateInlineTrigger();
+  };
+
+  const handleReferencePickerClose = () => {
+    setIsReferencePickerOpen(false);
+    setInlineTrigger(null);
+  };
+
+  const handleReferenceSelectionChange = (selected: ChatReferenceOption[]) => {
+    const hadReferences = chatReferences.length > 0;
+    setChatReferences(selected);
+
+    if (!hadReferences && selected.length > 0 && inlineTrigger && textareaRef.current) {
+      const nextValue =
+        input.slice(0, inlineTrigger.start) + input.slice(inlineTrigger.end, input.length);
+      setInput(nextValue);
+      const cursorPos = inlineTrigger.start;
+      requestAnimationFrame(() => {
+        textareaRef.current?.setSelectionRange(cursorPos, cursorPos);
+      });
+    }
+
+    if (selected.length === 0) {
+      setInlineTrigger(null);
+    }
+  };
+
+  const removeChatReference = (chatId: string) => {
+    setChatReferences((prev) => prev.filter((ref) => ref.id !== chatId));
+  };
+
+  const handleReferenceButtonClick = () => {
+    const rect =
+      referenceButtonRef.current?.getBoundingClientRect() ||
+      textareaRef.current?.getBoundingClientRect() ||
+      null;
+    setPickerAnchorRect(rect);
+    setPickerPlacement('above');
+    setInlineTrigger(null);
+    setIsReferencePickerOpen((prev) => !prev);
   };
   
   
@@ -626,6 +1026,7 @@ const ChatInterface: React.FC = () => {
     
     // Filter out failed uploads
     const successfulFiles = attachedFiles.filter(f => f.uploadStatus === 'success' || !f.uploadStatus);
+    const referencedChatIds = chatReferences.map(ref => ref.id);
     
     // Capture if this is the first message before state updates
     const isFirstMessage = messages.length === 0;
@@ -652,6 +1053,15 @@ const ChatInterface: React.FC = () => {
       timestamp: new Date().toISOString(),
       attachments: successfulFiles.length > 0 ? [...successfulFiles] : undefined,
       file_references: fileIds.length > 0 ? fileIds : undefined,
+      chat_references: chatReferences.length > 0 ? [...chatReferences] : undefined,
+      user_info: user ? {
+        id: parseInt(user.id),
+        first_name: user.firstName,
+        last_name: user.lastName,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      } : undefined,
     };
     
     // Add assistant message placeholder
@@ -697,6 +1107,7 @@ const ChatInterface: React.FC = () => {
         currentInput, 
         fileIds.length > 0 ? fileIds : undefined,
         fileDetails,
+        referencedChatIds,
         (streamedText) => {
           // Update streaming content as chunks arrive
           setStreamingContent(streamedText);
@@ -708,10 +1119,20 @@ const ChatInterface: React.FC = () => {
           }
           // Enable send button immediately when stream completes
           setIsStreamingComplete(true);
+          
+          // Store last message ID in localStorage
+          if (streamCompleteData.ai_chat?.id) {
+            try {
+              window.localStorage.setItem('lastMessageId', streamCompleteData.ai_chat.id.toString());
+            } catch (e) {
+              // Silently fail if localStorage is not available
+            }
+          }
         }
       );
       
       if (response.success && response.ai_chat) {
+        const responseChatRefs = buildChatReferences(response.ai_chat);
         // Auto-rename chat IMMEDIATELY based on first message response
         if (response.ai_chat.chat_name && response.ai_chat.chat_name !== "" && projectId) {
           updateChat(projectId, chatId, response.ai_chat.chat_name, '');
@@ -753,11 +1174,29 @@ const ChatInterface: React.FC = () => {
                 id: `user-${response.ai_chat.id}`,
                 // timestamp: response.ai_chat.created_at,
                 file_references: response.ai_chat.file_references,
+                chat_references: responseChatRefs || m.chat_references,
+                user_info: response.ai_chat.user_info ? {
+                  id: response.ai_chat.user_info.id,
+                  first_name: response.ai_chat.user_info.first_name,
+                  last_name: response.ai_chat.user_info.last_name,
+                  email: response.ai_chat.user_info.email,
+                  username: response.ai_chat.user_info.username,
+                  role: response.ai_chat.user_info.role,
+                } : m.user_info,
               };
             }
             return m;
           });
         });
+
+        const responseReferencedIds = Array.isArray(response.ai_chat.referenced_chat_ids)
+          ? response.ai_chat.referenced_chat_ids
+              .map((id) => normalizeReferenceValue(id))
+              .filter((value): value is PersistedReference => Boolean(value))
+          : [];
+
+        setPersistedReferenceIds(responseReferencedIds);
+        setChatReferences(responseChatRefs ?? []);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -775,7 +1214,8 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex overflow-hidden">
+    <>
+      <div className="h-full flex overflow-hidden">
       {/* Chat interface */}
       <div className="flex-1 flex flex-col bg-light-200">
         {/* Chat header */}
@@ -867,12 +1307,8 @@ const ChatInterface: React.FC = () => {
                   className={`group flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   {/* Attachments above the bubble */}
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className={`${
-                      message.role === 'user'
-                        ? 'self-end w-fit max-w-[85%]'
-                        : 'self-start w-full max-w-[85%]'
-                    } flex flex-wrap gap-2 mb-1`}>
+                  {message.role !== 'user' && message.attachments && message.attachments.length > 0 && (
+                    <div className="self-start w-full max-w-[85%] flex flex-wrap gap-2 mb-1">
                       {message.attachments.map((file, index) => {
                         const isImage = file.mime_type.startsWith('image/');
                         
@@ -880,9 +1316,7 @@ const ChatInterface: React.FC = () => {
                           /* Unified chip for both documents and images */
                           <div
                             key={file.id || index}
-                            className={`inline-flex items-center gap-2 rounded-md px-3 py-2 max-w-full ${
-                              message.role === 'user' ? 'bg-primary-700 text-white' : 'bg-gray-100 text-gray-800'
-                            }`}
+                            className="inline-flex items-center gap-2 rounded-md px-3 py-2 max-w-full bg-gray-100 text-gray-800"
                           >
                             {isImage ? (
                               /* Image icon */
@@ -907,65 +1341,155 @@ const ChatInterface: React.FC = () => {
                     </div>
                   )}
                   {/* Message bubble */}
-                  <div
-                    className={`${message.role === 'user' ? 'w-fit max-w-[85%] rounded-2xl px-3 py-2 bg-primary-600 text-white' : 'w-full'}`}
-                  >
-                    {message.role === 'assistant' ? (
-                      <div className="leading-6">
-                        {streamingMessageId === message.id && displayedContent === '' ? (
-                          // Show blue pulsating dot when streaming starts but no content yet
-                          <div className="flex space-x-2 py-2">
-                            <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse"></div>
-                            <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                          </div>
-                        ) : (
+                  <div className="flex items-center justify-end gap-2">
+                    <div
+                      className={`${
+                        message.role === 'user'
+                          ? 'w-full flex justify-end'
+                          : 'w-full'
+                      }`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <div className="leading-6">
+                          {streamingMessageId === message.id && displayedContent === '' ? (
+                            // Show blue pulsating dot when streaming starts but no content yet
+                            <div className="flex space-x-2 py-2">
+                              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse"></div>
+                              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                              <div className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                            </div>
+                          ) : (
+                            <>
+                              <MarkdownMessage
+                                content={streamingMessageId === message.id ? displayedContent : message.content}
+                              />
+                              {/* Sources chips - always display if available */}
+                              {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
+                                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => {
+                                        const success = downloadRagFile(source);
+                                        if (!success) {
+                                          showErrorToast(t('chat.interface.downloadError', { filename: source }));
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
+                                      title={`Click to download: ${source}`}
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                      </svg>
+                                      <span className="truncate max-w-[80px]">{source}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        message.content && (
                           <>
-                            <MarkdownMessage 
-                              content={streamingMessageId === message.id ? displayedContent : message.content} 
-                            />
-                            {/* Sources chips - always display if available */}
-                            {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
-                              <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
-                                {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => {
-                                      const success = downloadRagFile(source);
-                                      if (!success) {
-                                        showErrorToast(t('chat.interface.downloadError', { filename: source }));
-                                      }
-                                    }}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
-                                    title={`Click to download: ${source}`}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                                    </svg>
-                                    <span className="truncate max-w-[80px]">{source}</span>
-                                  </button>
-                                ))}
+                            <div className="flex max-w-[75%] flex-col items-end gap-1 self-stretch">
+                              {message.attachments && message.attachments.length > 0 && (
+                                <div className="flex w-fit max-w-full flex-wrap justify-end gap-2">
+                                  {message.attachments.map((file, index) => {
+                                    const isImage = file.mime_type.startsWith('image/');
+                                    return (
+                                      <div
+                                        key={file.id || index}
+                                        className="inline-flex items-center gap-2 rounded-md bg-primary-700 px-3 py-2 text-white max-w-full"
+                                      >
+                                        {isImage ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                          </svg>
+                                        ) : (
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                          </svg>
+                                        )}
+                                        <div className="min-w-0">
+                                          <div className="text-sm truncate">{file.filename}</div>
+                                          <div className="text-xs opacity-80 truncate">
+                                            {(file.size_bytes / 1024).toFixed(1)} KB{file.file_type && ` • ${file.file_type}`}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <div className="w-fit max-w-full rounded-2xl bg-primary-600 px-3 py-2 text-white whitespace-pre-wrap leading-6">
+                                {message.content}
+                              </div>
+                              {message.chat_references && message.chat_references.length > 0 && (
+                                <div className="flex w-fit max-w-full flex-wrap justify-end gap-1 text-xs self-end">
+                                  {message.chat_references.map((ref) => (
+                                    <span
+                                      key={ref.id}
+                                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-primary-50 text-primary-800"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
+                                      </svg>
+                                      <span className="max-w-[140px] truncate" title={ref.title}>
+                                        {ref.title}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="self-end text-xs text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {formatTime(message.timestamp)}
+                              </div>
+                            </div>
+                            {message.user_info && (
+                              <div className="flex w-16 flex-col items-center self-start">
+                                <div
+                                  className={`flex h-10 w-10 items-center justify-center rounded-full text-white text-xs font-semibold ${getAvatarColor(
+                                    message.user_info.id
+                                  )}`}
+                                >
+                                  {getInitials(message.user_info.first_name, message.user_info.last_name)}
+                                </div>
+                                <span
+                                  className="mt-1 w-full truncate text-center text-xs text-gray-500"
+                                  title={`${message.user_info.first_name} ${message.user_info.last_name}`}
+                                >
+                                  {message.user_info.first_name} {message.user_info.last_name}
+                                </span>
                               </div>
                             )}
                           </>
-                        )}
-                      </div>
-                    ) : (
-                      message.content && (
-                        <div className="whitespace-pre-wrap leading-6">{message.content}</div>
-                      )
-                    )}
+                        )
+                      )}
+                    </div>
                   </div>
+                  {/* Chat references for assistant messages (keep existing behavior) */}
+                  {message.role === 'assistant' && message.chat_references && message.chat_references.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1 text-xs self-start">
+                      {message.chat_references.map((ref) => (
+                        <span
+                          key={ref.id}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-gray-100 text-gray-600"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M12.586 5.586a2 2 0 010 2.828l-4 4a2 2 0 11-2.828-2.828l1.172-1.172a1 1 0 10-1.414-1.414l-1.172 1.172a4 4 0 105.657 5.657l4-4a4 4 0 10-5.657-5.657l-1.172 1.172a1 1 0 101.414 1.414l1.172-1.172a2 2 0 012.829 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="max-w-[140px] truncate" title={ref.title}>{ref.title}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {/* Timestamp below message container, visible on hover */}
-                  <div
-                    className={`${
-                      message.role === 'user'
-                        ? 'self-end max-w-[85%] text-right text-primary-400'
-                        : 'self-start w-full text-left text-gray-500'
-                    } text-xs mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}
-                  >
-                    {formatTime(message.timestamp)}
-                  </div>
+                  {message.role === 'assistant' && (
+                    <div className="self-start w-full text-left text-gray-500 text-xs mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {formatTime(message.timestamp)}
+                    </div>
+                  )}
                 </div>
               ))}
               
@@ -974,12 +1498,15 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
         
-        {/* Input area - Only visible for owner or editor (hidden while loading) */}
-        {!projectRoleLoading && (projectRole === 'owner' || projectRole === 'editor') ? (
+        {/* Input area - Only visible for owner or editor */}
+        {(projectRole === 'owner' || projectRole === 'editor') ? (
           <div className="border-t border-gray-200 p-4">
             <div className="max-w-3xl mx-auto">
             <form onSubmit={handleSubmit} className="flex items-end space-x-2">
             <div className="flex-1 rounded-lg border border-gray-200 p-2">
+              {chatReferences.length > 0 && (
+                <p className='text-xs text-gray-500 mb-2 mt-[-4px] cursor-pointer' onClick={handleReferenceButtonClick}>{chatReferences.length > 1 ? `${chatReferences.length} chats referenced.` : `${chatReferences.length} chat referenced.`}</p>
+              )}
               {/* Display attached files before sending */}
               {attachedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -1106,6 +1633,17 @@ const ChatInterface: React.FC = () => {
                     </div>
                   )}
                 </div>
+                <button
+                  type="button"
+                  ref={referenceButtonRef}
+                  onClick={handleReferenceButtonClick}
+                  className={`p-1.5 rounded-full ${isReferencePickerOpen ? 'bg-gray-200' : ''} shrink-0`}
+                  title="Reference previous chats"
+                >
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600 ${isReferencePickerOpen ? 'bg-gray-200' : ''}`}>
+                    @
+                  </span>
+                </button>
                 <textarea
                   ref={textareaRef}
                   className="w-full bg-transparent resize-none focus:outline-none py-1 max-h-24 overflow-y-auto scrollbar-thin"
@@ -1114,6 +1652,8 @@ const ChatInterface: React.FC = () => {
                   value={input}
                   onChange={handleInputChange}
                   onPaste={handlePaste}
+                  onKeyUp={handleTextareaKeyUp}
+                  onClick={handleTextareaKeyUp}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -1145,7 +1685,19 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+      <ChatReferencePicker
+        projectId={projectId}
+        isOpen={isReferencePickerOpen}
+        anchorRect={pickerAnchorRect}
+        placement={pickerPlacement}
+        excludeChatId={chatId}
+        selectedChats={chatReferences}
+        searchTerm={inlineTrigger?.keyword}
+        onSelectionChange={handleReferenceSelectionChange}
+        onClose={handleReferencePickerClose}
+      />
+    </>
   );
 };
 

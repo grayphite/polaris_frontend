@@ -250,7 +250,7 @@ const MembersList: React.FC = () => {
 
       </div>
       {isOwner && billingData?.upcoming_invoice && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg shadow-sm p-4">
               {isLoadingBilling ? (
                 <div className="flex items-center justify-center py-4">
