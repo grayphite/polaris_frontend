@@ -284,7 +284,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('teamId');
-    localStorage.removeItem('lastMessageId');
+    // Remove all chat-scoped lastMessageId keys
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('lastMessageId:')) {
+        localStorage.removeItem(key);
+      }
+    }
     localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
     localStorage.removeItem(TEAM_OWNER_STORAGE_KEY);
     setUser(null);

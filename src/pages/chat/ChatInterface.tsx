@@ -331,10 +331,10 @@ const ChatInterface: React.FC = () => {
       try {
         const response = await getChatMessages(chatId, 1, 10);
         if (response.success && response.ai_chats) {
-          // Store the first (latest) message ID as fallback
+          // Store the first (latest) message ID as fallback (scoped per chat)
           if (response.ai_chats.length > 0 && response.ai_chats[0].id) {
             try {
-              window.localStorage.setItem('lastMessageId', response.ai_chats[0].id.toString());
+              window.localStorage.setItem(`lastMessageId:${chatId}`, response.ai_chats[0].id.toString());
             } catch (e) {
               // Silently fail if localStorage is not available
             }
@@ -426,10 +426,10 @@ const ChatInterface: React.FC = () => {
         const response = await getChatReferencesMapping(chatId);
         if (isCancelled) return;
 
-        // Get stored last message ID from localStorage
+        // Get stored last message ID from localStorage (scoped per chat)
         let storedLastMessageId: number | null = null;
         try {
-          const stored = window.localStorage.getItem('lastMessageId');
+          const stored = window.localStorage.getItem(`lastMessageId:${chatId}`);
           if (stored) {
             storedLastMessageId = parseInt(stored, 10);
             if (Number.isNaN(storedLastMessageId)) {
@@ -1120,10 +1120,10 @@ const ChatInterface: React.FC = () => {
           // Enable send button immediately when stream completes
           setIsStreamingComplete(true);
           
-          // Store last message ID in localStorage
+          // Store last message ID in localStorage (scoped per chat)
           if (streamCompleteData.ai_chat?.id) {
             try {
-              window.localStorage.setItem('lastMessageId', streamCompleteData.ai_chat.id.toString());
+              window.localStorage.setItem(`lastMessageId:${chatId}`, streamCompleteData.ai_chat.id.toString());
             } catch (e) {
               // Silently fail if localStorage is not available
             }
