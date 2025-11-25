@@ -1363,26 +1363,22 @@ const ChatInterface: React.FC = () => {
                               <MarkdownMessage
                                 content={streamingMessageId === message.id ? displayedContent : message.content}
                               />
-                              {/* Sources chips - always display if available */}
+                                                            {/* Sources chips - always display if available */}
                               {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
                                 <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  <p className="w-full text-[12px] text-gray-400">
+                                    These sources are legal documents - rights preserved by the owner.
+                                  </p>
                                   {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
-                                    <button
+                                    <div
                                       key={idx}
-                                      onClick={() => {
-                                        const success = downloadRagFile(source);
-                                        if (!success) {
-                                          showErrorToast(t('chat.interface.downloadError', { filename: source }));
-                                        }
-                                      }}
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
-                                      title={`Click to download: ${source}`}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-default"
                                     >
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                       </svg>
-                                      <span className="truncate max-w-[80px]">{source}</span>
-                                    </button>
+                                      <span className="truncate max-w-[80px]" title={source}>{source}</span>
+                                    </div>
                                   ))}
                                 </div>
                               )}
