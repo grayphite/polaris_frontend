@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from './LanguageToggle';
+import SurveyMonkeyModal from '../../components/ui/SurveyMonkeyModal';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -19,6 +20,7 @@ const Header: React.FC<HeaderProps> = ({
   const { t } = useTranslation();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [surveyModalOpen, setSurveyModalOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close user menu when clicking outside
@@ -37,7 +39,14 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, [userMenuOpen]);
 
+  useEffect(() => {
+    if (!user) {
+      setSurveyModalOpen(false);
+    }
+  }, [user]);
+
   return (
+    <>
     <header className="bg-white shadow-sm z-10 flex-shrink-0">
       <div className="px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center min-w-0 gap-3">
@@ -58,6 +67,15 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-3">
+          {user && (
+            <button
+              type="button"
+              onClick={() => setSurveyModalOpen(true)}
+              className="inline-flex items-center rounded-md border border-primary-500 px-3 py-1.5 text-sm font-medium text-primary-600 hover:bg-primary-50 focus:outline-none"
+            >
+              {t('header.survey')}
+            </button>
+          )}
           <LanguageToggle />
           <div className="relative flex-shrink-0" ref={userMenuRef}>
           <button
@@ -111,6 +129,13 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
+    {user && (
+      <SurveyMonkeyModal
+        isOpen={surveyModalOpen}
+        onClose={() => setSurveyModalOpen(false)}
+      />
+    )}
+    </>
   );
 };
 

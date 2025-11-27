@@ -169,7 +169,8 @@
     "companyProfile": "Company Profile",
     "subscription": "Subscription",
     "signOut": "Sign out",
-    "projects": "Projects"
+    "projects": "Projects",
+    "survey": "Share Feedback"
   },
   "projects": {
     "list": {
