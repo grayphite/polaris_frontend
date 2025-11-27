@@ -128,8 +128,8 @@ const ProjectsList: React.FC = () => {
                 <div className="bg-white rounded-lg shadow-card p-6 hover:shadow-lg transition-shadow max-h-40 flex flex-col">
                   <div>
                     <div className="flex justify-between items-start">
-                      <h3 className="text-lg font-medium text-gray-900">{project.name}</h3>
-                      <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">
+                      <h3 className="text-lg font-medium text-gray-900 line-clamp-1" title={project.name}>{project.name}</h3>
+                      <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full whitespace-nowrap">
                         {project.conversationsCount !== null && project.conversationsCount !== undefined ?
                           project.conversationsCount === 0 ? t('projects.list.noChats') : project.conversationsCount === 1 ? t('projects.list.oneChat') : t('projects.list.chats', { count: project.conversationsCount })
                           : t('projects.list.conversations_zero')}
