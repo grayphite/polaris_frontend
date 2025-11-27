@@ -1673,13 +1673,18 @@ const ChatInterface: React.FC = () => {
             </form>
             </div>
           </div>
-        ) : (
+        ) : projectRole === 'viewer' ? (
           <div className="border-t border-gray-200 p-4">
             <div className="max-w-3xl mx-auto text-center text-gray-500 text-sm">
               <p>{t('chat.interface.noPermission')}</p>
             </div>
           </div>
-        )}
+        ) : (
+        <div className="border-t border-gray-200 p-4">
+          <div className="max-w-3xl mx-auto text-center text-gray-500 text-sm">
+          </div>
+        </div>
+      )}
       </div>
       </div>
       <ChatReferencePicker
