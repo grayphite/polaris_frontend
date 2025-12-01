@@ -197,7 +197,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!shouldFetch) return;
     
     try {
-      const response = await fetchChats(projectId, currentPage, 4, conversationsSearchQuery);
+      const response = await fetchChats(projectId, currentPage, 10, conversationsSearchQuery);
       if (response && response.chats) {
         hydrateProjectChats(projectId, response.chats.map(r => ({ 
           id: r.id.toString(), 
