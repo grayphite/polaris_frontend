@@ -331,10 +331,10 @@ const ChatInterface: React.FC = () => {
       try {
         const response = await getChatMessages(chatId, 1, 10);
         if (response.success && response.ai_chats) {
-          // Store the first (latest) message ID as fallback
+          // Store the first (latest) message ID as fallback (scoped per chat)
           if (response.ai_chats.length > 0 && response.ai_chats[0].id) {
             try {
-              window.localStorage.setItem('lastMessageId', response.ai_chats[0].id.toString());
+              window.localStorage.setItem(`lastMessageId:${chatId}`, response.ai_chats[0].id.toString());
             } catch (e) {
               // Silently fail if localStorage is not available
             }
@@ -426,10 +426,10 @@ const ChatInterface: React.FC = () => {
         const response = await getChatReferencesMapping(chatId);
         if (isCancelled) return;
 
-        // Get stored last message ID from localStorage
+        // Get stored last message ID from localStorage (scoped per chat)
         let storedLastMessageId: number | null = null;
         try {
-          const stored = window.localStorage.getItem('lastMessageId');
+          const stored = window.localStorage.getItem(`lastMessageId:${chatId}`);
           if (stored) {
             storedLastMessageId = parseInt(stored, 10);
             if (Number.isNaN(storedLastMessageId)) {
@@ -1120,10 +1120,10 @@ const ChatInterface: React.FC = () => {
           // Enable send button immediately when stream completes
           setIsStreamingComplete(true);
           
-          // Store last message ID in localStorage
+          // Store last message ID in localStorage (scoped per chat)
           if (streamCompleteData.ai_chat?.id) {
             try {
-              window.localStorage.setItem('lastMessageId', streamCompleteData.ai_chat.id.toString());
+              window.localStorage.setItem(`lastMessageId:${chatId}`, streamCompleteData.ai_chat.id.toString());
             } catch (e) {
               // Silently fail if localStorage is not available
             }
@@ -1363,26 +1363,22 @@ const ChatInterface: React.FC = () => {
                               <MarkdownMessage
                                 content={streamingMessageId === message.id ? displayedContent : message.content}
                               />
-                              {/* Sources chips - always display if available */}
+                                                            {/* Sources chips - always display if available */}
                               {((streamingMessageId === message.id && streamingSources.length > 0) || (message.sources && message.sources.length > 0)) && (
                                 <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  <p className="w-full text-[12px] text-gray-400">
+                                    These sources are legal documents - rights preserved by the owner.
+                                  </p>
                                   {Array.from(new Set(streamingMessageId === message.id ? streamingSources : message.sources || [])).map((source, idx) => (
-                                    <button
+                                    <div
                                       key={idx}
-                                      onClick={() => {
-                                        const success = downloadRagFile(source);
-                                        if (!success) {
-                                          showErrorToast(t('chat.interface.downloadError', { filename: source }));
-                                        }
-                                      }}
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-pointer"
-                                      title={`Click to download: ${source}`}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[12px] font-normal hover:bg-primary-100 hover:text-primary-600 transition-colors cursor-default"
                                     >
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                       </svg>
-                                      <span className="truncate max-w-[80px]">{source}</span>
-                                    </button>
+                                      <span className="truncate max-w-[80px]" title={source}>{source}</span>
+                                    </div>
                                   ))}
                                 </div>
                               )}
@@ -1677,13 +1673,18 @@ const ChatInterface: React.FC = () => {
             </form>
             </div>
           </div>
-        ) : (
+        ) : projectRole === 'viewer' ? (
           <div className="border-t border-gray-200 p-4">
             <div className="max-w-3xl mx-auto text-center text-gray-500 text-sm">
               <p>{t('chat.interface.noPermission')}</p>
             </div>
           </div>
-        )}
+        ) : (
+        <div className="border-t border-gray-200 p-4">
+          <div className="max-w-3xl mx-auto text-center text-gray-500 text-sm">
+          </div>
+        </div>
+      )}
       </div>
       </div>
       <ChatReferencePicker

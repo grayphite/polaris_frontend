@@ -169,7 +169,8 @@
     "companyProfile": "Perfil da Empresa",
     "subscription": "Assinatura",
     "signOut": "Sair",
-    "projects": "Projetos"
+    "projects": "Projetos",
+    "survey": "Responder Pesquisa"
   },
   "projects": {
     "list": {
