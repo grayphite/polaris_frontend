@@ -80,7 +80,7 @@ const PricingSection: React.FC = () => {
                   <p className="text-sm text-gray-700">
                     <span className="font-medium">{t('subscription.additionalMembers')}</span><br />
                     {t('subscription.perExtraMember', { 
-                      price: formatPrice(50000, "brl"), 
+                      price: formatPrice(5000, "brl"), 
                       interval: "month"
                     })}
                   </p>

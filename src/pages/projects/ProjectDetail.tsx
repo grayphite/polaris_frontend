@@ -12,6 +12,7 @@ import { formatDate, formatTime } from '../../utils/dateTime';
 import InviteProjectMemberModal from '../../components/ui/InviteProjectMemberModal';
 import EditProjectMemberModal from '../../components/ui/EditProjectMemberModal';
 import DeleteProjectMemberModal from '../../components/ui/DeleteProjectMemberModal';
+import DeleteChatModal from '../../components/ui/DeleteChatModal';
 import { showErrorToast } from '../../utils/toast';
 
 interface Conversation {
@@ -51,6 +52,7 @@ const ProjectDetail: React.FC = () => {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [editMemberUserId, setEditMemberUserId] = useState<number | null>(null);
   const [deleteMemberUserId, setDeleteMemberUserId] = useState<number | null>(null);
+  const [chatDeleteId, setChatDeleteId] = useState<string | null>(null);
   
   const { projects } = useProjects();
   const { 
@@ -62,7 +64,8 @@ const ProjectDetail: React.FC = () => {
     currentPage, 
     setCurrentPage, 
     pagination,
-    createChat
+    createChat,
+    deleteChat
   } = useChats();
 
   const ctxProject = useMemo(() => {
@@ -151,6 +154,13 @@ const ProjectDetail: React.FC = () => {
     if (window.confirm(t('projects.detail.settings.confirmDelete'))) {
       // In a real app, you would make an API call here
       navigate('/projects');
+    }
+  };
+
+  const handleDeleteChat = async (projectId: string, chatId: string) => {
+    const success = await deleteChat(projectId, chatId);
+    if (success && projectId) {
+      ensureProjectChatsLoaded(projectId);
     }
   };
 
@@ -268,7 +278,7 @@ const ProjectDetail: React.FC = () => {
                       transition={{ duration: 0.2, delay: index * 0.05 }}
                     >
                       <Link to={`/projects/${projectId}/chat/${conversation.id}`}>
-                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:bg-light-100 transition-colors">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:bg-light-100 transition-colors relative">
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="text-lg font-medium text-gray-900">{conversation.title}</h3>
@@ -278,8 +288,25 @@ const ProjectDetail: React.FC = () => {
                               {t('projects.detail.conversations.messages', { count: conversation.messageCount })}
                             </span>
                           </div>
-                          <div className="mt-3 text-xs text-gray-500">
-                            {t('projects.detail.conversations.lastUpdated', { date: formatDate(conversation.updatedAt), time: formatTime(conversation.updatedAt) })}
+                          <div className="mt-3 flex justify-between items-center">
+                            <span className="text-xs text-gray-500">
+                              {t('projects.detail.conversations.lastUpdated', { date: formatDate(conversation.updatedAt), time: formatTime(conversation.updatedAt) })}
+                            </span>
+                            {isProjectOwner && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setChatDeleteId(conversation.id);
+                                }}
+                                className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                                title={t('common.delete')}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </Link>
@@ -708,6 +735,16 @@ const ProjectDetail: React.FC = () => {
               />
             );
           })()}
+
+          {chatDeleteId && (
+            <DeleteChatModal
+              isOpen={true}
+              onClose={() => setChatDeleteId(null)}
+              projectId={projectId}
+              chatId={chatDeleteId}
+              onConfirm={handleDeleteChat}
+            />
+          )}
         </>
       )}
     </div>

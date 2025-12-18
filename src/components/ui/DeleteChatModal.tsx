@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { createPortal } from 'react-dom';
 
 interface DeleteChatModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ const DeleteChatModal: React.FC<DeleteChatModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-white text-gray-900 rounded-lg shadow-xl w-full max-w-sm mx-4">
@@ -74,6 +75,8 @@ const DeleteChatModal: React.FC<DeleteChatModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default DeleteChatModal;
