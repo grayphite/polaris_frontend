@@ -33,18 +33,26 @@ Polaris is a modern web application that provides a ChatGPT-like interface for m
 git clone https://github.com/yourusername/polaris-fe.git
 cd polaris-fe
 ```
+2. Add .env.local file and here is its content
+```bash
+REACT_APP_API_BASE_URL=https://backend.polaris-ai.app/api
+```
 
-2. Install dependencies
+3. Install dependencies
 ```bash
 npm install
 ```
+if gives error, try
+```bash
+npm i -f
+```
 
-3. Start the development server
+4. Start the development server
 ```bash
 npm start
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## Project Structure
 
